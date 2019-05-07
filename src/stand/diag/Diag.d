@@ -1,6 +1,8 @@
 #include "../../lib/a3x.d"
 #include "../../lib/Runtime.d"
 
+#include "Prompt.d"
+
 asm preamble "
 
 .org 0x200000
@@ -34,9 +36,31 @@ procedure Main (* ciptr bootdev args -- *)
 	(* initialize the client interface *)
 	a3xInit
 
-	if (args@ 0 ==)
-		"no args\n" Printf
-	end else
-		args@ "args: %s\n" Printf
+	"\n=== diag.stand ===\nStandalone diagnostics utility for LIMNstation,1.\n" Printf
+
+	auto pf
+
+	"/" DeviceSelect
+		"platform" DGetProperty pf!
+	DeviceExit
+
+	if (pf@ 0 ==) return end
+
+	if ("LIMNstation,1" pf@ strcmp ~~)
+		pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway [y/n]? " Printf
+
+		auto yn
+		2 Calloc yn!
+
+		yn@ 1 Gets
+
+		if (yn@ gb 'y' ~=)
+			yn@ Free
+			return
+		end
+
+		yn@ Free
 	end
+
+	Prompt
 end
