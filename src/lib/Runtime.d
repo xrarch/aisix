@@ -1,144 +1,6 @@
-(* barebones runtime lib for vnboot *)
-
-var CIPtr 0
-
 procedure CR (* -- *)
 	'\n' Putc
 end
-
-asm "
-
-;r30 - call num
-_CIC_Call:
-	push r29
-	lri.l r29, CIPtr
-	add r30, r30, r29
-	lrr.l r30, r30
-
-	call .e
-	pop r29
-	ret
-
-.e:
-	br r30
-
-_CIC_Putc === 0
-_CIC_Getc === 4
-_CIC_Gets === 8
-_CIC_Puts === 12
-_CIC_DevTree === 16
-_CIC_Malloc === 20
-_CIC_Calloc === 24
-_CIC_Free === 28
-
-; string --
-Puts:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Puts
-	call _CIC_Call
-
-	pop r30
-	ret
-
-; buffer maxchars --
-Gets:
-	push r30
-
-	popv r5, r1
-	
-	popv r5, r0
-
-	li r30, _CIC_Gets
-	call _CIC_Call
-
-	pop r30
-	ret
-
-; char -- 
-Putc:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Putc
-	call _CIC_Call
-
-	pop r30
-	ret
-
-; -- char
-Getc:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Getc
-	call _CIC_Call
-
-	pushv r5, r0
-
-	pop r30
-	ret
-
-; -- root dcp
-APIDevTree:
-	push r30
-
-	li r30, _CIC_DevTree
-	call _CIC_Call
-
-	pushv r5, r0
-
-	mov r0, r1
-	pushv r5, r0
-
-	pop r30
-	ret
-
-; sz -- ptr
-Malloc:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Malloc
-	call _CIC_Call
-
-	pushv r5, r0
-
-	pop r30
-	ret
-
-; sz -- ptr
-Calloc:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Calloc
-	call _CIC_Call
-
-	pushv r5, r0
-
-	pop r30
-	ret
-
-; ptr -- 
-Free:
-	push r30
-
-	popv r5, r0
-
-	li r30, _CIC_Free
-	call _CIC_Call
-
-	pop r30
-	ret
-
-"
 
 procedure Call (* ... ptr -- ... *)
 	asm "
@@ -282,6 +144,7 @@ procedure strtok (* str buf del -- next *)
 	0 i!
 
 	if (str@ gb 0 ==)
+		0 buf@ sb
 		0 return
 	end
 
@@ -336,6 +199,7 @@ procedure strntok (* str buf del n -- next *)
 	0 i!
 
 	if (str@ gb 0 ==)
+		0 buf@ sb
 		0 return
 	end
 
@@ -400,19 +264,89 @@ procedure atoi (* str -- n *)
 	res@ return
 end
 
+table KConsoleDigits
+	'0' '1' '2' '3' '4' '5' '6' '7' '8' '9' 'a' 'b' 'c' 'd' 'e' 'f'
+endtable
 
+procedure Putx (* nx -- *)
+	auto nx
+	nx!
 
+	if (nx@ 15 >)
+		auto a
+		nx@ 16 / a!
 
+		nx@ 16 a@ * - nx!
+		a@ Putx
+	end
 
+	[nx@]KConsoleDigits@ Putc
+end
 
+procedure Putn (* n -- *)
+	auto n
+	n!
 
+	if (n@ 9 >)
+		auto a
+		n@ 10 / a!
 
+		n@ 10 a@ * - n!
+		a@ Putn
+	end
 
+	[n@]KConsoleDigits@ Putc
+end
 
+procedure Printf (* ... fmt -- *)
+	auto f
+	f!
+	auto i
+	0 i!
+	auto sl
+	f@ strlen sl!
+	while (i@ sl@ <)
+		auto char
+		f@ i@ + gb char!
+		if (char@ '%' ~=)
+			char@ Putc
+		end else
+			i@ 1 + i!
+			if (i@ sl@ >=)
+				return
+			end
 
+			f@ i@ + gb char!
 
+			if (char@ 'd' ==)
+				Putn
+			end else
 
+			if (char@ 'x' ==)
+				Putx
+			end else
 
+			if (char@ 's' ==)
+				Puts
+			end else
 
+			if (char@ '%' ==)
+				'%' Putc
+			end else
 
+			if (char@ 'l' ==)
+				Putc
+			end
 
+			end
+
+			end
+
+			end
+
+			end
+		end
+
+		i@ 1 + i!
+	end
+end

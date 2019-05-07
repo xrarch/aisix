@@ -1,8 +1,6 @@
-#include "Runtime.d"
-#include "lib/List.d"
-#include "lib/Tree.d"
-#include "Console.d"
-#include "DeviceTree.d"
+#include "../lib/a3x.d"
+#include "../lib/Runtime.d"
+
 #include "IDisk.d"
 #include "aisixfat.d"
 
@@ -38,7 +36,7 @@ procedure Main (* ciptr bootdev args -- *)
 	BootDevice!
 
 	(* initialize the client interface *)
-	CIPtr!
+	a3xInit
 
 	"==============================\n" Printf
 
@@ -48,19 +46,18 @@ procedure Main (* ciptr bootdev args -- *)
 		args@ "kernel args: %s\n" Printf
 	end
 
-	APIDevTree DeviceInit
-
 	BootDevice@ IDiskInit
 	AFSInit
 
 	Prompt
-
-	DevStack@ Free
 end
 
-procedure DoFile (* f -- *)
+procedure DoFile (* args f -- *)
 	auto buf
 	buf!
+
+	auto arg
+	arg!
 
 	buf@ 0x200000 AFSLoadFile
 	if (0 ==)
@@ -69,10 +66,10 @@ procedure DoFile (* f -- *)
 		if (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
 		end else
-			CIPtr@ BootDevice@ args@ asm "
-				pushv r5, r2
-				pushv r5, r1
-				pushv r5, r0
+			CIPtr@ BootDevice@ arg@ asm "
+				popv r5, r2
+				popv r5, r1
+				popv r5, r0
 				call 0x200004
 			"
 		end
@@ -86,23 +83,35 @@ procedure Prompt (* -- *)
 	auto buf
 	256 Calloc buf!
 
+	auto word
+	256 Calloc word!
+
 	AFSPrintList
 
-	"Type name of standalone program in root directory, or 'exit' to return.\n" Printf
+	"Type name of standalone program, or 'exit' to return.\nPress return to boot the kernel with normal args.\n" Printf
 
 	while (Go@)
 		"\t# " Printf
 		buf@ 255 Gets
 
-		if (buf@ strlen 0 >)
-			if (buf@ "exit" strcmp)
+		auto nw
+		buf@ word@ ' ' 255 strntok nw!
+
+		if (word@ strlen 0 >)
+			if (word@ "exit" strcmp)
 				0 Go!
 			end else
-				buf@ DoFile
+				if (nw@ 0 ~=)
+					nw@ 1 + nw!
+				end
+				nw@ word@ DoFile
 			end
+		end else
+			args@ "aisix" DoFile
 		end
 	end
 
+	word@ Free
 	buf@ Free
 end
 
