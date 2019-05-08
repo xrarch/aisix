@@ -47,19 +47,11 @@ procedure Main (* ciptr bootdev args -- *)
 	if (pf@ 0 ==) return end
 
 	if ("LIMNstation,1" pf@ strcmp ~~)
-		pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway [y/n]? " Printf
+		pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway"
 
-		auto yn
-		2 Calloc yn!
-
-		yn@ 1 Gets
-
-		if (yn@ gb 'y' ~=)
-			yn@ Free
+		if (PromptYN ~~)
 			return
 		end
-
-		yn@ Free
 	end
 
 	Prompt
