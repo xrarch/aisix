@@ -1,6 +1,7 @@
 #include "../../lib/a3x.d"
 #include "../../lib/Runtime.d"
 
+#include "IDisk.d"
 #include "Prompt.d"
 
 asm preamble "
@@ -115,6 +116,10 @@ procedure Main (* ciptr bootdev args -- *)
 			return
 		end
 	end
+
+	dn@ IDiskInit
+
+	CommandLine
 end
 
 
