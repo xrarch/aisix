@@ -36,7 +36,7 @@ procedure Main (* ciptr bootdev args -- *)
 	(* initialize the client interface *)
 	a3xInit
 
-	"\n=== diag.stand ===\nStandalone diagnostics utility for LIMNstation,1.\n" Printf
+	"\n\t=== diag ===\nStandalone diagnostics utility for LIMNstation,1.\n" Printf
 
 	auto pf
 
