@@ -1,7 +1,14 @@
 #include "../../lib/a3x.d"
 #include "../../lib/Runtime.d"
 
+var args 0
+var BootDevice 0
+
+(* 1: disk. 2: logical. *)
+var DeviceType 0
+
 #include "IDisk.d"
+#include "Partition.d"
 #include "Prompt.d"
 
 asm preamble "
@@ -24,9 +31,6 @@ pushv r5, r2
 b Main
 
 "
-
-var args 0
-var BootDevice 0
 
 procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	auto arg
@@ -119,7 +123,28 @@ procedure Main (* ciptr bootdev args -- *)
 
 	dn@ IDiskInit
 
-	CommandLine
+	auto dt
+
+	dn@ DeviceSelectNode
+		"type" DGetProperty dt!
+	DeviceExit
+
+	if (dt@ "disk" strcmp)
+		"device type: raw disk\n" Printf
+		1 DeviceType!
+	end
+
+	if (dt@ "logical" strcmp)
+		"device type: logical volume\n" Printf
+		2 DeviceType!
+	end
+
+	if (DeviceType@ 0 ==)
+		"couldn't determine device type.\n" Printf
+		return
+	end
+
+	Prompt
 end
 
 

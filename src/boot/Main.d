@@ -91,7 +91,7 @@ procedure Prompt (* -- *)
 	"Type name of standalone program, or 'exit' to return.\nPress return to boot the kernel with normal args.\n" Printf
 
 	while (Go@)
-		"\t# " Printf
+		"\t>> " Printf
 		buf@ 255 Gets
 
 		auto nw
