@@ -69,6 +69,17 @@ procedure VDBFix (* -- ok? *)
 	1 return
 end
 
+procedure PTEGet (* ent -- label blocks status *)
+	auto ent
+	ent!
+
+	VDB@ VDB_PartitionTable + ent@ PTE_SIZEOF * + ent!
+
+	ent@ PTE_Label +
+	ent@ PTE_Blocks + @
+	ent@ PTE_Status + gb
+end
+
 procedure PTESet (* label blocks status ent -- *)
 	auto ent
 	ent!
@@ -91,12 +102,52 @@ procedure PTESet (* label blocks status ent -- *)
 	status@ ptb@ PTE_Status + sb
 end
 
+table PTStatus
+	"unused"
+	"boot"
+	"used"
+	"??? corrupt entry"
+endtable
+
+procedure PTInfo (* -- *)
+	"\ncurrent partition info:\n" Printf
+
+	auto i
+	0 i!
+
+	while (i@ 8 <)
+		auto status
+		auto blocks
+		auto label
+
+		i@ PTEGet status! blocks! label!
+
+		if (status@ 3 >)
+			3 status!
+		end
+
+		if (status@ 0 ~=)
+			label@ i@ "part%d: %s\n" Printf
+			[status@]PTStatus@ "\tstatus: %s\n" Printf
+			blocks@ dup 4096 * "\tsize: %d bytes (%d blocks)\n" Printf
+		end
+
+		i@ 1 + i!
+	end
+
+	CR
+end
+
 procedure PartitionDisk (* -- *)
 	LoadVDB
 
 	if (VDBFix ~~)
 		"vdb invalid. cannot continue.\n" Printf
 		return
+	end
+
+	if ("dump current partition info" PromptYN)
+		PTInfo
 	end
 
 	FreeVDB

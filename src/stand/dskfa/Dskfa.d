@@ -59,11 +59,11 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	auto wbm
 
 	dn@ DeviceSelectNode
-		"readBlock" DGetMethod wbm!
+		"writeBlock" DGetMethod wbm!
 	DeviceExit
 
 	if (wbm@ 0 ==)
-		disk@ "%s isn't a readable block device.\n" Printf
+		disk@ "%s isn't a writable block device.\n" Printf
 		disk@ Free
 		0 return
 	end
