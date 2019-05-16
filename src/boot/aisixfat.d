@@ -61,13 +61,13 @@ procedure AFSInit (* -- *)
 	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
-procedure AFSLoadFile (* name destptr -- *)
+procedure AFSLoadFile (* name destptr -- size ok? *)
 	auto destptr
 	destptr!
 
 	AFSFileByName
 	if (dup 0 ==)
-		return
+		0 return
 	end
 
 	auto entryptr
@@ -83,7 +83,7 @@ procedure AFSLoadFile (* name destptr -- *)
 	destptr@ size@ 4096 * + nmem!
 
 	if (nmem@ TotalRAM@ >=)
-		2 return (* not enough memory *)
+		0 2 return (* not enough memory *)
 	end
 
 	auto i
@@ -97,7 +97,7 @@ procedure AFSLoadFile (* name destptr -- *)
 		i@ 1 + i!
 	end
 
-	1
+	size@ 4096 * 1
 end
 
 procedure AFSPrintList (* -- *)

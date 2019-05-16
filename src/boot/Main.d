@@ -64,15 +64,18 @@ procedure DoFile (* args f -- *)
 	auto arg
 	arg!
 
+	auto sz
+
 	auto r
-	buf@ 0x200000 AFSLoadFile r!
+	buf@ 0x200000 AFSLoadFile r! sz!
 	if (r@ 1 ~=)
 		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
 	end else
 		if (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
 		end else
-			CIPtr@ BootDevice@ arg@ asm "
+			CIPtr@ BootDevice@ arg@ sz@ asm "
+				popv r5, r3
 				popv r5, r2
 				popv r5, r1
 				popv r5, r0
