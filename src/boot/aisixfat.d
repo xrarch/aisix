@@ -35,6 +35,12 @@ struct AFSDirEnt
 	1 nullterm
 endstruct
 
+table AFSErrors
+	"not found"
+	"ok"
+	"not enough memory"
+endtable
+
 procedure AFSInit (* -- *)
 	"AFS: Mounting filesystem\n" Printf
 
@@ -72,6 +78,13 @@ procedure AFSLoadFile (* name destptr -- *)
 
 	entryptr@ AFSDirEnt_startblock + @ cblock!
 	entryptr@ AFSDirEnt_size + @ size!
+
+	auto nmem
+	destptr@ size@ 4096 * + nmem!
+
+	if (nmem@ TotalRAM@ >=)
+		2 return (* not enough memory *)
+	end
 
 	auto i
 	0 i!

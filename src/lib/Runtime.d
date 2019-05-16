@@ -76,6 +76,44 @@ procedure reverse (* str -- *)
 	end
 end
 
+procedure memcpy (* dest src size -- *)
+	auto sz
+	sz!
+
+	auto src
+	src!
+
+	auto dest
+	dest!
+
+	auto i
+	0 i!
+
+	auto iol
+	sz@ 4 / iol!
+
+	auto rm
+	sz@ 4 % rm!
+
+	while (i@ iol@ <)
+		src@ @ dest@ !
+
+		src@ 4 + src!
+		dest@ 4 + dest!
+		i@ 1 + i!
+	end
+
+	0 i!
+
+	while (i@ rm@ <)
+		src@ gb dest@ sb
+
+		src@ 1 + src!
+		dest@ 1 + dest!
+		i@ 1 + i!
+	end
+end
+
 procedure memset (* ptr size wot -- *)
 	auto wot
 	wot!

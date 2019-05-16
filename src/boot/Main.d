@@ -1,6 +1,10 @@
 #include "../lib/a3x.d"
 #include "../lib/Runtime.d"
 
+var args 0
+var BootDevice 0
+var TotalRAM 0
+
 #include "IDisk.d"
 #include "aisixfat.d"
 
@@ -26,9 +30,6 @@ b Main
 
 "
 
-var args 0
-var BootDevice 0
-
 procedure Main (* ciptr bootdev args -- *)
 	args!
 
@@ -46,6 +47,10 @@ procedure Main (* ciptr bootdev args -- *)
 		args@ "kernel args: %s\n" Printf
 	end
 
+	"/memory" DeviceSelect
+		"totalRAM" DGetProperty TotalRAM!
+	DeviceExit
+
 	BootDevice@ IDiskInit
 	AFSInit
 
@@ -59,9 +64,10 @@ procedure DoFile (* args f -- *)
 	auto arg
 	arg!
 
-	buf@ 0x200000 AFSLoadFile
-	if (0 ==)
-		buf@ "failed to load %s\n" Printf
+	auto r
+	buf@ 0x200000 AFSLoadFile r!
+	if (r@ 1 ~=)
+		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
 	end else
 		if (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
