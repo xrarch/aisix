@@ -5,6 +5,8 @@ const PBInfoIRQ 0xF8000FFC
 var PBInterruptsVT 0
 
 procedure Branch31Init (* -- *)
+	"branch31: init\n" Printf
+
 	1024 Calloc PBInterruptsVT!
 
 	pointerof PBInterrupt 0x7 EBusSlotInterruptRegister

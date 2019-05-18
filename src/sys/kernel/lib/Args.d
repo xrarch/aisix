@@ -12,7 +12,7 @@ procedure ArgsInit (* argsptr -- *)
 
 	ArgsBuffer@ argp@ strcpy
 
-	argp@ "aisix arguments: %s\n" Printf
+	argp@ "aisix arguments: ' %s '\n" Printf
 end
 
 procedure ArgsValue (* arg -- value or 0 *)

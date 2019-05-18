@@ -21,19 +21,13 @@ procedure Main (* args ksize -- *)
 	auto mp2
 	pointerof Main2 MakeProcZero mp2!
 
-	2
 	pointerof CoolTestProcess
-	0
-	0
 	"cooltest"
-	ProcSkeleton drop
+	MakeKernelProcess drop
 
-	2
 	pointerof CoolTestProcess2
-	0
-	0
 	"cooltest2"
-	ProcSkeleton drop
+	MakeKernelProcess drop
 
 	mp2@ uswtch
 
@@ -43,11 +37,16 @@ procedure Main (* args ksize -- *)
 end
 
 procedure Main2 (* -- *)
+	"\n-- main2 --\n" Printf
+
 	LateDeviceInit
 	
-	1 DoScheduler!
+	"\n+------------------+\n| AISIX later init |\n+------------------+\n" Printf
 
-	while (1) end
+	"scheduler should run for the first time, then kernel task will idle forever\n" Printf
+	"diving in...\n" Printf
+
+	1 DoScheduler!
 end
 
 procedure CoolTestProcess (* -- *)

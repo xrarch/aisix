@@ -8,6 +8,8 @@ const SerialCmdEnableInt 3
 const SerialInterruptNum 0x2B
 
 procedure SerialInit (* -- *)
+	"serial: init\n" Printf
+
 	pointerof SerialInterrupt 0x2B PBInterruptRegister
 
 	auto rs
@@ -24,9 +26,6 @@ procedure SerialInterrupt (* -- *)
 
 	while (c@ ERR ~=)
 		SerialReadPolled c!
-		if (c@ ERR ~=)
-			c@ Putc
-		end
 	end
 end
 

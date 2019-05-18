@@ -1,6 +1,10 @@
 procedure ProcInit (* -- *)
+	"proc: init\n" Printf
+
 	ListCreate ProcList!
 end
+
+var SN 1
 
 procedure Schedule (* status return? -- *)
 	auto ret
@@ -18,6 +22,10 @@ procedure Schedule (* status return? -- *)
 		"scheduler expects interrupts to be disabled\n" Panic
 	end
 
+	SN@ "schedn: %d\n" Printf
+
+	SN@ 1 + SN!
+
 	if (DoScheduler@ ~~)
 		1 DoScheduler!
 	end
@@ -34,7 +42,11 @@ procedure Schedule (* status return? -- *)
 		auto pnode
 		n@ ListNodeValue pnode!
 
+		pnode@ Proc_Status + @ pnode@ pnode@ Proc_PID + @ "check pid%d@%x, status: %d\n" Printf
+
 		if (pnode@ Proc_Status + @ PRUNNABLE ==)
+			"ok runnable\n" Printf
+
 			pnode@ np!
 			n@ ProcList@ ListDelete
 			n@ ProcList@ ListAppend
@@ -56,6 +68,24 @@ procedure Schedule (* status return? -- *)
 	end else
 		np@ uswtch
 	end
+end
+
+procedure MakeKernelProcess (* func name -- proc *)
+	auto name
+	name!
+
+	auto func
+	func!
+
+	auto proc
+	2 func@ -1 0 name@ ProcSkeleton proc!
+
+	auto r5
+	1024 Malloc r5!
+
+	r5@ proc@ Proc_cHTTA + @ HTTA_r5 + !
+
+	proc@
 end
 
 procedure ProcSkeleton (* rs entry extent page name -- proc *)
@@ -88,6 +118,11 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 	auto htta
 	rs@ 0 kstack@ entry@ HTTANew htta!
 
+	auto r5
+	1024 Malloc r5!
+
+	r5@ htta@ HTTA_r5 + !
+
 	auto proc
 	kstack@ kr5@ CurProc@ extent@ page@ htta@ pid@ name@ ProcBuildStruct proc!
 
@@ -99,6 +134,8 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 end
 
 procedure MakeProcZero (* func -- proc *)
+	"hand-crafting pid 0\n" Printf
+
 	auto func
 	func!
 

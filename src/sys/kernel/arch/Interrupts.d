@@ -2,7 +2,7 @@ var InterruptsVT 0
 var TrapsVT 0
 
 procedure InterruptsInit (* -- *)
-	"init interrupts\n" Printf
+	"interrupts: init\n" Printf
 
 	1024 Calloc InterruptsVT!
 	1024 Calloc TrapsVT!
@@ -28,7 +28,7 @@ procedure InterruptsInit (* -- *)
 
 	CR
 
-	InterruptsVT@ "interrupt table at 0x%x\n" Printf
+	InterruptsVT@ "ivt at 0x%x\n" Printf
 
 	"setting up syscall vector: " Printf
 	0xA i!
@@ -40,6 +40,8 @@ procedure InterruptsInit (* -- *)
 	end
 
 	CR
+
+	TrapsVT@ InterruptsVT@ "\tivt: 0x%x\n\ttvt: 0x%x\n" Printf
 end
 
 asm "
