@@ -121,14 +121,21 @@ procedure ListCreate (* -- list *)
 	out@
 end
 
-procedure ListRemove (* index list -- *)
+procedure ListTakeHead (* list -- head *)
+	auto list
+	list!
+
+	0 list@ ListRemoveRR
+end
+
+procedure ListRemoveRR (* index list -- ref *)
 	auto list
 	list!
 
 	auto index
 	index!
 
-	if (index@ list@ List_Length + @ >) return end
+	if (index@ list@ List_Length + @ >) ERR return end
 
 	auto n
 	list@ List_Head + @ n!
@@ -142,6 +149,12 @@ procedure ListRemove (* index list -- *)
 	end
 
 	n@ list@ ListDelete
+
+	n@
+end
+
+procedure ListRemove (* index list -- *)
+	ListRemoveRR drop
 end
 
 procedure ListDelete (* node list -- *)

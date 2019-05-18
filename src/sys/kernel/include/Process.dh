@@ -1,0 +1,50 @@
+var ProcCurrentkr5 0
+
+var CurProc -1
+var LastPID 1
+
+var ProcList 0
+
+var DoScheduler 0
+
+struct Proc
+	4 Name
+	4 PID
+	4 cHTTA
+	4 Page
+	4 Extent
+	4 Status
+	4 Parent
+	4 kr5
+	4 kstack
+endstruct
+
+struct HTTA
+	4 r0	4 r1
+	4 r2	4 r3
+	4 r4	4 r5
+	4 r6	4 r7
+	4 r8	4 r9
+	4 r10	4 r11
+	4 r12	4 r13
+	4 r14	4 r15
+	4 r16	4 r17
+	4 r18	4 r19
+	4 r20	4 r21
+	4 r22	4 r23
+	4 r24	4 r25
+	4 r26	4 r27
+	4 r28	4 r29
+	4 r30	4 rf
+	4 pc
+	4 sp
+	4 rs
+	4 ivt
+	4 htta
+	4 usp
+endstruct
+
+const PNONE 0
+const PRUNNABLE 1
+const PRUNNING 2
+const PBLOCKED 3

@@ -23,7 +23,6 @@ _CIC_Call:
 _CIC_Putc === 0
 _CIC_Getc === 4
 _CIC_Gets === 8
-_CIC_Puts === 12
 _CIC_DevTree === 16
 _CIC_Malloc === 20
 _CIC_Calloc === 24
@@ -37,16 +36,6 @@ _CIC_DeviceDGetProperty === 48
 _CIC_DeviceDGetMethod === 52
 _CIC_DeviceDCallMethod === 56
 _CIC_DeviceExit === 60
-
-; string --
-Puts:
-	push r30
-
-	li r30, _CIC_Puts
-	call _CIC_Call
-
-	pop r30
-	ret
 
 ; buffer maxchars --
 Gets:

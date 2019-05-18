@@ -21,3 +21,5 @@ Again, replace `disk.img` with the name of your disk image.
 `./aisix/build-boot.sh ./disk.img`
 
 `./aisix/build-stand.sh ./disk.img`
+
+`./aisix/build-aisix.sh ./disk.img`

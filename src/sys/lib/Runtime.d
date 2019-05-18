@@ -306,6 +306,16 @@ table KConsoleDigits
 	'0' '1' '2' '3' '4' '5' '6' '7' '8' '9' 'a' 'b' 'c' 'd' 'e' 'f'
 endtable
 
+procedure Puts (* s -- *)
+	auto s
+	s!
+
+	while (s@ gb 0 ~=)
+		s@ gb Putc
+		s@ 1 + s!
+	end
+end
+
 procedure Putx (* nx -- *)
 	auto nx
 	nx!
