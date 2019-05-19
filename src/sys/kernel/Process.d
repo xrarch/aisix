@@ -22,13 +22,7 @@ procedure Schedule (* status return? -- *)
 		"scheduler expects interrupts to be disabled\n" Panic
 	end
 
-	SN@ "schedn: %d\n" Printf
-
 	SN@ 1 + SN!
-
-	if (DoScheduler@ ~~)
-		1 DoScheduler!
-	end
 
 	250 ProcList@ ListLength / 1 max ClockSetInterval
 
@@ -42,11 +36,9 @@ procedure Schedule (* status return? -- *)
 		auto pnode
 		n@ ListNodeValue pnode!
 
-		pnode@ Proc_Status + @ pnode@ pnode@ Proc_PID + @ "check pid%d@%x, status: %d\n" Printf
+		pnode@ Proc_Status + @ pnode@ "check %x: %d\n" Printf
 
 		if (pnode@ Proc_Status + @ PRUNNABLE ==)
-			"ok runnable\n" Printf
-
 			pnode@ np!
 			n@ ProcList@ ListDelete
 			n@ ProcList@ ListAppend
@@ -57,7 +49,8 @@ procedure Schedule (* status return? -- *)
 	end
 
 	if (np@ ERR ==)
-		"nothing to schedule!\n" Panic
+		(* "nothing to schedule!\n" Panic *)
+		return
 	end
 
 	status@ CurProc@ Proc_Status + !
@@ -70,22 +63,29 @@ procedure Schedule (* status return? -- *)
 	end
 end
 
-procedure MakeKernelProcess (* func name -- proc *)
-	auto name
-	name!
+procedure MakeProcZero (* func -- proc *)
+	"hand-crafting pid 0\n" Printf
 
 	auto func
 	func!
 
-	auto proc
-	2 func@ -1 0 name@ ProcSkeleton proc!
+	auto myhtta
+	3 0 0x1FE000 func@ HTTANew myhtta!
 
-	auto r5
-	1024 Malloc r5!
+	0x200000 myhtta@ HTTA_r5 + !
 
-	r5@ proc@ Proc_cHTTA + @ HTTA_r5 + !
+	auto kr5
+	1024 Malloc kr5!
 
-	proc@
+	auto myproc
+
+	0x1FE000 kr5@ -1 PMMTotalPages@ 0 myhtta@ 0 "init" ProcBuildStruct myproc!
+
+	PRUNNABLE myproc@ Proc_Status + !
+
+	myproc@ ProcList@ ListInsert
+
+	myproc@
 end
 
 procedure ProcSkeleton (* rs entry extent page name -- proc *)
@@ -118,11 +118,6 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 	auto htta
 	rs@ 0 kstack@ entry@ HTTANew htta!
 
-	auto r5
-	1024 Malloc r5!
-
-	r5@ htta@ HTTA_r5 + !
-
 	auto proc
 	kstack@ kr5@ CurProc@ extent@ page@ htta@ pid@ name@ ProcBuildStruct proc!
 
@@ -131,29 +126,6 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 	proc@ ProcList@ ListInsert
 
 	proc@
-end
-
-procedure MakeProcZero (* func -- proc *)
-	"hand-crafting pid 0\n" Printf
-
-	auto func
-	func!
-
-	auto myhtta
-	2 0 0x1FE000 func@ HTTANew myhtta!
-
-	0x200000 myhtta@ HTTA_r5 + !
-
-	auto kr5
-	1024 Malloc kr5!
-
-	auto myproc
-
-	0x1FE000 kr5@ -1 PMMTotalPages@ 0 myhtta@ 0 "kernel" ProcBuildStruct myproc!
-
-	myproc@ ProcList@ ListInsert
-
-	myproc@
 end
 
 procedure ProcDestroy (* proc -- *)

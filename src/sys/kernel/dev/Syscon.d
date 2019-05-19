@@ -25,7 +25,21 @@ procedure Getc (* -- c *)
 end
 
 procedure SysconLateInit (* -- *)
-	if (VidConPresent@)
-		pointerof GConsolePutChar SysconOut!
+	auto sca
+	"syscon" ArgsValue sca!
+
+	auto con
+	0 con!
+
+	if (sca@ 0 ~=)
+		if (sca@ "serial" strcmp)
+			1 con!
+		end
+	end
+
+	if (con@ 0 ==)
+		if (VidConPresent@)
+			pointerof VConsolePutChar SysconOut!
+		end
 	end
 end

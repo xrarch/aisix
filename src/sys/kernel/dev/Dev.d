@@ -7,7 +7,7 @@
 #include "dev/graphics/Graphics.d"
 #include "dev/Syscon.d"
 
-procedure LowlevelInit (* -- *)
+procedure DevEarlyInit (* -- *)
 	EBusEarlyInit
 	AmanatsuEarlyInit
 	AmaKeyboardInit
@@ -16,19 +16,18 @@ procedure LowlevelInit (* -- *)
 	EarlyClockInit
 end
 
-procedure EarlyDeviceInit (* -- *)
-	"dev: early init\n" Printf
-
-	LowlevelInit
-end
-
-procedure LateDeviceInit (* -- *)
-	"dev: late init\n" Printf
-
+procedure DevLateInit (* -- *)
 	LateClockInit
 	SerialInit
 	EBusLateInit
 	AmanatsuLateInit
 	GraphicsLateInit
 	SysconLateInit
+end
+
+procedure DeviceInit (* -- *)
+	"dev: init\n" Printf
+
+	DevEarlyInit
+	DevLateInit
 end

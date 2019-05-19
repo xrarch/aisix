@@ -14,61 +14,31 @@ procedure Main (* args ksize -- *)
 	HeapInit
 	InterruptsInit
 	args@ ArgsInit
-	EarlyDeviceInit
+	DeviceInit
 
 	ProcInit
+	
+	"+------------------+\n| AISIX later init |\n+------------------+\n" Printf
 
-	auto mp2
-	pointerof Main2 MakeProcZero mp2!
+	"scheduler should run for the first time\n" Printf
+	"diving in...\n" Printf
 
-	pointerof CoolTestProcess
-	"cooltest"
-	MakeKernelProcess drop
 
-	pointerof CoolTestProcess2
-	"cooltest2"
-	MakeKernelProcess drop
-
-	mp2@ uswtch
+	pointerof InitProc MakeProcZero uswtch
 
 	while (1) end
 
 	ResetSystem
 end
 
-procedure Main2 (* -- *)
-	"\n-- main2 --\n" Printf
+asm "
 
-	LateDeviceInit
-	
-	"\n+------------------+\n| AISIX later init |\n+------------------+\n" Printf
+InitProc:
+	li r0, 0xF
+	li r1, 0xDEADBEEF
+	sys 0
 
-	"scheduler should run for the first time, then kernel task will idle forever\n" Printf
-	"diving in...\n" Printf
+.loop:
+	b .loop
 
-	1 DoScheduler!
-end
-
-procedure CoolTestProcess (* -- *)
-	auto lc
-	-1 lc!
-
-	while (1)
-		if (lc@ ClockUptimeMS@ ~=)
-			ClockUptimeMS@ lc!
-			"wow\n" Printf
-		end
-	end
-end
-
-procedure CoolTestProcess2 (* -- *)
-	auto lc
-	-1 lc!
-
-	while (1)
-		if (lc@ ClockUptimeMS@ ~=)
-			ClockUptimeMS@ lc!
-			"heck\n" Printf
-		end
-	end
-end
+"

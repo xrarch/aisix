@@ -26,6 +26,10 @@ procedure SerialInterrupt (* -- *)
 
 	while (c@ ERR ~=)
 		SerialReadPolled c!
+
+		if (c@ ERR ~=)
+			c@ Putc
+		end
 	end
 end
 

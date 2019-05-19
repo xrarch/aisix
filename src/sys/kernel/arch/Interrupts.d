@@ -48,7 +48,7 @@ asm "
 
 KEntryASM:
 	htts
-
+	
 	lri.l r5, ProcCurrentkr5
 
 	lri.l r1, TrapsVT

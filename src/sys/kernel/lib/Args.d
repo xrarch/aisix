@@ -25,14 +25,6 @@ procedure ArgsValue (* arg -- value or 0 *)
 	auto namebuf
 	256 Calloc namebuf!
 
-	if (wordbuf@ 0 ==)
-		"Out of memory\n" Panic
-	end
-
-	if (namebuf@ 0 ==)
-		"Out of memory\n" Panic
-	end
-
 	auto nt
 	ArgsBuffer@ nt!
 
@@ -46,9 +38,6 @@ procedure ArgsValue (* arg -- value or 0 *)
 		wordbuf@ namebuf@ '=' 255 strntok 1 + rmnd!
 		if (namebuf@ arg@ strcmp)
 			256 Calloc out!
-			if (out@ 0 ==)
-				"Out of memory\n" Panic
-			end
 
 			out@ rmnd@ strcpy
 
@@ -68,10 +57,6 @@ procedure ArgsCheck (* arg -- present? *)
 
 	auto wordbuf
 	256 Calloc wordbuf!
-
-	if (wordbuf@ 0 ==)
-		"Out of memory\n" Panic
-	end
 
 	auto nt
 	ArgsBuffer@ nt!

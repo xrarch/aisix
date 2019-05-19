@@ -1,88 +1,90 @@
-var GCFBStart 0
-var GCGWidth 0
-var GCGHeight 0
+var VCFBStart 0
+var VCGWidth 0
+var VCGHeight 0
 
-var GCColorBG 0x56
-var GCColorFG 0x00
+var VCColorBG 0x56
+var VCColorFG 0x00
 
-var GCColorOBG 0x56
-var GCColorOFG 0x00
+var VCColorOBG 0x56
+var VCColorOFG 0x00
 
-const GConsoleBG 0xF
-const GConsoleFG 0x0
+const VConsoleBG 0xF
+const VConsoleFG 0x0
 
-var GCCurX 0
-var GCCurY 0
+var VCCurX 0
+var VCCurY 0
 
-var GConsoleX 0
-var GConsoleY 0
+var VConsoleX 0
+var VConsoleY 0
 
-var GCWidth 0
-var GCHeight 0
+var VCWidth 0
+var VCHeight 0
 
-var GCScreenNode 0
+var VCScreenNode 0
 
-const GConsoleFontWidth 8
-const GConsoleFontWidthA 7
+const VConsoleFontWidth 8
+const VConsoleFontWidthA 7
 
-const GConsoleFontBytesPerRow 1
-const GConsoleFontHeight 16
+const VConsoleFontBytesPerRow 1
+const VConsoleFontHeight 16
 
-var GCEscape 0
+const VConsoleMargin 40
 
-var GCLineLenBuf 0
+var VCEscape 0
 
-var GConsoleModified 0
+var VCLineLenBuf 0
 
-var GCNeedsInit 1
+var VConsoleModified 0
+
+var VCNeedsDraw 1
 
 var VidConPresent 0
 
 asm "
 
-GConsoleFont:
+VConsoleFont:
 	.static dev/graphics/font-terminus.bmp
 
 "
 
 procedure VidConInit (* -- *)
-	GraphicsFramebuffer@ GCFBStart!
+	GraphicsFramebuffer@ VCFBStart!
 
-	if (GraphicsWidth@ 650 < GraphicsHeight 490 < ||)
-		0 GConsoleX!
-		0 GConsoleY!
+	if (GraphicsWidth@ 640 VConsoleMargin + < GraphicsHeight 480 VConsoleMargin + < ||)
+		0 VConsoleX!
+		0 VConsoleY!
 
-		GraphicsWidth@ GCGWidth!
-		GraphicsHeight@ GCGHeight!
+		GraphicsWidth@ VCGWidth!
+		GraphicsHeight@ VCGHeight!
 	end else
-		GraphicsWidth@ 2 / 320 - GConsoleX!
-		GraphicsHeight@ 2 / 240 - GConsoleY!
+		GraphicsWidth@ 2 / 320 - VConsoleX!
+		GraphicsHeight@ 2 / 240 - VConsoleY!
 
-		640 GCGWidth!
-		480 GCGHeight!
+		640 VCGWidth!
+		480 VCGHeight!
 	end
 
-	GConsoleBG GCColorBG!
-	GConsoleFG GCColorFG!
+	VConsoleBG VCColorBG!
+	VConsoleFG VCColorFG!
 
-	GCGWidth@ GConsoleFontWidth / GCWidth!
-	GCGHeight@ GConsoleFontHeight / GCHeight!
+	VCGWidth@ VConsoleFontWidth / VCWidth!
+	VCGHeight@ VConsoleFontHeight / VCHeight!
 
-	GCHeight@ 4 * Calloc GCLineLenBuf!
+	VCHeight@ 4 * Calloc VCLineLenBuf!
 
 	1 VidConPresent!
 end
 
-procedure GConsoleLongestLine (* -- width *)
+procedure VConsoleLongestLine (* -- width *)
 	auto i
 	0 i!
 
 	auto longest
 	0 longest!
 
-	while (i@ GCHeight@ <)
+	while (i@ VCHeight@ <)
 		auto len
-		i@ 4 * GCLineLenBuf@ + @ len!
+		i@ 4 * VCLineLenBuf@ + @ len!
 
 		if (len@ longest@ >)
 			len@ longest!
@@ -94,49 +96,49 @@ procedure GConsoleLongestLine (* -- width *)
 	longest@
 end
 
-procedure GConsoleClear (* -- *)
-	GConsoleX@ GConsoleY@ GConsoleLongestLine GConsoleFontWidth * GCHeight@ GConsoleFontHeight * GConsoleBG GConsoleRect
+procedure VConsoleClear (* -- *)
+	VConsoleX@ VConsoleY@ VConsoleLongestLine VConsoleFontWidth * VCHeight@ VConsoleFontHeight * VConsoleBG VConsoleRect
 
-	0 GCCurX!
-	0 GCCurY!
+	0 VCCurX!
+	0 VCCurY!
 
-	GCLineLenBuf@ GCHeight@ 4 * 0 memset
+	VCLineLenBuf@ VCHeight@ 4 * 0 memset
 end
 
-procedure GConsoleRect (* x y w h color -- *)
+procedure VConsoleRect (* x y w h color -- *)
 	GraphicsRectangle
 end
 
-procedure GConsoleScroll (* rows -- *)
+procedure VConsoleScroll (* rows -- *)
 	auto rows
 	rows!
 
-	GConsoleX@ GConsoleY@
+	VConsoleX@ VConsoleY@
 	640
 	480
-	GConsoleBG
-	rows@ GConsoleFontHeight *
+	VConsoleBG
+	rows@ VConsoleFontHeight *
 	GraphicsScroll
 
 	auto k
-	GCHeight@ k!
+	VCHeight@ k!
 
-	auto gclb
-	GCLineLenBuf@ gclb!
+	auto VClb
+	VCLineLenBuf@ VClb!
 
 	auto r
-	gclb@ r!
+	VClb@ r!
 
 	auto max
-	GCHeight@ rows@ - 4 * gclb@ + max!
+	VCHeight@ rows@ - 4 * VClb@ + max!
 
 	while (r@ max@ <)
 		r@ rows@ 4 * + @ r@ !
 		r@ 4 + r!
 	end
 
-	GCHeight@ rows@ - 4 * gclb@ + r!
-	GCHeight@ 4 * gclb@ + max!
+	VCHeight@ rows@ - 4 * VClb@ + r!
+	VCHeight@ 4 * VClb@ + max!
 
 	while (r@ max@ <)
 		0 r@ !
@@ -144,148 +146,160 @@ procedure GConsoleScroll (* rows -- *)
 	end
 end
 
-procedure GConsoleDoCur (* color -- *)
+procedure VConsoleDoCur (* color -- *)
 	auto color
 	color!
 
-	GCCurX@ GConsoleFontWidth * GConsoleX@ + GCCurY@ GConsoleFontHeight * GConsoleY@ + GConsoleFontWidth GConsoleFontHeight color@ GConsoleRect
+	VCCurX@ VConsoleFontWidth * VConsoleX@ + VCCurY@ VConsoleFontHeight * VConsoleY@ + VConsoleFontWidth VConsoleFontHeight color@ VConsoleRect
 end
 
-procedure GConsoleClearCur (* -- *)
-	GCColorBG@ GConsoleDoCur
+procedure VConsoleClearCur (* -- *)
+	VCColorBG@ VConsoleDoCur
 end
 
-procedure GConsoleDrawCur (* -- *)
-	GCColorFG@ GConsoleDoCur
+procedure VConsoleDrawCur (* -- *)
+	VCColorFG@ VConsoleDoCur
 end
 
-procedure GConsoleNewline (* -- *)
-	GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + !
+procedure VConsoleNewline (* -- *)
+	VCCurX@ VCCurY@ 4 * VCLineLenBuf@ + !
 
-	0 GCCurX!
-	GCCurY@ 1 + GCCurY!
+	0 VCCurX!
+	VCCurY@ 1 + VCCurY!
 
-	if (GCCurY@ GCHeight@ >=)
-		GCHeight@ 1 - GCCurY!
-		0 GCCurX!
-		1 GConsoleScroll
+	if (VCCurY@ VCHeight@ >=)
+		VCHeight@ 1 - VCCurY!
+		0 VCCurX!
+		1 VConsoleScroll
 	end
 end
 
-procedure GConsoleBack (* -- *)
-	if (GCCurX@ 0 ==)
-		if (GCCurY@ 0 >)
-			GCCurY@ 1 - GCCurY!
-			GCWidth@ 1 - GCCurX!
+procedure VConsoleBack (* -- *)
+	if (VCCurX@ 0 ==)
+		if (VCCurY@ 0 >)
+			VCCurY@ 1 - VCCurY!
+			VCWidth@ 1 - VCCurX!
 		end
 		return
 	end
 
-	GCCurX@ 1 - GCCurX!
+	VCCurX@ 1 - VCCurX!
 end
 
-procedure GConsoleInit (* -- *)
-	GConsoleX@ GConsoleY@ GCGWidth@ GCGHeight@ GConsoleBG GConsoleRect
-end
+procedure VConsoleDraw (* -- *)
+	0 VCCurX!
+	0 VCCurY!
 
-procedure GConsoleTab (* -- *)
-	GCCurX@ 8 / 1 + 8 * GCCurX!
+	if (VConsoleX@ 0 ~= VConsoleY@ 0 ~= &&) (* there is at least VConsoleMargin/2 pixels around the edge, do a pretty box *)
 
-	if (GCCurX@ GCWidth@ >=)
-		GConsoleNewline
+		(* edges *)
+		VConsoleX@ 4 - VConsoleY@ 4 - VCGWidth@ 8 + VCGHeight@ 8 + 0xF VConsoleRect
+		VConsoleX@ 3 - VConsoleY@ 3 - VCGWidth@ 6 + VCGHeight@ 6 + 0x0 VConsoleRect
+
+		VConsoleX@ 2 - VConsoleY@ 2 - VCGWidth@ 4 + VCGHeight@ 4 + VConsoleBG VConsoleRect
+	end else (* un-pretty box *)
+		VConsoleX@ VConsoleY@ VCGWidth@ VCGHeight@ VConsoleBG VConsoleRect
 	end
 end
 
-var GCEV0 0
-var GCEV1 0
+procedure VConsoleTab (* -- *)
+	VCCurX@ 8 / 1 + 8 * VCCurX!
 
-var GCEV 0
+	if (VCCurX@ VCWidth@ >=)
+		VConsoleNewline
+	end
+end
 
-procedure GConsoleSetColor (* -- *)
-	if (GCEV0@ 256 <)
-		GCColorFG@ GCColorOFG!
-		GCEV0@ GCColorFG!
+var VCEV0 0
+var VCEV1 0
+
+var VCEV 0
+
+procedure VConsoleSetColor (* -- *)
+	if (VCEV0@ 256 <)
+		VCColorFG@ VCColorOFG!
+		VCEV0@ VCColorFG!
 		return
 	end
 
-	if (GCEV0@ 512 <)
-		GCColorBG@ GCColorOBG!
-		GCEV0@ 256 - GCColorBG!
+	if (VCEV0@ 512 <)
+		VCColorBG@ VCColorOBG!
+		VCEV0@ 256 - VCColorBG!
 		return
 	end
 
-	if (GCEV0@ 1024 ==)
-		GCColorOBG@ GCColorBG!
-		GCColorOFG@ GCColorFG!
+	if (VCEV0@ 1024 ==)
+		VCColorOBG@ VCColorBG!
+		VCColorOFG@ VCColorFG!
 		return
 	end
 end
 
-procedure GConsoleParseEscape (* c -- *)
+procedure VConsoleParseEscape (* c -- *)
 	auto c
 	c!
 
 	if (c@ '0' >= c@ '9' <= &&)
-		GCEV@ @ 10 * GCEV@ !
-		GCEV@ @ c@ '0' - + GCEV@ !
+		VCEV@ @ 10 * VCEV@ !
+		VCEV@ @ c@ '0' - + VCEV@ !
 		return
 	end
 
 	if (c@ '[' ==) return end
-	if (c@ ';' ==) pointerof GCEV1 GCEV! return end
-	if (c@ 'm' ==) GConsoleSetColor end
-	if (c@ 'c' ==) GConsoleClear end
+	if (c@ ';' ==) pointerof VCEV1 VCEV! return end
+	if (c@ 'm' ==) VConsoleSetColor end
+	if (c@ 'c' ==) VConsoleClear end
 
-	0 GCEscape!
+	0 VCEscape!
 end
 
-procedure GConsolePutChar (* char -- *)
+procedure VConsolePutChar (* char -- *)
 	auto char
 	char!
 
-	if (GCEscape@) char@ GConsoleParseEscape return end
+	if (VCEscape@) char@ VConsoleParseEscape return end
 
 	if (char@ 0x1b ==)
-		pointerof GCEV0 GCEV!
-		0 GCEV0!
-		0 GCEV1!
-		1 GCEscape!
+		pointerof VCEV0 VCEV!
+		0 VCEV0!
+		0 VCEV1!
+		1 VCEscape!
 		return
 	end
 
-	GConsoleClearCur
+	VConsoleClearCur
 
-	char@ GConsolePutCharF
+	char@ VConsolePutCharF
 
-	GConsoleDrawCur
+	VConsoleDrawCur
 end
 
-procedure GConsolePutCharF (* char -- *)
-	if (GCNeedsInit@)
-		GConsoleInit
-		0 GCNeedsInit!
+procedure VConsolePutCharF (* char -- *)
+	if (VCNeedsDraw@)
+		VConsoleDraw
+		0 VCNeedsDraw!
 	end
 
 	auto char
 	char!
 
 	if (char@ '\n' ==)
-		GConsoleNewline
+		VConsoleNewline
 		return
 	end else if (char@ '\b' ==)
-		GConsoleBack
+		VConsoleBack
 		return
 	end else if (char@ '\t' ==)
-		GConsoleTab
+		VConsoleTab
 		return
 	end end
 
-	GCCurX@ GConsoleFontWidth * GConsoleX@ + GCCurY@ GConsoleFontHeight * GConsoleY@ + char@ GCColorFG@ GConsoleDrawChar
+	VCCurX@ VConsoleFontWidth * VConsoleX@ + VCCurY@ VConsoleFontHeight * VConsoleY@ + char@ VCColorFG@ VConsoleDrawChar
 
-	GCCurX@ 1 + GCCurX!
+	VCCurX@ 1 + VCCurX!
 
-	if (GCCurX@ GCWidth@ >=)
-		GConsoleNewline
+	if (VCCurX@ VCWidth@ >=)
+		VConsoleNewline
 	end
 end
 
@@ -293,13 +307,13 @@ end
 
 asm "
 
-GCGPPStub:
+VCGPPStub:
 	push r5
 
 	lri.l r5, GraphicsWidth
 	mul r1, r5, r1
 	add r1, r1, r0
-	lri.l r5, GCFBStart
+	lri.l r5, VCFBStart
 	add r1, r1, r5
 	srr.b r1, r2
 
@@ -311,7 +325,7 @@ GCGPPStub:
 ;r2 - y
 ;r3 - color
 ;draw bitmap character at specified location on screen
-GConsoleDrawCharASM:
+VConsoleDrawCharASM:
 	cmpi r0, 0x20 ;dont draw if space
 	be .spout
 
@@ -326,12 +340,12 @@ GConsoleDrawCharASM:
 
 	mov r10, r3
 
-	muli r11, r0, GConsoleFontBytesPerRow
-	muli r11, r11, GConsoleFontHeight
-	addi r11, r11, GConsoleFont
+	muli r11, r0, VConsoleFontBytesPerRow
+	muli r11, r11, VConsoleFontHeight
+	addi r11, r11, VConsoleFont
 	li r3, 0
 .yloop:
-	cmpi r3, GConsoleFontHeight
+	cmpi r3, VConsoleFontHeight
 	bge .yend
 
 	;body of y loop
@@ -339,9 +353,9 @@ GConsoleDrawCharASM:
 	lrr.l r6, r11
 
 	li r4, 0 ;ctr
-	li r8, GConsoleFontWidthA ;reverse ctr
+	li r8, VConsoleFontWidthA ;reverse ctr
 .xloop:
-	cmpi r4, GConsoleFontWidth
+	cmpi r4, VConsoleFontWidth
 	bge .ynext
 
 	rsh r7, r6, r8 ;use r4 or r8 depending on bit order
@@ -363,7 +377,7 @@ GConsoleDrawCharASM:
 	add r1, r2, r3 ;add by and y iterator
 	mov r2, r10 ;get color
 
-	call GCGPPStub
+	call VCGPPStub
 
 	pop r2
 	pop r1
@@ -375,7 +389,7 @@ GConsoleDrawCharASM:
 	b .xloop
 
 .ynext:
-	addi r11, r11, GConsoleFontBytesPerRow
+	addi r11, r11, VConsoleFontBytesPerRow
 	addi r3, r3, 1
 	b .yloop
 
@@ -393,7 +407,7 @@ GConsoleDrawCharASM:
 
 "
 
-procedure GConsoleDrawChar (* x y char color -- *)
+procedure VConsoleDrawChar (* x y char color -- *)
 	asm "
 
 	popv r5, r3
@@ -404,7 +418,7 @@ procedure GConsoleDrawChar (* x y char color -- *)
 
 	popv r5, r1
 
-	call GConsoleDrawCharASM
+	call VConsoleDrawCharASM
 
 	"
 end
