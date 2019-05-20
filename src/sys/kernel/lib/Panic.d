@@ -1,4 +1,5 @@
 procedure Panic (* fmt -- *)
+
 	"\n\naisix PANIC: " Printf
 
 	Printf

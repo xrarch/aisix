@@ -1,7 +1,7 @@
 const ClockPortCmd 0x20
 const ClockPortA 0x21
 
-const ClockDefaultInterval 1 (* every 1 ms *)
+const ClockDefaultInterval 10 (* every 10 ms *)
 
 var ClockUptimeMS 0
 var ClockInterval 0

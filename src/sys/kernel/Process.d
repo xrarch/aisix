@@ -24,7 +24,7 @@ procedure Schedule (* status return? -- *)
 
 	SN@ 1 + SN!
 
-	250 ProcList@ ListLength / 1 max ClockSetInterval
+	250 ProcList@ ListLength / 10 max ClockSetInterval
 
 	auto np
 	ERR np!
@@ -35,8 +35,6 @@ procedure Schedule (* status return? -- *)
 	while (n@ 0 ~=)
 		auto pnode
 		n@ ListNodeValue pnode!
-
-		pnode@ Proc_Status + @ pnode@ "check %x: %d\n" Printf
 
 		if (pnode@ Proc_Status + @ PRUNNABLE ==)
 			pnode@ np!

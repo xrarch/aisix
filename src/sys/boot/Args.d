@@ -8,11 +8,7 @@ procedure ArgsInit (* argsptr -- *)
 		return
 	end
 
-	argp@ strlen 1 + Malloc ArgsBuffer!
-
-	ArgsBuffer@ argp@ strcpy
-
-	argp@ "aisix arguments: ' %s '\n" Printf
+	argp@ ArgsBuffer!
 end
 
 procedure ArgsValue (* arg -- value or 0 *)

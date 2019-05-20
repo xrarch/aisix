@@ -8,7 +8,7 @@ var VCColorFG 0x00
 var VCColorOBG 0x56
 var VCColorOFG 0x00
 
-const VConsoleBG 0xF
+const VConsoleBG 0x1E
 const VConsoleFG 0x0
 
 var VCCurX 0
@@ -191,12 +191,9 @@ procedure VConsoleDraw (* -- *)
 	0 VCCurY!
 
 	if (VConsoleX@ 0 ~= VConsoleY@ 0 ~= &&) (* there is at least VConsoleMargin/2 pixels around the edge, do a pretty box *)
-
-		(* edges *)
-		VConsoleX@ 4 - VConsoleY@ 4 - VCGWidth@ 8 + VCGHeight@ 8 + 0xF VConsoleRect
-		VConsoleX@ 3 - VConsoleY@ 3 - VCGWidth@ 6 + VCGHeight@ 6 + 0x0 VConsoleRect
-
-		VConsoleX@ 2 - VConsoleY@ 2 - VCGWidth@ 4 + VCGHeight@ 4 + VConsoleBG VConsoleRect
+		VConsoleX@ 6 - VConsoleY@ 4 - VCGWidth@ 13 + VCGHeight@ 9 + 0x00 VConsoleRect
+		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x0F VConsoleRect
+		VConsoleX@ 4 - VConsoleY@ 2 - VCGWidth@ 8 + VCGHeight@ 4 + VConsoleBG VConsoleRect
 	end else (* un-pretty box *)
 		VConsoleX@ VConsoleY@ VCGWidth@ VCGHeight@ VConsoleBG VConsoleRect
 	end

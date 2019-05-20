@@ -7,6 +7,7 @@ var TotalRAM 0
 
 #include "IDisk.d"
 #include "aisixfat.d"
+#include "Args.d"
 
 asm preamble "
 
@@ -39,6 +40,8 @@ procedure Main (* ciptr bootdev args -- *)
 	(* initialize the client interface *)
 	a3xInit
 
+	args@ ArgsInit
+
 	"==============================\n" Printf
 
 	BootDevice@ "boot1 on dev%x\n" Printf
@@ -53,6 +56,32 @@ procedure Main (* ciptr bootdev args -- *)
 
 	BootDevice@ IDiskInit
 	AFSInit
+
+	auto ab
+	"boot:auto" ArgsValue ab!
+
+	if (ab@ 0 ~=)
+		ab@ "automatic load: boot:auto=%s\n" Printf
+
+		if ("-boot:nodelay" ArgsCheck ~~)
+			auto cn
+			"/clock" DevTreeWalk cn!
+
+			if (cn@ 0 ~=)
+				"press 'p' in the next 2 seconds to cancel.\n" Printf
+
+				cn@ DeviceSelectNode
+					2000 "wait" DCallMethod drop
+				DeviceExit
+			end
+		end
+
+		if (Getc 'p' ~=)
+			args@ ab@ DoFile
+		end else
+			"automatic load cancelled\n" Printf
+		end
+	end
 
 	Prompt
 end

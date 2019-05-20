@@ -40,6 +40,9 @@ procedure DMATransfer (* src dest srcinc destinc count mode -- *)
 	auto src
 	src!
 
+	auto rs
+	InterruptDisable rs!
+
 	src@ DMARegisterSource!
 	dest@ DMARegisterDest!
 	srcinc@ DMARegisterSInc!
@@ -49,4 +52,6 @@ procedure DMATransfer (* src dest srcinc destinc count mode -- *)
 
 	DMADoOperation
 	DMAWaitUnbusy
+
+	rs@ InterruptRestore
 end

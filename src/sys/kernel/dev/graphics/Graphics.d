@@ -52,6 +52,14 @@ procedure GraphicsS2S (* x1 y1 x2 y2 w h -- *)
 	end
 end
 
+procedure GraphicsBlitBits (* x y w h fg bg bitd bmp -- *)
+	if (GraphicsPresent@)
+		KinnowBlitBits
+	end else
+		drop drop drop drop drop drop drop drop
+	end
+end
+
 procedure GraphicsEarlyInit (* -- *)
 	"graphics: early init\n" Printf
 
@@ -59,6 +67,11 @@ procedure GraphicsEarlyInit (* -- *)
 end
 
 procedure GraphicsLateInit (* -- *)
+	if ("-nographics" ArgsCheck)
+		"no graphics\n" Printf
+		return
+	end
+
 	"graphics: late init\n" Printf
 
 	if (KinnowSlotSpace@ 0 ~=)
@@ -69,5 +82,11 @@ procedure GraphicsLateInit (* -- *)
 		KinnowFBStart@ GraphicsFramebuffer!
 
 		VidConInit
+	end
+
+	if (GraphicsPresent@)
+		if ("-graphics,noclear" ArgsCheck ~~)
+			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
+		end
 	end
 end

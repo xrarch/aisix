@@ -15,16 +15,27 @@ procedure Main (* args ksize -- *)
 	InterruptsInit
 	args@ ArgsInit
 	DeviceInit
+	
+"  ___ _____ _____ _______   __
+ / _ \\_   _/  ___|_   _\\ \\ / /
+/ /_\\ \\| | \\ `--.  | |  \\ V / 
+|  _  || |  `--. \\ | |  /   \\ 
+| | | || |_/\\__/ /_| |_/ /^\\ \\
+\\_| |_|___/\\____/ \\___/\\/   \\/
+" Printf
 
 	ProcInit
-	
-	"+------------------+\n| AISIX later init |\n+------------------+\n" Printf
 
-	"scheduler should run for the first time\n" Printf
-	"diving in...\n" Printf
+	auto proc
+	pointerof InitProc MakeProcZero proc!
 
+	proc@ "pid0 (init): pcb@%x\n" Printf
 
-	pointerof InitProc MakeProcZero uswtch
+	"uswtch'ing into pid0\n" Printf
+
+	1 DoScheduler!
+
+	proc@ uswtch
 
 	while (1) end
 
