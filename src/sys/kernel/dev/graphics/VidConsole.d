@@ -272,26 +272,33 @@ procedure VConsolePutChar (* char -- *)
 end
 
 procedure VConsolePutCharF (* char -- *)
-	if (VCNeedsDraw@)
-		VConsoleDraw
-		0 VCNeedsDraw!
-	end
-
 	auto char
 	char!
 
 	if (char@ '\n' ==)
 		VConsoleNewline
 		return
-	end else if (char@ '\b' ==)
+	end else
+
+	if (char@ '\b' ==)
 		VConsoleBack
 		return
-	end else if (char@ '\t' ==)
+	end else
+
+	if (char@ '\t' ==)
 		VConsoleTab
 		return
-	end end
+	end
 
-	VCCurX@ VConsoleFontWidth * VConsoleX@ + VCCurY@ VConsoleFontHeight * VConsoleY@ + char@ VCColorFG@ VConsoleDrawChar
+	end
+
+	end
+
+	VCCurX@ VConsoleFontWidth * VConsoleX@ +
+	VCCurY@ VConsoleFontHeight * VConsoleY@ +
+	char@
+	VCColorFG@
+	VConsoleDrawChar
 
 	VCCurX@ 1 + VCCurX!
 
@@ -300,122 +307,32 @@ procedure VConsolePutCharF (* char -- *)
 	end
 end
 
-(* here be ugly dragons *)
-
-asm "
-
-VCGPPStub:
-	push r5
-
-	lri.l r5, GraphicsWidth
-	mul r1, r5, r1
-	add r1, r1, r0
-	lri.l r5, VCFBStart
-	add r1, r1, r5
-	srr.b r1, r2
-
-	pop r5
-	ret
-
-;r0 - char
-;r1 - x
-;r2 - y
-;r3 - color
-;draw bitmap character at specified location on screen
-VConsoleDrawCharASM:
-	cmpi r0, 0x20 ;dont draw if space
-	be .spout
-
-	;push r3 ;use r3 as y iterator
-	push r4 ;use r4 as x iterator
-	push r11 ;use r11 to store ptr to current byte in font to look at
-	push r6 ;use r6 to store current byte
-	push r7 ;use r7 for scratch in xloop
-	push r8 ;use r8 to cache 0x7
-	push r9 ;use r9 for more scratch in xloop
-	push r10 ;use r10 to store color
-
-	mov r10, r3
-
-	muli r11, r0, VConsoleFontBytesPerRow
-	muli r11, r11, VConsoleFontHeight
-	addi r11, r11, VConsoleFont
-	li r3, 0
-.yloop:
-	cmpi r3, VConsoleFontHeight
-	bge .yend
-
-	;body of y loop
-
-	lrr.l r6, r11
-
-	li r4, 0 ;ctr
-	li r8, VConsoleFontWidthA ;reverse ctr
-.xloop:
-	cmpi r4, VConsoleFontWidth
-	bge .ynext
-
-	rsh r7, r6, r8 ;use r4 or r8 depending on bit order
-	andi r7, r7, 1
-	cmpi r7, 1
-	bne .xnext
-
-	;thunk over to GraphicsPutPixel.
-	;it expects x,y in r0,r1
-	;and color in r2.
-	;all of these get trashed so we
-	;have to push them first.
-
-	push r0
-	push r1
-	push r2
-
-	add r0, r1, r4 ;add bx and x iterator
-	add r1, r2, r3 ;add by and y iterator
-	mov r2, r10 ;get color
-
-	call VCGPPStub
-
-	pop r2
-	pop r1
-	pop r0
-
-.xnext:
-	addi r4, r4, 1
-	subi r8, r8, 1
-	b .xloop
-
-.ynext:
-	addi r11, r11, VConsoleFontBytesPerRow
-	addi r3, r3, 1
-	b .yloop
-
-.yend:
-	pop r10
-	pop r9
-	pop r8
-	pop r7
-	pop r6
-	pop r11
-	pop r4
-
-.spout:
-	ret
-
-"
-
 procedure VConsoleDrawChar (* x y char color -- *)
-	asm "
+	auto color
+	color!
 
-	popv r5, r3
+	auto char
+	char!
 
-	popv r5, r0
+	auto y
+	y!
 
-	popv r5, r2
+	auto x
+	x!
 
-	popv r5, r1
+	if (VCNeedsDraw@)
+		VConsoleDraw
+		0 VCNeedsDraw!
+	end
 
-	call VConsoleDrawCharASM
+	(* dont draw spaces *)
+	if (char@ ' ' ==)
+		return
+	end
 
-	"
+	auto bmp
+	char@ VConsoleFontBytesPerRow VConsoleFontHeight * * pointerof VConsoleFont + bmp!
+
+	x@ y@ VConsoleFontWidth VConsoleFontHeight VConsoleFontBytesPerRow color@ VCColorBG@ 1 bmp@ GraphicsBlitBits
+
 end

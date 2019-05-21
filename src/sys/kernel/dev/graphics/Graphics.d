@@ -52,7 +52,7 @@ procedure GraphicsS2S (* x1 y1 x2 y2 w h -- *)
 	end
 end
 
-procedure GraphicsBlitBits (* x y w h fg bg bitd bmp -- *)
+procedure GraphicsBlitBits (* x y w h bpr fg bg bitd bmp -- *)
 	if (GraphicsPresent@)
 		KinnowBlitBits
 	end else

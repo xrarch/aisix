@@ -6,7 +6,7 @@ procedure Main (* args ksize -- *)
 	args!
 
 	(* works this early because the serial port can be polled and is always at the same spot *)
-	pointerof SerialWritePolled SysconOut!
+	pointerof SerialWritePolled SysconSetOut
 
 	"\n+--------------------------+\n| AISIX (very) early init! |\n+--------------------------+\n" Printf
 

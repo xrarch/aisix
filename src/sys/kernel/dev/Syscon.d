@@ -24,6 +24,10 @@ procedure Getc (* -- c *)
 	ERR return
 end
 
+procedure SysconSetOut (* ptr -- *)
+	SysconOut!
+end
+
 procedure SysconLateInit (* -- *)
 	auto sca
 	"syscon" ArgsValue sca!
