@@ -1,6 +1,4 @@
 procedure Panic (* fmt -- *)
-	pointerof SerialWritePolled SysconSetOut
-
 	"\n\naisix PANIC: " Printf
 
 	Printf

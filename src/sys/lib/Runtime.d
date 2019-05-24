@@ -398,3 +398,15 @@ procedure Printf (* ... fmt -- *)
 		i@ 1 + i!
 	end
 end
+
+procedure strdup (* str -- allocstr *)
+	auto str
+	str!
+
+	auto astr
+	str@ strlen 1 + Malloc astr!
+
+	astr@ str@ strcpy
+
+	astr@
+end

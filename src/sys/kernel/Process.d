@@ -24,7 +24,14 @@ procedure Schedule (* status return? -- *)
 
 	SN@ 1 + SN!
 
-	250 ProcList@ ListLength / 10 max ClockSetInterval
+	auto pln
+	ProcList@ ListLength pln!
+
+	if (pln@ 0 ==)
+		"nothing to schedule\n" Panic
+	end
+
+	250 pln@ / 10 max ClockSetInterval
 
 	auto np
 	ERR np!
@@ -84,6 +91,10 @@ procedure MakeProcZero (* func -- proc *)
 	myproc@ ProcList@ ListInsert
 
 	myproc@
+end
+
+procedure ProcExit (* -- *)
+	
 end
 
 procedure ProcSkeleton (* rs entry extent page name -- proc *)
@@ -177,15 +188,10 @@ procedure ProcBuildStruct (* kstack kr5 parent extent page chtta pid name -- pro
 	auto kstack
 	kstack!
 
-	auto nbuf
-	name@ strlen 1 + Malloc nbuf!
-
-	nbuf@ name@ strcpy
-
 	auto proc
 	Proc_SIZEOF Malloc proc!
 
-	nbuf@ proc@ Proc_Name + !
+	name@ strdup proc@ Proc_Name + !
 	pid@ proc@ Proc_PID + !
 	chtta@ proc@ Proc_cHTTA + !
 	page@ proc@ Proc_Page + !
