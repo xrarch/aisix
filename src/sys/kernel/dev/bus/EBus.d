@@ -18,8 +18,8 @@ procedure EBusBoardRegister (* board -- *)
 	EBusBoards@ ListInsert
 end
 
-procedure EBusEarlyInit (* -- *)
-	"ebus: early init\n" Printf
+procedure EBusInit (* -- *)
+	"ebus: init\n" Printf
 
 	ListCreate EBusBoards!
 end
@@ -53,8 +53,8 @@ procedure EBusDoBoard (* slot slotspace id -- *)
 	end
 end
 
-procedure EBusLateInit (* -- *)
-	"ebus: late init\n" Printf
+procedure EBusProbe (* -- *)
+	"ebus: probing\n" Printf
 
 	auto i
 	EBusSlotsStart i!

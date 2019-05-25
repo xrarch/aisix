@@ -9,6 +9,8 @@ const DMARegisterMode 0x38000014
 const DMARegisterStatus 0x38000018
 
 procedure DMAInit (* -- *)
+	"dma: init\n" Printf
+
 	DMAWaitUnbusy
 	0 DMARegisterStatus!
 end

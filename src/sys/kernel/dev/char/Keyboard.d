@@ -19,7 +19,9 @@ procedure AmaKeyboardDevice (* id -- *)
 	pointerof AmaKeyboardInt id@ AmanatsuSetInterrupt
 end
 
-procedure AmaKeyboardInit (* -- *)
+procedure KeyboardInit (* -- *)
+	"keyboard: init\n" Printf
+
 	AmaKeyboardDev AmanatsuDevRegister
 end
 

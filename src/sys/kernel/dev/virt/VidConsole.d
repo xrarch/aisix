@@ -43,11 +43,17 @@ var VidConPresent 0
 asm "
 
 VConsoleFont:
-	.static dev/graphics/font-terminus.bmp
+	.static dev/virt/font-terminus.bmp
 
 "
 
 procedure VidConInit (* -- *)
+	"vidcon: init\n" Printf
+
+	if (GraphicsPresent@ ~~)
+		return
+	end
+
 	GraphicsFramebuffer@ VCFBStart!
 
 	if (GraphicsWidth@ 640 VConsoleMargin + < GraphicsHeight 480 VConsoleMargin + < ||)

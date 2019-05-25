@@ -51,8 +51,8 @@ procedure AmanatsuReadB (* -- long *)
 	AmaPortB DCitronInl
 end
 
-procedure AmanatsuEarlyInit (* -- *)
-	"amanatsu: early init\n" Printf
+procedure AmanatsuInit (* -- *)
+	"amanatsu: init\n" Printf
 
 	ListCreate AmanatsuDevices!
 end
@@ -119,8 +119,8 @@ procedure AmanatsuDoDevice (* did id -- *)
 	end
 end
 
-procedure AmanatsuLateInit (* -- *)
-	"amanatsu: late init\n" Printf
+procedure AmanatsuProbe (* -- *)
+	"amanatsu: probing\n" Printf
 
 	auto a
 	1 a!

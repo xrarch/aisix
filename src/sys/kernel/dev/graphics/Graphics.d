@@ -10,8 +10,6 @@ var GraphicsPresent 0
 var GraphicsFramebuffer 0
 
 #include "dev/graphics/Kinnow3.d"
-#include "dev/graphics/VidConsole.d"
-
 procedure GraphicsRectangle (* x y w h color -- *)
 	if (GraphicsPresent@)
 		KinnowRectangle
@@ -60,19 +58,13 @@ procedure GraphicsBlitBits (* x y w h bpr fg bg bitd bmp -- *)
 	end
 end
 
-procedure GraphicsEarlyInit (* -- *)
-	"graphics: early init\n" Printf
-
-	Kinnow3Init
-end
-
 procedure GraphicsLateInit (* -- *)
+	"graphics: late init\n" Printf
+
 	if ("-nographics" ArgsCheck)
-		"no graphics\n" Printf
+		"graphics: -nographics, aborting\n" Printf
 		return
 	end
-
-	"graphics: late init\n" Printf
 
 	if (KinnowSlotSpace@ 0 ~=)
 		1 GraphicsPresent!
@@ -80,8 +72,6 @@ procedure GraphicsLateInit (* -- *)
 		KinnowWidth@ GraphicsWidth!
 		KinnowHeight@ GraphicsHeight!
 		KinnowFBStart@ GraphicsFramebuffer!
-
-		VidConInit
 	end
 
 	if (GraphicsPresent@)
@@ -89,4 +79,15 @@ procedure GraphicsLateInit (* -- *)
 			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
 		end
 	end
+end
+
+procedure GraphicsInit (* -- *)
+	"graphics: init\n" Printf
+
+	if ("-nographics" ArgsCheck)
+		"graphics: -nographics, aborting\n" Printf
+		return
+	end
+
+	Kinnow3Init
 end

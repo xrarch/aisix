@@ -28,7 +28,9 @@ procedure SysconSetOut (* ptr -- *)
 	SysconOut!
 end
 
-procedure SysconLateInit (* -- *)
+procedure SysconInit (* -- *)
+	"syscon: init\n" Printf
+
 	auto sca
 	"syscon" ArgsValue sca!
 

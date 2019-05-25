@@ -1,33 +1,20 @@
 #include "dev/bus/Bus.d"
-#include "dev/MMU.d"
-#include "dev/Branch31.d"
-#include "dev/Clock.d"
-#include "dev/Serial.d"
-#include "dev/Keyboard.d"
+#include "dev/chipset/Chipset.d"
 #include "dev/graphics/Graphics.d"
-#include "dev/Syscon.d"
-
-procedure DevEarlyInit (* -- *)
-	EBusEarlyInit
-	AmanatsuEarlyInit
-	AmaKeyboardInit
-	GraphicsEarlyInit
-	Branch31Init
-	EarlyClockInit
-end
-
-procedure DevLateInit (* -- *)
-	LateClockInit
-	SerialInit
-	EBusLateInit
-	AmanatsuLateInit
-	GraphicsLateInit
-	SysconLateInit
-end
+#include "dev/char/Character.d"
+#include "dev/virt/Virt.d"
 
 procedure DeviceInit (* -- *)
 	"dev: init\n" Printf
 
-	DevEarlyInit
-	DevLateInit
+	BusInit
+	ChipsetInit
+	GraphicsInit
+	CharacterInit
+
+	BusProbe
+
+	GraphicsLateInit
+
+	VirtInit
 end

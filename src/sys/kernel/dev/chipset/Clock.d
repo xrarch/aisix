@@ -6,15 +6,10 @@ const ClockDefaultInterval 10 (* every 10 ms *)
 var ClockUptimeMS 0
 var ClockInterval 0
 
-procedure EarlyClockInit (* -- *)
-	"clock: early init\n" Printf
+procedure ClockInit (* -- *)
+	"clock: init\n" Printf
 
 	pointerof ClockInt 0x36 PBInterruptRegister
-end
-
-procedure LateClockInit (* -- *)
-	"clock: late init\n" Printf
-
 	ClockDefaultInterval ClockSetInterval (* set clock ticking *)
 end
 
