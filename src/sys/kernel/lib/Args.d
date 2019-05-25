@@ -5,6 +5,7 @@ procedure ArgsInit (* argsptr -- *)
 	argp!
 
 	if (argp@ 0 ==)
+		2 Calloc ArgsBuffer!
 		return
 	end
 
@@ -12,16 +13,12 @@ procedure ArgsInit (* argsptr -- *)
 
 	ArgsBuffer@ argp@ strcpy
 
-	argp@ "aisix arguments: ' %s '\n" Printf
+	argp@ dup "aisix arguments: ' %s ' @ 0x%x\n" Printf
 end
 
 procedure ArgsValue (* arg -- value or 0 *)
 	auto arg
 	arg!
-
-	if (ArgsBuffer@ 0 ==)
-		0 return
-	end
 
 	auto wordbuf
 	256 Calloc wordbuf!
@@ -58,10 +55,6 @@ end
 procedure ArgsCheck (* arg -- present? *)
 	auto arg
 	arg!
-
-	if (ArgsBuffer@ 0 ==)
-		0 return
-	end
 
 	auto wordbuf
 	256 Calloc wordbuf!

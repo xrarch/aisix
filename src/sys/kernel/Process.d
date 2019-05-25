@@ -74,29 +74,6 @@ procedure ProcExit (* -- *)
 	
 end
 
-procedure ProcSetStatus (* status -- *)
-	auto proc
-	CurProc@ proc!
-
-	auto status
-	status!
-
-	auto os
-	proc@ Proc_Status + @ os!
-
-	status@ proc@ Proc_Status + !
-
-	if (status@ PRUNNABLE == os@ PRUNNABLE ~= &&)
-		ProcsRunnable@ 1 + ProcsRunnable!
-		return
-	end
-
-	if (status@ PRUNNABLE ~= os@ PRUNNABLE == &&)
-		ProcsRunnable@ 1 - ProcsRunnable!
-		return
-	end
-end
-
 (* these functions DO NOT implicitly use the current process *)
 
 procedure MakeProcZero (* func -- proc *)
