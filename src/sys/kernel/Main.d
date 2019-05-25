@@ -48,6 +48,8 @@ InitProc:
 	li r0, 0xF
 	li r1, 0xDEADBEEF
 	sys 0
+	li r0, 0xF
+	sys 1
 
 .loop:
 	b .loop

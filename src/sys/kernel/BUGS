@@ -1,2 +1,0 @@
-1. usermode, mmu-enabled tasks don't work at the moment. unfortunately, this could be an
-issue anywhere from the scheduler to the MMU implementation in the emulator.

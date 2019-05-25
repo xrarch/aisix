@@ -5,6 +5,8 @@ var LastPID 1
 
 var ProcList 0
 
+var ProcsRunnable 0
+
 var DoScheduler 0
 
 struct Proc
@@ -17,6 +19,8 @@ struct Proc
 	4 Parent
 	4 kr5
 	4 kstack
+	4 Base
+	4 Bounds
 endstruct
 
 table HTTA_Names
@@ -73,3 +77,5 @@ const PNONE 0
 const PRUNNABLE 1
 const PRUNNING 2
 const PBLOCKED 3
+const PFORKING 4
+const PZOMBIE 5

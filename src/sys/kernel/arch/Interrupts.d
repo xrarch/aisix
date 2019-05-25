@@ -146,6 +146,17 @@ procedure IVTRegister (* handler num -- *)
 	4 * InterruptsVT@ + !
 end
 
+procedure InterruptGet (* -- on? *)
+	auto rs
+	asm "pushv r5, rs" rs!
+
+	if (rs@ 2 & 2 ==)
+		1 return
+	end
+
+	0
+end
+
 procedure InterruptRegister (* handler num -- *)
 	auto num
 	num!

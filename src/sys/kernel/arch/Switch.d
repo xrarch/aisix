@@ -42,11 +42,19 @@ procedure uswtch (* newproc -- *)
 
 	newproc@ Proc_kr5 + @ ProcCurrentkr5!
 
+	auto nppb
+	newproc@ Proc_Page + @ nppb!
+
+	if (nppb@ -1 ~=)
+		nppb@ 4096 * newproc@ Proc_Base + !
+		nppb@ newproc@ Proc_Extent + @ + 4096 * newproc@ Proc_Bounds + !
+	end
+
 	auto mb
-	newproc@ Proc_Page + @ 4096 * mb!
+	newproc@ Proc_Base + @ mb!
 
 	auto bounds
-	mb@ newproc@ Proc_Extent + @ 4096 * + bounds!
+	newproc@ Proc_Bounds + @ bounds!
 
 	mb@ MMUSetBase
 	bounds@ MMUSetBounds

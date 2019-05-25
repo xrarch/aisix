@@ -1,10 +1,14 @@
+const PROCMINQUANTUM 10
+
 procedure ProcInit (* -- *)
 	"proc: init\n" Printf
+
+	PROCMINQUANTUM "min quantum: %dms\n" Printf
 
 	ListCreate ProcList!
 end
 
-var SN 1
+(* these functions DO implicitly use the current process *)
 
 procedure Schedule (* status return? -- *)
 	auto ret
@@ -18,11 +22,9 @@ procedure Schedule (* status return? -- *)
 		pushv r5, rs
 	" rs!
 
-	if (rs@ 2 & 2 ==)
+	if (InterruptGet)
 		"scheduler expects interrupts to be disabled\n" Panic
 	end
-
-	SN@ 1 + SN!
 
 	auto pln
 	ProcList@ ListLength pln!
@@ -31,7 +33,7 @@ procedure Schedule (* status return? -- *)
 		"nothing to schedule\n" Panic
 	end
 
-	250 pln@ / 10 max ClockSetInterval
+	250 pln@ / PROCMINQUANTUM max ClockSetInterval
 
 	auto np
 	ERR np!
@@ -68,6 +70,35 @@ procedure Schedule (* status return? -- *)
 	end
 end
 
+procedure ProcExit (* -- *)
+	
+end
+
+procedure ProcSetStatus (* status -- *)
+	auto proc
+	CurProc@ proc!
+
+	auto status
+	status!
+
+	auto os
+	proc@ Proc_Status + @ os!
+
+	status@ proc@ Proc_Status + !
+
+	if (status@ PRUNNABLE == os@ PRUNNABLE ~= &&)
+		ProcsRunnable@ 1 + ProcsRunnable!
+		return
+	end
+
+	if (status@ PRUNNABLE ~= os@ PRUNNABLE == &&)
+		ProcsRunnable@ 1 - ProcsRunnable!
+		return
+	end
+end
+
+(* these functions DO NOT implicitly use the current process *)
+
 procedure MakeProcZero (* func -- proc *)
 	"hand-crafting pid 0\n" Printf
 
@@ -76,25 +107,21 @@ procedure MakeProcZero (* func -- proc *)
 
 	auto myhtta
 	3 0 0x1FE000 func@ HTTANew myhtta!
-
-	0x200000 myhtta@ HTTA_r5 + !
+	(* psw of 3: usermode and interrupts enabled, but mmu disabled *)
 
 	auto kr5
 	1024 Malloc kr5!
 
 	auto myproc
 
-	0x1FE000 kr5@ -1 PMMTotalPages@ 0 myhtta@ 0 "init" ProcBuildStruct myproc!
+	0 0 0x1FE000 kr5@ -1 -1 -1 myhtta@ 0 "init" ProcBuildStruct myproc!
 
 	PRUNNABLE myproc@ Proc_Status + !
+	1 ProcsRunnable!
 
 	myproc@ ProcList@ ListInsert
 
 	myproc@
-end
-
-procedure ProcExit (* -- *)
-	
 end
 
 procedure ProcSkeleton (* rs entry extent page name -- proc *)
@@ -128,9 +155,9 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 	rs@ 0 kstack@ entry@ HTTANew htta!
 
 	auto proc
-	kstack@ kr5@ CurProc@ extent@ page@ htta@ pid@ name@ ProcBuildStruct proc!
+	0 0 kstack@ kr5@ CurProc@ extent@ page@ htta@ pid@ name@ ProcBuildStruct proc!
 
-	PRUNNABLE proc@ Proc_Status + !
+	PFORKING proc@ Proc_Status + !
 
 	proc@ ProcList@ ListInsert
 
@@ -163,7 +190,7 @@ procedure ProcDestroyStruct (* proc -- *)
 	proc@ Free
 end
 
-procedure ProcBuildStruct (* kstack kr5 parent extent page chtta pid name -- proc *)
+procedure ProcBuildStruct (* bounds base kstack kr5 parent extent page chtta pid name -- proc *)
 	auto name
 	name!
 
@@ -188,6 +215,12 @@ procedure ProcBuildStruct (* kstack kr5 parent extent page chtta pid name -- pro
 	auto kstack
 	kstack!
 
+	auto base
+	base!
+
+	auto bounds
+	bounds!
+
 	auto proc
 	Proc_SIZEOF Malloc proc!
 
@@ -200,6 +233,8 @@ procedure ProcBuildStruct (* kstack kr5 parent extent page chtta pid name -- pro
 	PNONE proc@ Proc_Status + !
 	kr5@ proc@ Proc_kr5 + !
 	kstack@ proc@ Proc_kstack + !
+	base@ proc@ Proc_Base + !
+	bounds@ proc@ Proc_Bounds + !
 
 	proc@
 end
