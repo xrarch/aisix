@@ -1,4 +1,5 @@
 #include "../../lib/a3x.d"
+#include "../../lib/a3x_names.d"
 #include "../../lib/Runtime.d"
 
 var args 0
@@ -36,7 +37,7 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	auto arg
 	arg!
 
-	if (args@ 0 ==)
+	if (arg@ 0 ==)
 		"no disk name provided.\n" Printf
 		0 return
 	end
@@ -45,10 +46,27 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	256 Calloc disk!
 
 	auto nw
-	args@ disk@ ' ' 255 strntok nw!
+	arg@ disk@ ' ' 255 strntok nw!
+
+
+
+	(* THIS IS VERY BAD: WHY DO I HAVE TO DO THIS?
+		the DevTreeWalk a3x call should NOT be writing
+		to the path string, but it ends up putting a
+		zero at the start!! why???
+	 *)
+	auto nd
+	disk@ strdup nd!
 
 	auto dn
-	disk@ DevTreeWalk dn!
+	nd@ DevTreeWalk dn!
+
+	nd@ Free
+
+
+
+
+
 
 	if (dn@ 0 ==)
 		disk@ "%s is an invalid disk path.\n" Printf

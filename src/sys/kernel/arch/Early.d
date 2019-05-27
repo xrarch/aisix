@@ -14,6 +14,13 @@ li sp, 0x1FE000
 li ivt, 0 ;reset ivt
 cli ;clear them even more
 
+;r0 contains pointer to API
+pushv r5, r0
+call a3xInit
+
+;make initial system console the a3x console
+sii.l SysconOut, a3xPutc
+
 ;r2 contains args
 pushv r5, r2
 

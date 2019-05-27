@@ -38,7 +38,7 @@ _CIC_DeviceDCallMethod === 56
 _CIC_DeviceExit === 60
 
 ; buffer maxchars --
-Gets:
+a3xGets:
 	push r30
 
 	li r30, _CIC_Gets
@@ -48,7 +48,7 @@ Gets:
 	ret
 
 ; char -- 
-Putc:
+a3xPutc:
 	push r30
 
 	li r30, _CIC_Putc
@@ -58,7 +58,7 @@ Putc:
 	ret
 
 ; -- char
-Getc:
+a3xGetc:
 	push r30
 
 	li r30, _CIC_Getc
@@ -68,7 +68,7 @@ Getc:
 	ret
 
 ; -- root dcp
-APIDevTree:
+a3xAPIDevTree:
 	push r30
 
 	li r30, _CIC_DevTree
@@ -78,7 +78,7 @@ APIDevTree:
 	ret
 
 ; sz -- ptr
-Malloc:
+a3xMalloc:
 	push r30
 
 	li r30, _CIC_Malloc
@@ -88,7 +88,7 @@ Malloc:
 	ret
 
 ; sz -- ptr
-Calloc:
+a3xCalloc:
 	push r30
 
 	li r30, _CIC_Calloc
@@ -98,7 +98,7 @@ Calloc:
 	ret
 
 ; ptr -- 
-Free:
+a3xFree:
 	push r30
 
 	li r30, _CIC_Free
@@ -108,7 +108,7 @@ Free:
 	ret
 
 ; path -- node
-DevTreeWalk:
+a3xDevTreeWalk:
 	push r30
 
 	li r30, _CIC_DevTreeWalk
@@ -118,7 +118,7 @@ DevTreeWalk:
 	ret
 
 ; --
-DeviceParent:
+a3xDeviceParent:
 	push r30
 
 	li r30, _CIC_DeviceParent
@@ -128,7 +128,7 @@ DeviceParent:
 	ret
 
 ; node -- 
-DeviceSelectNode:
+a3xDeviceSelectNode:
 	push r30
 
 	li r30, _CIC_DeviceSelectNode
@@ -138,7 +138,7 @@ DeviceSelectNode:
 	ret
 
 ; path -- 
-DeviceSelect:
+a3xDeviceSelect:
 	push r30
 
 	li r30, _CIC_DeviceSelect
@@ -148,7 +148,7 @@ DeviceSelect:
 	ret
 
 ; name -- value
-DGetProperty:
+a3xDGetProperty:
 	push r30
 
 	li r30, _CIC_DeviceDGetProperty
@@ -158,7 +158,7 @@ DGetProperty:
 	ret
 
 ; name -- ptr
-DGetMethod:
+a3xDGetMethod:
 	push r30
 
 	li r30, _CIC_DeviceDGetMethod
@@ -168,7 +168,7 @@ DGetMethod:
 	ret
 
 ; name -- success
-DCallMethod:
+a3xDCallMethod:
 	push r30
 
 	li r30, _CIC_DeviceDCallMethod
@@ -178,7 +178,7 @@ DCallMethod:
 	ret
 
 ; -- 
-DeviceExit:
+a3xDeviceExit:
 	push r30
 
 	li r30, _CIC_DeviceExit

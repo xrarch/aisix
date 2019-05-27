@@ -51,6 +51,7 @@ procedure VidConInit (* -- *)
 	"vidcon: init\n" Printf
 
 	if (GraphicsPresent@ ~~)
+		"vidcon: no graphics, aborting\n" Printf
 		return
 	end
 
@@ -259,6 +260,10 @@ end
 procedure VConsolePutChar (* char -- *)
 	auto char
 	char!
+
+	if (char@ 255 >)
+		return
+	end
 
 	if (VCEscape@) char@ VConsoleParseEscape return end
 

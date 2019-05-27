@@ -61,7 +61,7 @@ procedure AFSInit (* -- *)
 	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
-procedure AFSLoadFile (* name destptr -- size ok? *)
+procedure AFSLoadFile (* name destptr -- ok? size *)
 	auto destptr
 	destptr!
 

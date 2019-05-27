@@ -1,3 +1,4 @@
+#include "../lib/a3x.d"
 #include "arch/Early.d"
 #include "arch/Debug.d"
 #include "arch/Interrupts.d"

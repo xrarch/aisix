@@ -10,17 +10,13 @@ end
 
 (* these functions DO implicitly use the current process *)
 
+(* caller should be aware that this function can return if there is nothing to schedule *)
 procedure Schedule (* status return? -- *)
 	auto ret
 	ret!
 
 	auto status
 	status!
-
-	auto rs
-	asm "
-		pushv r5, rs
-	" rs!
 
 	if (InterruptGet)
 		"scheduler expects interrupts to be disabled\n" Panic
@@ -56,7 +52,7 @@ procedure Schedule (* status return? -- *)
 	end
 
 	if (np@ ERR ==)
-		(* "nothing to schedule!\n" Panic *)
+		(* nothing to schedule *)
 		return
 	end
 

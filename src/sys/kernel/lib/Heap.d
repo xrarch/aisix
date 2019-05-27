@@ -1,5 +1,5 @@
-var KHeapStart 0x000000
-var KHeapSize 0x1F0000
+var KHeapStart 0x100000
+var KHeapSize 0x0F0000
 
 struct KHeapHeader
 	4 size
@@ -9,9 +9,13 @@ struct KHeapHeader
 endstruct
 
 procedure HeapInit (* -- *)
+	"heap init\n" Printf
+
 	KHeapSize@ KHeapStart@ KHeapHeader_size + !
 	0 KHeapStart@ KHeapHeader_last + !
 	0 KHeapStart@ KHeapHeader_allocated + !
+
+	KHeapSize@ KHeapStart@ "heap start: 0x%x size: %d bytes\n" Printf
 end
 
 procedure HeapDump (* -- *)

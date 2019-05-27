@@ -9,6 +9,15 @@ var GraphicsHeight 0
 var GraphicsPresent 0
 var GraphicsFramebuffer 0
 
+asm "
+
+GraphicsLogo:
+	.static dev/graphics/aisixlogo.bmp
+
+"
+const GraphicsLogoWidth 147
+const GraphicsLogoHeight 46
+
 #include "dev/graphics/Kinnow3.d"
 procedure GraphicsRectangle (* x y w h color -- *)
 	if (GraphicsPresent@)
@@ -75,8 +84,19 @@ procedure GraphicsLateInit (* -- *)
 	end
 
 	if (GraphicsPresent@)
-		if ("-graphics,noclear" ArgsCheck ~~)
+		if ("-graphics,nobg" ArgsCheck ~~)
 			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
+
+			if (GraphicsLogoWidth 15 + GraphicsWidth@ > GraphicsLogoHeight 15 + GraphicsHeight@ > ||)
+				return
+			end
+
+			GraphicsWidth@ GraphicsLogoWidth - 15 -
+			GraphicsHeight@ GraphicsLogoHeight - 15 -
+			GraphicsLogoWidth GraphicsLogoHeight
+			pointerof GraphicsLogo
+			-1
+			GraphicsBlit
 		end
 	end
 end

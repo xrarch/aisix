@@ -106,7 +106,7 @@ table PTStatus
 	"unused"
 	"boot"
 	"used"
-	"??? corrupt entry"
+	"??? corrupt entry ???"
 endtable
 
 procedure PTInfo (* -- *)

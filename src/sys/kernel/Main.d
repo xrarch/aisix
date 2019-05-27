@@ -5,10 +5,9 @@ procedure Main (* args ksize -- *)
 	auto args
 	args!
 
-	(* works this early because the serial port can be polled and is always at the same spot *)
-	pointerof SerialWritePolled SysconSetOut
-
 	"\n+--------------------------+\n| AISIX (very) early init! |\n+--------------------------+\n" Printf
+
+	ksize@ "image size: ~%d bytes\n" Printf
 
 	PMMInit
 	HeapInit
@@ -49,7 +48,9 @@ InitProc:
 	li r1, 0xDEADBEEF
 	sys 0
 	li r0, 0xF
-	sys 1
+	sys 0
+	li r0, 0xf
+	sys 0
 
 .loop:
 	b .loop
