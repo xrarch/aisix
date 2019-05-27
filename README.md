@@ -42,10 +42,10 @@ If you want to avoid these long-winded commands, it's possible to make the firmw
 
 At the firmware prompt, type the following sequence of commmands:
 
-`
+```
 setenv boot-dev /ebus/platformboard/citron/dks/0
 setenv auto-boot? true
-`
+```
 
 This sets the NVRAM variable boot-dev to point towards the devicetree path of our boot disk.
 
@@ -53,14 +53,14 @@ It sets the variable auto-boot? to true, to tell the firmware to automatically t
 
 If you want to automate the bootloader prompt as well, type the following command at the firmware prompt:
 
-`
+```
 setenv boot-args boot:auto=aisix
-`
+```
 
 The bootloader, by default, will have a two second delay to give an opportunity to cancel the boot.
 
 If you don't want this, type this command instead:
 
-`
+```
 setenv boot-args boot:auto=aisix -boot:nodelay
-`
+```
