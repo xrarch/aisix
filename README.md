@@ -61,7 +61,7 @@ setenv boot-args boot:auto=aisix
 
 The bootloader, by default, will have a two second delay to give an opportunity to cancel the boot.
 
-If you don't want this, type this command instead:
+If you're impatient, type this command instead:
 
 ```
 setenv boot-args boot:auto=aisix -boot:nodelay
