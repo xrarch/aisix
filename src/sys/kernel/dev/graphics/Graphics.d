@@ -84,18 +84,24 @@ procedure GraphicsLateInit (* -- *)
 	end
 
 	if (GraphicsPresent@)
-		if ("-graphics,nobg" ArgsCheck ~~)
-			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
+		auto nobg
+		"-graphics,nobg" ArgsCheck nobg!
 
-			if (GraphicsLogoWidth 15 + GraphicsWidth@ > GraphicsLogoHeight 15 + GraphicsHeight@ > ||)
+		if ("-graphics,noclear" ArgsCheck ~~ nobg@ ||)
+			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
+		end
+
+		if (nobg@ ~~)
+			if (GraphicsLogoWidth GraphicsWidth@ > GraphicsLogoHeight 20 + GraphicsHeight@ > ||)
 				return
 			end
 
-			GraphicsWidth@ GraphicsLogoWidth - 15 -
-			GraphicsHeight@ GraphicsLogoHeight - 15 -
+
+			GraphicsWidth@ 2 / GraphicsLogoWidth 2 / -
+			GraphicsHeight@ GraphicsLogoHeight - 20 -
 			GraphicsLogoWidth GraphicsLogoHeight
 			pointerof GraphicsLogo
-			-1
+			25
 			GraphicsBlit
 		end
 	end

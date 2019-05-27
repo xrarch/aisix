@@ -22,13 +22,18 @@ var VCHeight 0
 
 var VCScreenNode 0
 
-const VConsoleFontWidth 8
-const VConsoleFontWidthA 7
+const VConsoleFontWidth 6
+const VConsoleFontWidthA 5
 
 const VConsoleFontBytesPerRow 1
-const VConsoleFontHeight 16
+const VConsoleFontHeight 12
+
+const VConsoleFontBitD 0
 
 const VConsoleMargin 40
+
+const VCTargetCWidth 80
+const VCTargetCHeight 30
 
 var VCEscape 0
 
@@ -43,7 +48,7 @@ var VidConPresent 0
 asm "
 
 VConsoleFont:
-	.static dev/virt/font-terminus.bmp
+	.static dev/virt/font-haiku.bmp
 
 "
 
@@ -57,18 +62,24 @@ procedure VidConInit (* -- *)
 
 	GraphicsFramebuffer@ VCFBStart!
 
-	if (GraphicsWidth@ 640 VConsoleMargin + < GraphicsHeight 480 VConsoleMargin + < ||)
+	auto twidth
+	auto theight
+
+	VCTargetCWidth VConsoleFontWidth * twidth!
+	VCTargetCHeight VConsoleFontHeight * theight!
+
+	if (GraphicsWidth@ twidth@ VConsoleMargin + < GraphicsHeight theight@ VConsoleMargin + < ||)
 		0 VConsoleX!
 		0 VConsoleY!
 
 		GraphicsWidth@ VCGWidth!
 		GraphicsHeight@ VCGHeight!
 	end else
-		GraphicsWidth@ 2 / 320 - VConsoleX!
-		GraphicsHeight@ 2 / 240 - VConsoleY!
+		GraphicsWidth@ 2 / twidth@ 2 / - VConsoleX!
+		GraphicsHeight@ 2 / theight@ 2 / - VConsoleY!
 
-		640 VCGWidth!
-		480 VCGHeight!
+		twidth@ VCGWidth!
+		theight@ VCGHeight!
 	end
 
 	VConsoleBG VCColorBG!
@@ -121,8 +132,8 @@ procedure VConsoleScroll (* rows -- *)
 	rows!
 
 	VConsoleX@ VConsoleY@
-	640
-	480
+	VCGWidth@
+	VCGHeight@
 	VConsoleBG
 	rows@ VConsoleFontHeight *
 	GraphicsScroll
@@ -344,6 +355,6 @@ procedure VConsoleDrawChar (* x y char color -- *)
 	auto bmp
 	char@ VConsoleFontBytesPerRow VConsoleFontHeight * * pointerof VConsoleFont + bmp!
 
-	x@ y@ VConsoleFontWidth VConsoleFontHeight VConsoleFontBytesPerRow color@ VCColorBG@ 1 bmp@ GraphicsBlitBits
+	x@ y@ VConsoleFontWidth VConsoleFontHeight VConsoleFontBytesPerRow color@ VCColorBG@ VConsoleFontBitD bmp@ GraphicsBlitBits
 
 end

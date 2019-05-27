@@ -28,6 +28,13 @@ procedure SysconSetOut (* ptr -- *)
 	SysconOut!
 end
 
+table SysconNames
+	0
+	"serial console"
+	"a3x boot console"
+	"aisix video console"
+endtable
+
 procedure SysconInit (* -- *)
 	"syscon: init\n" Printf
 
@@ -54,24 +61,23 @@ procedure SysconInit (* -- *)
 		end
 	end
 
-	"setting syscon = " Printf
+	[con@]SysconNames@ "setting syscon = %s\n" Printf
 
 	if (con@ 1 ==)
-		"serial\n" Printf
 		pointerof SerialWritePolled SysconSetOut
 	end else
 
 	if (con@ 2 ==)
-		"a3x boot console\n" Printf
 		pointerof a3xPutc SysconSetOut
 	end else
 
 	if (con@ 3 ==)
-		"kernel video console\n" Printf
 		pointerof VConsolePutChar SysconSetOut
 	end
 
 	end
 
 	end
+
+	[con@]SysconNames@ "set syscon = %s\ncheck early console for earlier boot messages\n\n" Printf
 end
