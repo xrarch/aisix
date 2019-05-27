@@ -6,6 +6,8 @@ Attempt to build a unix-like OS for the LIMNstation fantasy computer.
 
 A long-term goal is a windowed GUI, short term goals are a bootloader, filesystem utilities, and a stub of a kernel.
 
+![Surprisingly decent-looking boot screen](https://i.imgur.com/dta207c.png)
+
 ## Building
 
 Create a blank disk image.
