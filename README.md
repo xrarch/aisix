@@ -4,7 +4,7 @@ Extreme work-in-progress.
 
 Attempt to build a unix-like OS for the LIMNstation fantasy computer.
 
-A long-term goal is a windowed GUI, short term goals are a bootloader, filesystem utilities, and a stub of a kernel.
+A long-term goal is a windowed GUI, short term goals are to finish the standalone disk utilities, and to get a decent kernel.
 
 ![Surprisingly decent-looking boot screen](https://i.imgur.com/dta207c.png)
 
