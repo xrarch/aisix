@@ -6,6 +6,11 @@ endtable
 
 var AmaKeyboardID 0
 
+var KeyboardPresent 0
+var KeyboardTty 0
+
+var KeyboardCapsLock 0
+
 procedure AmaKeyboardDevice (* id -- *)
 	auto id
 	id!
@@ -17,6 +22,8 @@ procedure AmaKeyboardDevice (* id -- *)
 	id@ AmaKeyboardID!
 
 	pointerof AmaKeyboardInt id@ AmanatsuSetInterrupt
+
+	1 KeyboardPresent!
 end
 
 procedure KeyboardInit (* -- *)
@@ -26,17 +33,80 @@ procedure KeyboardInit (* -- *)
 end
 
 procedure AmaKeyboardInt (* -- *)
-	auto pc
-	AmaKeyboardID@ AKeyboardPopCode pc!
-	while (pc@ 0xFFFF ~=)
-		pc@ "%d " Printf
-		AmaKeyboardID@ AKeyboardPopCode pc!
+	auto code
+
+	if (KeyboardTty@ 0 ==)
+		0 code!
+		while (code@ 0xFFFF ~=)
+			AKeyboardPopCode code!
+		end
+		return
 	end
+
+	AKeyboardPopCode code!
+
+	if (code@ 0xFFFF ==)
+		ERR return
+	end
+
+	auto c
+
+	code@ AKeyboardProcessKey c!
+
+	if (c@ -1 ==)
+		return
+	end
+
+	c@ KeyboardTty@ TtyPutc
 end
 
-procedure AKeyboardPopCode (* id -- code *)
+procedure AKeyboardProcessKey (* code -- char *)
+	auto code
+	code!
+
+	auto c
+
+	if (code@ 0xF0 ==) (* shift *)
+
+		AKeyboardPopCode code!
+
+		if (code@ 50 >=) code@ AKeyboardSpecial return end
+
+		[code@]AKeyboardLayoutShift@ c!
+
+	end else if (code@ 0xF1 ==) (* ctrl *)
+
+		AKeyboardPopCode code!
+
+		if (code@ 50 >=) code@ AKeyboardSpecial return end
+
+		[code@]AKeyboardLayoutCtrl@ c!
+
+	end else
+
+		if (KeyboardCapsLock@)
+
+			if (code@ 50 >=) code@ AKeyboardSpecial return end
+
+			[code@]AKeyboardLayoutShift@ c!
+
+		end else
+
+			if (code@ 50 >=) code@ AKeyboardSpecial return end
+
+			[code@]AKeyboardLayout@ c!
+			
+		end
+
+	end
+	end
+
+	c@
+end
+
+procedure AKeyboardPopCode (* -- code *)
 	auto id
-	id!
+	AmaKeyboardID@ id!
 
 	auto rs
 	InterruptDisable rs!
@@ -61,6 +131,10 @@ procedure AKeyboardSpecial (* code -- *)
 	end
 	if (code@ 51 ==)
 		'\b' return
+	end
+	if (code@ 52 ==)
+		KeyboardCapsLock@ ~~ KeyboardCapsLock!
+		-1 return
 	end
 
 	ERR return
@@ -89,7 +163,7 @@ table AKeyboardLayout
 	'['
 	']'
 	'\\'
-	0
+	-1
 	'/'
 	'.'
 	'\''
@@ -98,34 +172,34 @@ table AKeyboardLayout
 endtable
 
 table AKeyboardLayoutCtrl
-	'a'
-	'b' 'c' 'd'
-	'e' 'f' 'g'
-	'h' 'i' 'j'
-	'k' 'l' 'm'
-	'n' 'o' 'p'
-	'q' 'r' 's'
-	't' 'u' 'v'
-	'w' 'x' 'y'
-	'z'
-	'0' '1' '2'
-	'3' '4' '5'
-	'6' '7' '8'
-	'9'
-	';'
-	' '
-	' '
-	'-'
-	'='
-	'['
-	']'
-	'\\'
-	0
-	'/'
-	'.'
-	'\''
-	','
-	'`'
+	1
+	2 3 4
+	5 6 7
+	8 9 10
+	11 12 13
+	14 15 16
+	17 18 19
+	20 21 22
+	23 24 25
+	26
+	-1 -1 0
+	-1 -1 -1
+	30 -1 -1
+	-1
+	-1
+	-1
+	-1
+	31
+	-1
+	27
+	29
+	28
+	-1
+	-1
+	-1
+	-1
+	-1
+	-1
 endtable
 
 table AKeyboardLayoutShift
@@ -151,7 +225,7 @@ table AKeyboardLayoutShift
 	'{'
 	'}'
 	'|'
-	0
+	-1
 	'?'
 	'>'
 	'"'

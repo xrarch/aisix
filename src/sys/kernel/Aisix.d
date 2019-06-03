@@ -4,7 +4,7 @@
 #include "arch/Arch.d"
 #include "PMM.d"
 #include "Timer.d"
-#include "Traps.d"
+#include "Syscall.d"
 #include "Process.d"
 #include "fs/fs.d"
 #include "dev/Dev.d"

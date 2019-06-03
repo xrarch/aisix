@@ -11,7 +11,9 @@ procedure Panic (* fmt -- *)
 		CurProc@ Proc_Name + @ CurProc@ Proc_PID + @ "was executing pid%d (%s)\n" Printf
 
 		auto chtta
-		CurProc@ Proc_cHTTA + @ chtta!
+		asm "
+			pushv r5, htta
+		" chtta!
 
 		auto p
 		0 p!

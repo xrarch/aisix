@@ -1,0 +1,12 @@
+struct tty
+	4 KbdBuf
+	4 KbdBufRead
+	4 KbdBufWrite
+	4 BigBuf
+	4 BigBufRead
+	4 BigBufWrite
+	4 ActualOut
+endstruct
+
+const TTY_KBD_BUF_SIZE 512
+const TTY_BIG_BUF_SIZE 16384

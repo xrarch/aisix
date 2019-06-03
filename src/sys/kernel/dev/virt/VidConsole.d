@@ -85,6 +85,9 @@ procedure VidConInit (* -- *)
 	VConsoleBG VCColorBG!
 	VConsoleFG VCColorFG!
 
+	VCColorFG@ VCColorOFG!
+	VCColorBG@ VCColorOBG!
+
 	VCGWidth@ VConsoleFontWidth / VCWidth!
 	VCGHeight@ VConsoleFontHeight / VCHeight!
 
@@ -133,7 +136,7 @@ procedure VConsoleScroll (* rows -- *)
 
 	VConsoleX@ VConsoleY@
 	VCGWidth@
-	VCGHeight@
+	VCGHeight@ 1 +
 	VConsoleBG
 	rows@ VConsoleFontHeight *
 	GraphicsScroll

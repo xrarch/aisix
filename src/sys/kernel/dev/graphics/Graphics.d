@@ -87,7 +87,7 @@ procedure GraphicsLateInit (* -- *)
 		auto nobg
 		"-graphics,nobg" ArgsCheck nobg!
 
-		if ("-graphics,noclear" ArgsCheck ~~ nobg@ ||)
+		if ("-graphics,noclear" ArgsCheck ~~ nobg@ ~~ &&)
 			0 0 GraphicsWidth@ GraphicsHeight@ 25 GraphicsRectangle
 		end
 

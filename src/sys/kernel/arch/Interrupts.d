@@ -35,7 +35,7 @@ procedure InterruptsInit (* -- *)
 	while (i@ 0x10 <)
 		i@ "%d " Printf
 
-		pointerof UserTrap i@ InterruptRegister
+		pointerof Syscall i@ InterruptRegister
 		i@ 1 + i!
 	end
 
@@ -47,10 +47,19 @@ end
 asm "
 
 KEntryASM:
+	pop k3 ;yoink rs into k3 real fast
+	push k3
 	htts
 	
-	lri.l r5, ProcCurrentkr5
+	andi k3, k3, 1
+	cmpi k3, 0
+	be .kmode
 
+	;only load new r5 for dragonfruit stack if we were in usermode just now
+	lri.l r5, ProcCurrentkr5
+	addi r5, r5, 1024
+
+.kmode:
 	lri.l r1, TrapsVT
 	muli r2, r0, 4
 	add r1, r1, r2
@@ -67,11 +76,12 @@ KEntryASM:
 	ret
 
 .panic:
+	pushv r5, r0
 	pushvi r5, .pstr
 	call Panic
 
 .pstr:
-	.ds trap handler was set for nonexistent trap
+	.ds non-existent trap %d
 	.db 0xA, 0x0
 
 CPUFaultASM:
@@ -79,7 +89,7 @@ CPUFaultASM:
 	pop r2 ; r0
 	pop r3 ; pc
 
-	andi r4, r4, 1
+	andi r4, r1, 1
 	cmpi r4, 0
 	be .kfault
 
@@ -95,7 +105,7 @@ CPUFaultASM:
 .kfault:
 	
 	li r5, 0x200000
-	li sp, 0x202000
+	li sp, 0x1FE000
 
 	pushv r5, r0
 	pushv r5, r1
@@ -112,10 +122,10 @@ table CPUFaultsNames
 	"Page fault"
 	"Privilege violation"
 	"General fault"
-	"Unknown"
-	"Unknown"
+	"Unknown0"
+	"Unknown1"
 	"Bus error"
-	"Unknown"
+	"Unknown2"
 	"Spurious interrupt"
 endtable
 

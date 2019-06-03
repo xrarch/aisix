@@ -7,6 +7,8 @@ const SerialCmdEnableInt 3
 
 const SerialInterruptNum 0x2B
 
+var SerialTty 0
+
 procedure SerialInit (* -- *)
 	"serial: init\n" Printf
 
@@ -22,15 +24,20 @@ end
 
 procedure SerialInterrupt (* -- *)
 	auto c
-	0 c!
 
-	while (c@ ERR ~=)
-		SerialReadPolled c!
+	if (SerialTty@ 0 ==)
+		0 c!
 
-		if (c@ ERR ~=)
-			c@ Putc
+		while (c@ ERR ~=)
+			SerialReadPolled c!
 		end
+
+		return
 	end
+
+	SerialReadPolled c!
+
+	c@ SerialTty@ TtyPutc
 end
 
 procedure SerialWritePolled (* c -- *)

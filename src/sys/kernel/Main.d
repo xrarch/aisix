@@ -30,15 +30,17 @@ procedure Main (* args ksize -- *)
 	ProcInit
 
 	auto proc
-	pointerof InitProc MakeProcZero proc!
+	pointerof IdleProc MakeProcZero proc!
 
-	proc@ "pid0 (init): pcb@%x\n" Printf
+	pointerof InitProc MakeProcZero drop
+
+	proc@ "pid0 (idleproc): pcb@%x\n" Printf
 
 	"uswtch'ing into pid0\n" Printf
 
 	1 DoScheduler!
 
-	proc@ uswtch
+	proc@ swtch
 
 	while (1) end
 
@@ -47,13 +49,15 @@ end
 
 asm "
 
+;performs a yield syscall over and over
+IdleProc:
+	li r0, 3
+	sys 0
+	b IdleProc
+
 InitProc:
-	li r0, 0xF
+	li r0, 1
 	li r1, 0xDEADBEEF
-	sys 0
-	li r0, 0xF
-	sys 0
-	li r0, 0xf
 	sys 0
 
 .loop:

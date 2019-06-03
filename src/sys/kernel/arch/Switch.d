@@ -1,4 +1,4 @@
-procedure HTTANew (* rs usp ksp pc -- htta *)
+procedure HTTANew (* rs usp ksp pc -- htta httatab *)
 	auto pc
 	pc!
 
@@ -11,8 +11,11 @@ procedure HTTANew (* rs usp ksp pc -- htta *)
 	auto rs
 	rs!
 
+	auto httatab
+	HTTA_SIZEOF HTTA_NUM * Calloc httatab!
+
 	auto nhtta
-	HTTA_SIZEOF Calloc nhtta!
+	httatab@ HTTA_SIZEOF HTTA_NUM * HTTA_SIZEOF - + nhtta!
 
 	nhtta@ nhtta@ HTTA_htta + !
 	pc@ nhtta@ HTTA_pc + !
@@ -24,11 +27,11 @@ procedure HTTANew (* rs usp ksp pc -- htta *)
 		pushv r5, ivt
 	" nhtta@ HTTA_ivt + !
 
-	nhtta@
+	nhtta@ httatab@
 end
 
 (* for when we want to switch processes outright *)
-procedure uswtch (* newproc -- *)
+procedure swtch (* newproc -- *)
 	auto newproc
 	newproc!
 
@@ -67,10 +70,4 @@ procedure uswtch (* newproc -- *)
 	httl
 
 	"
-end
-
-(* for when we want to return to somewhere in kernelspace later *)
-procedure kswtch (* newproc -- *)
-	auto newproc
-	newproc!
 end

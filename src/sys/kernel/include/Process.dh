@@ -13,6 +13,7 @@ struct Proc
 	4 Name
 	4 PID
 	4 cHTTA
+	4 HTTATable
 	4 Page
 	4 Extent
 	4 Status
@@ -21,6 +22,7 @@ struct Proc
 	4 kstack
 	4 Base
 	4 Bounds
+	4 WChan
 endstruct
 
 table HTTA_Names
@@ -76,6 +78,8 @@ endstruct
 const PNONE 0
 const PRUNNABLE 1
 const PRUNNING 2
-const PBLOCKED 3
-const PFORKING 4
-const PZOMBIE 5
+const PSLEEPING 3
+const PZOMBIE 4
+const PFORKING 5
+
+const HTTA_NUM 8

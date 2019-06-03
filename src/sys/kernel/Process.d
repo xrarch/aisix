@@ -11,12 +11,7 @@ end
 (* these functions DO implicitly use the current process *)
 
 (* caller should be aware that this function can return if there is nothing to schedule *)
-procedure Schedule (* status return? -- *)
-	auto ret
-	ret!
-
-	auto status
-	status!
+procedure Schedule (* -- *)
 
 	if (InterruptGet)
 		"scheduler expects interrupts to be disabled\n" Panic
@@ -28,8 +23,6 @@ procedure Schedule (* status return? -- *)
 	if (pln@ 0 ==)
 		"nothing to schedule\n" Panic
 	end
-
-	250 pln@ / PROCMINQUANTUM max ClockSetInterval
 
 	auto np
 	ERR np!
@@ -56,18 +49,62 @@ procedure Schedule (* status return? -- *)
 		return
 	end
 
-	status@ CurProc@ Proc_Status + !
-
-	if (ret@)
-		np@ kswtch
-		return
-	end else
-		np@ uswtch
-	end
+	np@ swtch
 end
 
-procedure ProcExit (* -- *)
-	
+(* these things have lowercase names because tradition *)
+
+procedure yield (* waitstatus -- *)
+	auto wstat
+	wstat!
+
+	(* performs a yieldk syscall and briefly enables interrupts in order to process it *)
+	wstat@ asm "
+		popv r5, r1
+
+		mov r2, rs
+		bseti rs, rs, 1
+
+		li r0, 2 ;SYSYIELDK
+		sys 0
+
+		mov rs, r2
+	"
+end
+
+procedure sleep (* channel -- *)
+	auto chan
+	chan!
+
+	auto p
+	CurProc@ p!
+
+	chan@ p@ Proc_WChan + !
+
+	PSLEEPING yield
+
+	0 p@ Proc_WChan + !
+end
+
+procedure wakeup (* channel -- *)
+	auto chan
+	chan!
+
+	auto n
+	ProcList@ ListHead n!
+
+	while (n@ 0 ~=)
+		auto pnode
+		n@ ListNodeValue pnode!
+
+		if (pnode@ Proc_Status + @ PSLEEPING ==)
+			if (pnode@ Proc_WChan + @ chan@ ==)
+				PRUNNABLE pnode@ Proc_Status + !
+			end
+		end
+
+		n@ ListNode_Next + @ n!
+	end
 end
 
 (* these functions DO NOT implicitly use the current process *)
@@ -78,8 +115,13 @@ procedure MakeProcZero (* func -- proc *)
 	auto func
 	func!
 
+	auto kstack
+	1024 Malloc kstack!
+
+	auto httatab
+
 	auto myhtta
-	3 0 0x1FE000 func@ HTTANew myhtta!
+	3 0 kstack@ 1024 + func@ HTTANew httatab! myhtta!
 	(* psw of 3: usermode and interrupts enabled, but mmu disabled *)
 
 	auto kr5
@@ -87,7 +129,7 @@ procedure MakeProcZero (* func -- proc *)
 
 	auto myproc
 
-	0 0 0x1FE000 kr5@ -1 -1 -1 myhtta@ 0 "init" ProcBuildStruct myproc!
+	0 0 kstack@ kr5@ -1 -1 -1 myhtta@ httatab@ 0 "idle" ProcBuildStruct myproc!
 
 	PRUNNABLE myproc@ Proc_Status + !
 	1 ProcsRunnable!
@@ -124,11 +166,12 @@ procedure ProcSkeleton (* rs entry extent page name -- proc *)
 	auto kstack
 	1024 Malloc kstack!
 
+	auto httatab
 	auto htta
-	rs@ 0 kstack@ entry@ HTTANew htta!
+	rs@ 0 kstack@ 1024 + entry@ HTTANew httatab! htta!
 
 	auto proc
-	0 0 kstack@ kr5@ CurProc@ extent@ page@ htta@ pid@ name@ ProcBuildStruct proc!
+	0 0 kstack@ kr5@ CurProc@ extent@ page@ htta@ httatab@ pid@ name@ ProcBuildStruct proc!
 
 	PFORKING proc@ Proc_Status + !
 
@@ -141,7 +184,7 @@ procedure ProcDestroy (* proc -- *)
 	auto proc
 	proc!
 
-	proc@ Proc_cHTTA + @ Free
+	proc@ Proc_HTTATable + @ Free
 	proc@ Proc_kr5 + @ Free
 	proc@ Proc_kstack + @ Free
 
@@ -163,12 +206,15 @@ procedure ProcDestroyStruct (* proc -- *)
 	proc@ Free
 end
 
-procedure ProcBuildStruct (* bounds base kstack kr5 parent extent page chtta pid name -- proc *)
+procedure ProcBuildStruct (* bounds base kstack kr5 parent extent page chtta httatab pid name -- proc *)
 	auto name
 	name!
 
 	auto pid
 	pid!
+
+	auto httatab
+	httatab!
 
 	auto chtta
 	chtta!
@@ -199,6 +245,7 @@ procedure ProcBuildStruct (* bounds base kstack kr5 parent extent page chtta pid
 
 	name@ strdup proc@ Proc_Name + !
 	pid@ proc@ Proc_PID + !
+	httatab@ proc@ Proc_HTTATable + !
 	chtta@ proc@ Proc_cHTTA + !
 	page@ proc@ Proc_Page + !
 	extent@ proc@ Proc_Extent + !

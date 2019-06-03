@@ -1,31 +1,84 @@
 var SysconOut 0
+var SysconEarly 1
+
+buffer SysconEarlyBuf 1024
+const SysconEarlyBufSz 1024
+var SysconEarlyBufPtr 0
+var SysconEarlyBufSP 0
+var SysconEarlyCCount 0
+
+var SysconTty 0
+
+procedure SysconEarlyPut (* c -- *)
+	auto c
+	c!
+
+	c@ SysconEarlyBuf SysconEarlyBufPtr@ SysconEarlyBufSz % + sb
+
+	SysconEarlyBufPtr@ 1 + SysconEarlyBufPtr!
+
+	if (SysconEarlyBufPtr@ SysconEarlyBufSz >=)
+		SysconEarlyBufSP@ 1 + SysconEarlyBufSP!
+	end
+
+	SysconEarlyCCount@ 1 + SysconEarlyBufSz min SysconEarlyCCount!
+end
+
+procedure SysconDumpEarly (* -- *)
+	auto sp
+	SysconEarlyBufSP@ sp!
+
+	auto i
+	0 i!
+
+	while (i@ SysconEarlyCCount@ <)
+		auto c
+		SysconEarlyBuf sp@ SysconEarlyBufSz % + gb c!
+
+		if (c@ 0 ~=)
+			c@ Putc
+		end
+
+		sp@ 1 + sp!
+		i@ 1 + i!
+	end
+end
 
 procedure Putc (* c -- *)
+	auto c
+	c!
+
+	if (SysconEarly@)
+		c@ SysconEarlyPut
+	end
+
 	auto rs
 	InterruptDisable rs!
 
 	if (SysconOut@ 0 ==)
-		asm "
-
-		popv r5, r0
-		.db 0xF1
-
-		"
-
 		return
 	end
 
-	SysconOut@ Call
+	c@ SysconOut@ Call
 
 	rs@ InterruptRestore
 end
 
-procedure Getc (* -- c *)
-	ERR return
-end
-
 procedure SysconSetOut (* ptr -- *)
-	SysconOut!
+	auto ptr
+	ptr!
+
+	auto osc
+	SysconOut@ osc!
+
+	ptr@ SysconOut!
+
+	ptr@ SysconTty@ tty_ActualOut + !
+
+	if (SysconEarly@ osc@ ptr@ ~= &&)
+		0 SysconEarly!
+		SysconDumpEarly
+	end
 end
 
 table SysconNames
@@ -39,45 +92,24 @@ procedure SysconInit (* -- *)
 	"syscon: init\n" Printf
 
 	auto sca
-	"syscon" ArgsValue sca!
+	"tty0" ArgsValue sca!
 
-	auto con
+	auto contty
+	TtyAdd dup contty! SysconTty!
 
-	if (VidConPresent@)
-		3 con! (* if vidcon present, use it by default *)
-	end else
-		2 con! (* otherwise use a3x console by default *)
-	end
+	if (sca@ 0 ==)
+		(* defaults *)
 
-	if (sca@ 0 ~=)
-		if (sca@ "serial" strcmp)
-			1 con! (* use specifically the serial port *)
+		if (VidConPresent@)
+			pointerof VConsolePutChar SysconSetOut
+
+			if (KeyboardPresent@)
+				contty@ KeyboardTty!
+			end
 		end else
+			pointerof SerialWritePolled SysconSetOut
 
-		if (sca@ "a3x" strcmp)
-			2 con! (* use specifically a3x console *)
-		end
-
+			contty@ SerialTty!
 		end
 	end
-
-	[con@]SysconNames@ "setting syscon = %s\n" Printf
-
-	if (con@ 1 ==)
-		pointerof SerialWritePolled SysconSetOut
-	end else
-
-	if (con@ 2 ==)
-		pointerof a3xPutc SysconSetOut
-	end else
-
-	if (con@ 3 ==)
-		pointerof VConsolePutChar SysconSetOut
-	end
-
-	end
-
-	end
-
-	[con@]SysconNames@ "set syscon = %s\ncheck early console for earlier boot messages\n\n" Printf
 end
