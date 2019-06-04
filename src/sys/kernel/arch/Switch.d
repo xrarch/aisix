@@ -44,6 +44,7 @@ procedure swtch (* newproc -- *)
 	PRUNNING newproc@ Proc_Status + !
 
 	newproc@ Proc_kr5 + @ ProcCurrentkr5!
+	newproc@ Proc_PID + @ CurPID!
 
 	auto nppb
 	newproc@ Proc_Page + @ nppb!

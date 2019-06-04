@@ -23,6 +23,8 @@ procedure AmaKeyboardDevice (* id -- *)
 
 	pointerof AmaKeyboardInt id@ AmanatsuSetInterrupt
 
+	AKeyboardReset
+
 	1 KeyboardPresent!
 end
 
@@ -44,20 +46,19 @@ procedure AmaKeyboardInt (* -- *)
 	end
 
 	AKeyboardPopCode code!
+	while (code@ 0xFFFF ~=)
+		auto c
 
-	if (code@ 0xFFFF ==)
-		ERR return
+		code@ AKeyboardProcessKey c!
+
+		if (c@ -1 ==)
+			return
+		end
+
+		c@ KeyboardTty@ TtyPutc
+
+		AKeyboardPopCode code!
 	end
-
-	auto c
-
-	code@ AKeyboardProcessKey c!
-
-	if (c@ -1 ==)
-		return
-	end
-
-	c@ KeyboardTty@ TtyPutc
 end
 
 procedure AKeyboardProcessKey (* code -- char *)
@@ -120,6 +121,19 @@ procedure AKeyboardPopCode (* -- code *)
 	rs@ InterruptRestore
 
 	code@
+end
+
+procedure AKeyboardReset (* -- *)
+	auto id
+	AmaKeyboardID@ id!
+
+	auto rs
+	InterruptDisable rs!
+
+	id@ AmanatsuSelectDev
+	2 AmanatsuCommand
+
+	rs@ InterruptRestore
 end
 
 procedure AKeyboardSpecial (* code -- *)

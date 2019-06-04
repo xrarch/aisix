@@ -1,3 +1,5 @@
+(* polled boy *)
+
 var SysconOut 0
 var SysconEarly 1
 
@@ -77,7 +79,10 @@ procedure SysconSetOut (* ptr -- *)
 
 	if (SysconEarly@ osc@ ptr@ ~= &&)
 		0 SysconEarly!
-		SysconDumpEarly
+
+		if ("-tty0supl" ArgsCheck ~~)
+			SysconDumpEarly
+		end
 	end
 end
 

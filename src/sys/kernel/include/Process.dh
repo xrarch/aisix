@@ -1,11 +1,13 @@
 var ProcCurrentkr5 0
 
 var CurProc -1
-var LastPID 1
+var CurPID -1
 
-var ProcList 0
+var NextPID 0
 
-var ProcsRunnable 0
+var ProcTab 0
+
+var ProcNext 0
 
 var DoScheduler 0
 
@@ -75,11 +77,14 @@ struct HTTA
 	4 usp
 endstruct
 
-const PNONE 0
+const PEMPTY 0
 const PRUNNABLE 1
 const PRUNNING 2
 const PSLEEPING 3
 const PZOMBIE 4
 const PFORKING 5
 
+(* how many nested contexts are accomodated for per process *)
 const HTTA_NUM 8
+
+const PROC_MAX 128

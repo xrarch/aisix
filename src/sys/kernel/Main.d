@@ -26,21 +26,16 @@ procedure Main (* args ksize -- *)
 " Printf
 
 *)
+	auto idleproc
+	pointerof IdleProc ProcInit idleproc!
 
-	ProcInit
+	idleproc@ "pid0 (idleproc): pcb @ 0x%x\n" Printf
 
-	auto proc
-	pointerof IdleProc MakeProcZero proc!
-
-	pointerof InitProc MakeProcZero drop
-
-	proc@ "pid0 (idleproc): pcb@%x\n" Printf
-
-	"uswtch'ing into pid0\n" Printf
+	"swtch'ing into pid0\n" Printf
 
 	1 DoScheduler!
 
-	proc@ swtch
+	idleproc@ swtch
 
 	while (1) end
 
@@ -54,13 +49,5 @@ IdleProc:
 	li r0, 3
 	sys 0
 	b IdleProc
-
-InitProc:
-	li r0, 1
-	li r1, 0xDEADBEEF
-	sys 0
-
-.loop:
-	b .loop
 
 "

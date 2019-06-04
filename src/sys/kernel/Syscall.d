@@ -1,6 +1,6 @@
 table SysTab
 	0
-	pointerof SysTest
+	0
 	pointerof SysYieldK
 	pointerof SysYield
 endtable
@@ -27,14 +27,6 @@ procedure Syscall (* -- *)
 	if (sysf@ 0 ~=)
 		htta@ sysf@ Call
 	end
-end
-
-procedure SysTest (* htta -- *)
-	auto htta
-	htta!
-
-	htta@ HTTA_r1 + @ "this is a test syscall! 0xF in r0. contents of r1: %x\n" Printf
-	htta@ HTTA_r1 + @ bswap htta@ HTTA_r1 + !
 end
 
 procedure SysYieldK (* htta -- *)

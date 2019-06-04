@@ -157,6 +157,46 @@ procedure TtyKbufRemovec (* tty -- count *)
 	end
 end
 
+procedure TtyRubout (* tty -- rc *)
+	auto tty
+	tty!
+
+	auto ao
+	tty@ tty_ActualOut + @ ao!
+
+	auto rc
+	tty@ TtyKbufRemovec rc!
+
+	auto i
+	0 i!
+	while (i@ rc@ <)
+		if (ao@ 0 ~=)
+			'\b' ao@ Call
+			' ' ao@ Call
+			'\b' ao@ Call
+		end
+
+		i@ 1 + i!
+	end
+
+	rc@
+end
+
+procedure TtySubmit (* tty -- *)
+	auto tty
+	tty!
+
+	auto c1
+
+	tty@ TtyKbufGetc c1!
+
+	while (c1@ -1 ~=)
+		c1@ tty@ TtyBbufPutc drop
+
+		tty@ TtyKbufGetc c1!
+	end
+end
+
 procedure TtyPutc (* char tty -- *)
 	auto tty
 	tty!
@@ -172,32 +212,41 @@ procedure TtyPutc (* char tty -- *)
 			if (ao@ 0 ~=)
 				ao@ '\n' TtyEchoChar
 			end
-		end
 
-		auto c1
-		tty@ TtyKbufGetc c1!
-
-		while (c1@ -1 ~=)
-			c1@ tty@ TtyBbufPutc drop
-
-			tty@ TtyKbufGetc c1!
+			tty@ TtySubmit@
 		end
 	end else
 
 	if (c@ '\b' ==)
-		auto rc
-		tty@ TtyKbufRemovec rc!
-
-		auto i
-		0 i!
-		while (i@ rc@ <)
-			'\b' ao@ Call
-			' ' ao@ Call
-			'\b' ao@ Call
-
-			i@ 1 + i!
-		end
+		tty@ TtyRubout drop
 	end else
+		if (c@ 26 ==)
+			"^Z received, resetting machine\n" Printf
+			ResetSystem
+		end
+
+		if (c@ 21 ==) (* ^U *)
+			auto rc
+			tty@ TtyRubout rc!
+			while (rc@ 0 >)
+				tty@ TtyRubout rc!
+			end
+
+			return
+		end
+
+		if (c@ 4 ==) (* ^D *)
+			if (4 tty@ TtyKbufPutc)
+				if (ao@ 0 ~=)
+					ao@ 4 TtyEchoChar
+				end
+
+				tty@ TtySubmit@
+			end
+			
+			return
+		end
+
 		if (c@ tty@ TtyKbufPutc)
 			if (ao@ 0 ~=)
 				ao@ c@ TtyEchoChar

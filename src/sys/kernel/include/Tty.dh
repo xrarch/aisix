@@ -8,5 +8,5 @@ struct tty
 	4 ActualOut
 endstruct
 
-const TTY_KBD_BUF_SIZE 512
-const TTY_BIG_BUF_SIZE 16384
+const TTY_KBD_BUF_SIZE 2048
+const TTY_BIG_BUF_SIZE 32768

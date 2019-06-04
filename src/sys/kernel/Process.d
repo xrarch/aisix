@@ -1,52 +1,35 @@
-const PROCMINQUANTUM 10
-
-procedure ProcInit (* -- *)
-	"proc: init\n" Printf
-
-	PROCMINQUANTUM "min quantum: %dms\n" Printf
-
-	ListCreate ProcList!
-end
-
 (* these functions DO implicitly use the current process *)
 
-(* caller should be aware that this function can return if there is nothing to schedule *)
 procedure Schedule (* -- *)
 
 	if (InterruptGet)
 		"scheduler expects interrupts to be disabled\n" Panic
 	end
 
-	auto pln
-	ProcList@ ListLength pln!
-
-	if (pln@ 0 ==)
-		"nothing to schedule\n" Panic
-	end
-
 	auto np
 	ERR np!
 
-	auto n
-	ProcList@ ListHead n!
+	auto i
+	0 i!
 
-	while (n@ 0 ~=)
-		auto pnode
-		n@ ListNodeValue pnode!
+	while (i@ PROC_MAX <)
+		auto p
+		i@ ProcNext@ + PROC_MAX % Proc_SIZEOF * ProcTab@ + p!
 
-		if (pnode@ Proc_Status + @ PRUNNABLE ==)
-			pnode@ np!
-			n@ ProcList@ ListDelete
-			n@ ProcList@ ListAppend
+		if (p@ Proc_Status + @ PRUNNABLE ==)
+			p@ np!
+			i@ 1 + ProcNext!
+			if (ProcNext@ PROC_MAX >=)
+				0 ProcNext!
+			end
 			break
 		end
 
-		n@ ListNode_Next + @ n!
+		i@ 1 + i!
 	end
 
 	if (np@ ERR ==)
-		(* nothing to schedule *)
-		return
+		"nothing to schedule: the idle thread should NOT be blocked\n" Panic
 	end
 
 	np@ swtch
@@ -90,171 +73,93 @@ procedure wakeup (* channel -- *)
 	auto chan
 	chan!
 
-	auto n
-	ProcList@ ListHead n!
+	auto i
+	0 i!
 
-	while (n@ 0 ~=)
-		auto pnode
-		n@ ListNodeValue pnode!
+	while (i@ PROC_MAX <)
+		auto p
+		i@ Proc_SIZEOF * ProcTab@ + p!
 
-		if (pnode@ Proc_Status + @ PSLEEPING ==)
-			if (pnode@ Proc_WChan + @ chan@ ==)
-				PRUNNABLE pnode@ Proc_Status + !
+		if (p@ Proc_Status + @ PSLEEPING ==)
+			if (p@ Proc_WChan + @ chan@ ==)
+				PRUNNABLE p@ Proc_Status + !
 			end
 		end
 
-		n@ ListNode_Next + @ n!
+		i@ 1 + i!
 	end
 end
 
-(* these functions DO NOT implicitly use the current process *)
+procedure allocproc (* -- proc *)
+	auto i
+	0 i!
+
+	while (i@ PROC_MAX <)
+		auto p
+		i@ Proc_SIZEOF * ProcTab@ + p!
+
+		if (p@ Proc_Status + @ PEMPTY ==)
+			p@ Proc_SIZEOF 0 memset
+
+			CurProc@ p@ Proc_Parent + !
+
+			PFORKING p@ Proc_Status + !
+
+			p@ return
+		end
+
+		i@ 1 + i!
+	end
+
+	-ENOMEM
+end
+
+(* special-case initialization functions *)
 
 procedure MakeProcZero (* func -- proc *)
-	"hand-crafting pid 0\n" Printf
-
 	auto func
 	func!
 
+	func@ "hand-crafting idle process (pid 0) @ 0x%x\n" Printf
+
+	auto proc
+	allocproc proc!
+
+	if (proc@ iserr)
+		"couldn't allocate idle process\n" Panic
+	end
+
 	auto kstack
 	1024 Malloc kstack!
 
 	auto httatab
-
 	auto myhtta
-	3 0 kstack@ 1024 + func@ HTTANew httatab! myhtta!
 	(* psw of 3: usermode and interrupts enabled, but mmu disabled *)
+	3 0 kstack@ 1024 + func@ HTTANew httatab! myhtta!
 
 	auto kr5
 	1024 Malloc kr5!
 
-	auto myproc
-
-	0 0 kstack@ kr5@ -1 -1 -1 myhtta@ httatab@ 0 "idle" ProcBuildStruct myproc!
-
-	PRUNNABLE myproc@ Proc_Status + !
-	1 ProcsRunnable!
-
-	myproc@ ProcList@ ListInsert
-
-	myproc@
-end
-
-procedure ProcSkeleton (* rs entry extent page name -- proc *)
-	auto name
-	name!
-
-	auto page
-	page!
-
-	auto extent
-	extent!
-
-	auto entry
-	entry!
-
-	auto rs
-	rs!
-
-	auto pid
-	LastPID@ pid!
-
-	LastPID@ 1 + LastPID!
-
-	auto kr5
-	1024 Malloc kr5!
-
-	auto kstack
-	1024 Malloc kstack!
-
-	auto httatab
-	auto htta
-	rs@ 0 kstack@ 1024 + entry@ HTTANew httatab! htta!
-
-	auto proc
-	0 0 kstack@ kr5@ CurProc@ extent@ page@ htta@ httatab@ pid@ name@ ProcBuildStruct proc!
-
-	PFORKING proc@ Proc_Status + !
-
-	proc@ ProcList@ ListInsert
-
-	proc@
-end
-
-procedure ProcDestroy (* proc -- *)
-	auto proc
-	proc!
-
-	proc@ Proc_HTTATable + @ Free
-	proc@ Proc_kr5 + @ Free
-	proc@ Proc_kstack + @ Free
-
-	proc@ Proc_Page + @
-	proc@ Proc_Extent + @
-	PMMFree
-
-	proc@ ProcList@ ListFind ProcList@ ListRemove
-
-	proc@ ProcDestroyStruct
-end
-
-procedure ProcDestroyStruct (* proc -- *)
-	auto proc
-	proc!
-
-	proc@ Proc_Name + @ Free
-
-	proc@ Free
-end
-
-procedure ProcBuildStruct (* bounds base kstack kr5 parent extent page chtta httatab pid name -- proc *)
-	auto name
-	name!
-
-	auto pid
-	pid!
-
-	auto httatab
-	httatab!
-
-	auto chtta
-	chtta!
-
-	auto page
-	page!
-
-	auto extent
-	extent!
-
-	auto parent
-	parent!
-
-	auto kr5
-	kr5!
-
-	auto kstack
-	kstack!
-
-	auto base
-	base!
-
-	auto bounds
-	bounds!
-
-	auto proc
-	Proc_SIZEOF Malloc proc!
-
-	name@ strdup proc@ Proc_Name + !
-	pid@ proc@ Proc_PID + !
+	"idle" strdup proc@ Proc_Name + !
+	myhtta@ proc@ Proc_cHTTA + !
 	httatab@ proc@ Proc_HTTATable + !
-	chtta@ proc@ Proc_cHTTA + !
-	page@ proc@ Proc_Page + !
-	extent@ proc@ Proc_Extent + !
-	parent@ proc@ Proc_Parent + !
-	PNONE proc@ Proc_Status + !
 	kr5@ proc@ Proc_kr5 + !
 	kstack@ proc@ Proc_kstack + !
-	base@ proc@ Proc_Base + !
-	bounds@ proc@ Proc_Bounds + !
+
+	PRUNNABLE proc@ Proc_Status + !
 
 	proc@
+end
+
+procedure ProcInit (* idleproc -- proc0 *)
+	auto iproc
+	iproc!
+
+	"proc: init\n" Printf
+
+	PROC_MAX Proc_SIZEOF * Calloc ProcTab!
+
+	ProcTab@ "proctab @ 0x%x\n" Printf
+
+	iproc@ MakeProcZero
 end

@@ -77,7 +77,19 @@ procedure Main (* ciptr bootdev args -- *)
 			end
 		end
 
-		if (Getc 'p' ~=)
+		auto cl
+		0 cl!
+		auto c
+		Getc c!
+		while (c@ -1 ~=)
+			if (c@ 'p' ==)
+				1 cl!
+				break
+			end
+			Getc c!
+		end
+
+		if (cl@ ~~)
 			args@ ab@ DoFile
 		end else
 			"automatic load cancelled\n" Printf

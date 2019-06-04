@@ -1,7 +1,7 @@
 const ClockPortCmd 0x20
 const ClockPortA 0x21
 
-const ClockDefaultInterval 250 (* every 25 ms *)
+const ClockDefaultInterval 25 (* every 25 ms *)
 
 var ClockUptimeMS 0
 var ClockInterval 0
@@ -15,11 +15,6 @@ end
 
 procedure ClockInt (* -- *)
 	ClockInterval@ ClockUptimeMS@ + ClockUptimeMS!
-
-	auto pln
-	ProcList@ ListLength pln!
-
-	250 pln@ / PROCMINQUANTUM max ClockSetInterval
 
 	if (DoScheduler@)
 		PRUNNABLE CurProc@ Proc_Status + !

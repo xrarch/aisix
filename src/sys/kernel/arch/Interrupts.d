@@ -28,8 +28,6 @@ procedure InterruptsInit (* -- *)
 
 	CR
 
-	InterruptsVT@ "ivt at 0x%x\n" Printf
-
 	"setting up syscall vector: " Printf
 	0xA i!
 	while (i@ 0x10 <)
