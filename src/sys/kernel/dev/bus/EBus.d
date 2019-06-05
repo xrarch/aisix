@@ -42,7 +42,7 @@ procedure EBusDoBoard (* slot slotspace id -- *)
 		n@ ListNodeValue pnode!
 
 		if (pnode@ EBusBoard_ID + @ id@ ==)
-			slotspace@ pnode@ EBusBoard_Name + @ "%s @ %x" Printf
+			slotspace@ pnode@ EBusBoard_Name + @ "%s @ 0x%x" Printf
 
 			slot@ slotspace@ pnode@ EBusBoard_Constructor + @ Call
 

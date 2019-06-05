@@ -136,11 +136,28 @@ procedure memset (* ptr size wot -- *)
 	auto ptr
 	ptr!
 
-	auto max
-	ptr@ size@ + max!
-	while (ptr@ max@ <)
+	auto iol
+	size@ 4 / iol!
+
+	auto rm
+	size@ 4 % rm!
+
+	auto i
+	0 i!
+
+	while (i@ iol@ <)
+		wot@ ptr@ !
+		ptr@ 4 + ptr!
+		i@ 1 + i!
+	end
+
+	0 i!
+
+	while (i@ rm@ <)
 		wot@ ptr@ sb
+
 		ptr@ 1 + ptr!
+		i@ 1 + i!
 	end
 end
 

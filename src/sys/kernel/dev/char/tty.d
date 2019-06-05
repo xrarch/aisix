@@ -213,7 +213,7 @@ procedure TtyPutc (* char tty -- *)
 				ao@ '\n' TtyEchoChar
 			end
 
-			tty@ TtySubmit@
+			tty@ TtySubmit
 		end
 	end else
 
@@ -241,7 +241,7 @@ procedure TtyPutc (* char tty -- *)
 					ao@ 4 TtyEchoChar
 				end
 
-				tty@ TtySubmit@
+				tty@ TtySubmit
 			end
 			
 			return
