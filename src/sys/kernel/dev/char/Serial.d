@@ -56,7 +56,7 @@ procedure SerialReadPolled (* -- c *)
 
 	auto c
 	SerialCmdRead SerialCmdPort DCitronCommand
-	SerialDataPort DCitronInb c!
+	SerialDataPort DCitronIni c!
 
 	rs@ InterruptRestore
 
