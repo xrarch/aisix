@@ -5,8 +5,12 @@ struct tty
 	4 BigBuf
 	4 BigBufRead
 	4 BigBufWrite
+	4 DevBuf
+	4 DevBufRead
+	4 DevBufWrite
 	4 ActualOut
 endstruct
 
 const TTY_KBD_BUF_SIZE 2048
 const TTY_BIG_BUF_SIZE 32768
+const TTY_DEV_BUF_SIZE 64

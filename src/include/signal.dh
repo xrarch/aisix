@@ -1,0 +1,12 @@
+const SIGHUP 1
+const SIGINT 2
+const SIGQUIT 3
+const SIGILL 4
+const SIGTRAP 5
+const SIGABRT 6
+const SIGEMT 7
+const SIGFPE 8
+const SIGKILL 9
+const SIGBUS 10
+const SIGSEGV 11
+const SIGSYS 12

@@ -1,29 +1,39 @@
 var PMMTotalMemory 0
 var PMMTotalPages 0
+var PMMMemStart 0
 
-procedure PMMInit (* -- *)
-	TotalRAM dup PMMTotalMemory!
-	4096 / PMMTotalPages!
+procedure PMMInit (* kstart ksize -- *)
+	auto ksize
+	ksize!
 
-	PMMTotalPages@ "pmm: managing %d pages\n" Printf
+	auto kstart
+	kstart!
+
+	platformMemoryParams PMMMemStart! PMMTotalMemory!
+
+	PMMTotalMemory@ 4096 / PMMTotalPages!
+
+	PMMMemStart@ 4096 * PMMTotalMemory@ PMMTotalPages@ "pmm: managing %d pages (%d bytes) of memory starting at 0x%x\n" Printf
+
+	if (PMMTotalMemory@ 2097152 <)
+		"refusing to boot with less than 2MB of available RAM\n" Panic
+	end
 
 	if (PMMTotalPages@ 65536 >)
 		"pmm: can't manage more than 65536 pages (256MB of memory)\n" Panic
 	end
+
+	auto ksp
+	kstart@ 4096 / 2 - ksp!
+
+	auto kszp
+	ksize@ 4096 / 3 + 4096 * kszp!
+
+	ksp@ 4096 * kszp@ dup 4096 / "pmm: reserving %d pages (%d bytes) starting at 0x%x for kernel image\n" Printf
+	ksp@ kszp@ 4096 / PMMReserve
 end
 
 buffer PMMBitmap 8192 (* we can deal with up to 256MB of physical memory, this is not arbitrarily picked *)
-
-table PMMBitmasks
-	254
-	253
-	251
-	247
-	239
-	223
-	191
-	127
-endtable
 
 procedure PMMBMSet (* bit v -- *)
 	auto v
@@ -47,12 +57,9 @@ procedure PMMBMSet (* bit v -- *)
 	auto log
 
 	if (v@ 1 ==)
-		auto sh
-		v@ off@ << sh!
-
-		entv@ sh@ | log!
+		entv@ off@ bitset log!
 	end else
-		[off@]PMMBitmasks@ entv@ & log!
+		entv@ off@ bitclear log!
 	end
 
 	log@ enta@ sb
@@ -71,7 +78,7 @@ procedure PMMBMGet (* bit -- v *)
 	auto entv
 	ent@ PMMBitmap + gb entv!
 
-	entv@ off@ >> 1 & return
+	entv@ off@ bitget return
 end
 
 procedure PMMFree (* start size -- *)
@@ -82,10 +89,10 @@ procedure PMMFree (* start size -- *)
 	start!
 
 	auto i
-	start@ i!
+	start@ PMMMemStart@ - i!
 
 	auto max
-	start@ size@ + max!
+	start@ PMMMemStart@ - size@ + max!
 
 	while (i@ max@ <)
 		i@ 0 PMMBMSet
@@ -93,12 +100,31 @@ procedure PMMFree (* start size -- *)
 	end
 end
 
-procedure PMMAllocate (* size -- *)
+procedure PMMReserve (* start size -- *)
+	auto size
+	size!
+
+	auto start
+	start!
+
+	auto i
+	start@ PMMMemStart@ - i!
+
+	auto max
+	start@ PMMMemStart@ - size@ + max!
+
+	while (i@ max@ <)
+		i@ 1 PMMBMSet
+		i@ 1 + i!
+	end
+end
+
+procedure PMMAlloc (* size -- startpage *)
 	auto p
 	p!
 
 	auto i
-	768 i! (* skip first 3mb *)
+	0 i!
 
 	auto q
 	0 q!
@@ -125,13 +151,13 @@ procedure PMMAllocate (* size -- *)
 				i2@ 1 + i2!
 			end
 
-			strtpage@ return
+			strtpage@ PMMMemStart@ + return
 		end
 
 		i@ 1 + i!
 	end
 
-	"pmmallocate: all pages allocated\n" Panic
+	"pmmalloc: all pages allocated\n" Panic
 
 	ERR return
 end

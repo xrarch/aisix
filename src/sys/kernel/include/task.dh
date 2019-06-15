@@ -1,0 +1,56 @@
+struct Task
+	4 Status
+	4 PID
+	4 Name
+	4 Parent
+	4 Threads
+	4 MMUBase
+	4 MMUBounds
+	4 RunningThread
+	4 Killed
+	4 UID
+	4 EUID
+endstruct
+
+struct Thread
+	4 Status
+	4 Task
+	4 Context
+	4 KernelStack
+	4 WaitChan
+endstruct
+
+var TaskTable 0
+var ThreadTable 0
+
+const TASK_MAX 1024
+const THREAD_MAX 2048
+
+const TASK_EMPTY 0
+const TASK_USED 1
+const TASK_RUNNING 2
+const TASK_ZOMBIE 3
+
+table TaskStatusNames
+	"empty"
+	"used/not running"
+	"running"
+	"zombie"
+endtable
+
+const THREAD_EMPTY 0
+const THREAD_RUNNING 1
+const THREAD_RUNNABLE 2
+const THREAD_SLEEPING 3
+const THREAD_PAUSED 4
+
+const KERNEL_STACK_SIZE 8192
+
+var SchedulerContext 0
+
+var KernelTask 0
+
+var InitTask 0
+
+var TaskCurrent 0
+var ThreadCurrent 0

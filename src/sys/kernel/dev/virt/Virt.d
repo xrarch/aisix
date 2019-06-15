@@ -2,8 +2,6 @@
 #include "dev/virt/Syscon.d"
 
 procedure VirtInit (* -- *)
-	"pseudodevs: init\n" Printf
-
 	VidConInit
 	SysconInit
 end

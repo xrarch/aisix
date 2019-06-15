@@ -18,7 +18,6 @@ GraphicsLogo:
 const GraphicsLogoWidth 147
 const GraphicsLogoHeight 46
 
-#include "dev/graphics/Kinnow3.d"
 procedure GraphicsRectangle (* x y w h color -- *)
 	if (GraphicsPresent@)
 		KinnowRectangle
@@ -68,8 +67,6 @@ procedure GraphicsBlitBits (* x y w h bpr fg bg bitd bmp -- *)
 end
 
 procedure GraphicsLateInit (* -- *)
-	"graphics: late init\n" Printf
-
 	if ("-nographics" ArgsCheck)
 		"graphics: -nographics, aborting\n" Printf
 		return
@@ -108,12 +105,11 @@ procedure GraphicsLateInit (* -- *)
 end
 
 procedure GraphicsInit (* -- *)
-	"graphics: init\n" Printf
-
 	if ("-nographics" ArgsCheck)
 		"graphics: -nographics, aborting\n" Printf
 		return
 	end
 
+	(* initialize platform's graphics devices *)
 	Kinnow3Init
 end

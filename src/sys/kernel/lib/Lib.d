@@ -1,5 +1,2 @@
-#include "../lib/Runtime.d"
-#include "../lib/List.d"
-#include "lib/Heap.d"
-#include "lib/Args.d"
-#include "lib/Panic.d"
+#include "../../lib/Runtime.d"
+#include "../../lib/List.d"

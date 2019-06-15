@@ -275,6 +275,11 @@ procedure VConsolePutChar (* char -- *)
 	auto char
 	char!
 
+	if (VCNeedsDraw@)
+		VConsoleDraw
+		0 VCNeedsDraw!
+	end
+
 	if (char@ 255 >)
 		return
 	end
@@ -289,11 +294,16 @@ procedure VConsolePutChar (* char -- *)
 		return
 	end
 
+	auto rs
+	InterruptDisable rs!
+
 	VConsoleClearCur
 
 	char@ VConsolePutCharF
 
 	VConsoleDrawCur
+
+	rs@ InterruptRestore
 end
 
 procedure VConsolePutCharF (* char -- *)
@@ -344,11 +354,6 @@ procedure VConsoleDrawChar (* x y char color -- *)
 
 	auto x
 	x!
-
-	if (VCNeedsDraw@)
-		VConsoleDraw
-		0 VCNeedsDraw!
-	end
 
 	(* dont draw spaces *)
 	if (char@ ' ' ==)

@@ -1,6 +1,7 @@
 (* polled boy *)
 
 var SysconOut 0
+var SysconIn 0
 var SysconEarly 1
 
 buffer SysconEarlyBuf 1024
@@ -54,16 +55,62 @@ procedure Putc (* c -- *)
 		c@ SysconEarlyPut
 	end
 
-	auto rs
-	InterruptDisable rs!
-
 	if (SysconOut@ 0 ==)
+		c@ platformPutc
 		return
 	end
 
 	c@ SysconOut@ Call
+end
 
-	rs@ InterruptRestore
+procedure Getc (* -- c *)
+	if (SysconIn@ 0 ==)
+		platformGetc
+		return
+	end
+
+	SysconIn@ Call
+end
+
+procedure Gets (* s max -- *)
+	auto max
+	max!
+
+	auto s
+	s!
+
+	auto len
+	0 len!
+
+	while (1)
+		auto c
+		ERR c!
+		while (c@ ERR ==)
+			Getc c!
+		end
+
+		if (c@ '\n' ==)
+			'\n' Putc
+			break
+		end
+
+		if (c@ '\b' ==)
+			if (len@ 0 >)
+				len@ 1 - len!
+				0 s@ len@ + sb
+				'\b' Putc
+				' ' Putc
+				'\b' Putc
+			end
+		end else if (len@ max@ <)
+			c@ s@ len@ + sb
+
+			len@ 1 + len!
+			c@ Putc
+		end end
+	end
+
+	0 s@ len@ + sb
 end
 
 procedure SysconSetOut (* ptr -- *)
@@ -93,9 +140,21 @@ table SysconNames
 	"aisix video console"
 endtable
 
-procedure SysconInit (* -- *)
-	"syscon: init\n" Printf
+procedure SysconDefaults (* -- *)
+	if (VidConPresent@)
+		pointerof VConsolePutChar SysconSetOut
 
+		if (KeyboardPresent@)
+			SysconTty@ KeyboardTty!
+		end
+	end else
+		pointerof SerialWritePolled SysconSetOut
+
+		SysconTty@ SerialTty!
+	end
+end
+
+procedure SysconInit (* -- *)
 	auto sca
 	"tty0" ArgsValue sca!
 
@@ -105,6 +164,20 @@ procedure SysconInit (* -- *)
 	if (sca@ 0 ==)
 		(* defaults *)
 
+		SysconDefaults
+
+		return
+	end
+
+	if (sca@ "serial" strcmp)
+		pointerof SerialWritePolled SysconSetOut
+
+		contty@ SerialTty!
+
+		return
+	end
+
+	if (sca@ "framebuffer" strcmp)
 		if (VidConPresent@)
 			pointerof VConsolePutChar SysconSetOut
 
@@ -112,9 +185,15 @@ procedure SysconInit (* -- *)
 				contty@ KeyboardTty!
 			end
 		end else
-			pointerof SerialWritePolled SysconSetOut
-
-			contty@ SerialTty!
+			SysconDefaults
 		end
+
+		return
+	end
+
+	if (sca@ "a3x" strcmp sca@ "default" strcmp ||)
+		SysconDefaults
+
+		return
 	end
 end

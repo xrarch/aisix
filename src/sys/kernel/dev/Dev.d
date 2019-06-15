@@ -1,20 +1,10 @@
-#include "dev/bus/Bus.d"
-#include "dev/chipset/Chipset.d"
+#include "dev/limnstation/limnstation.d"
 #include "dev/graphics/Graphics.d"
-#include "dev/char/Character.d"
 #include "dev/virt/Virt.d"
+#include "dev/tty.d"
 
-procedure DeviceInit (* -- *)
-	"dev: init\n" Printf
-
-	BusInit
-	ChipsetInit
-	GraphicsInit
-	CharacterInit
-
-	BusProbe
-
-	GraphicsLateInit
-
+procedure DevInit (* -- *)
+	PlatformDevInit
+	TtyInit
 	VirtInit
 end

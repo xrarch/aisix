@@ -1,6 +1,6 @@
 #include "../lib/a3x.d"
 #include "../lib/a3x_names.d"
-#include "../lib/Runtime.d"
+#include "../../lib/Runtime.d"
 
 var args 0
 var BootDevice 0
@@ -116,6 +116,8 @@ procedure DoFile (* args f -- *)
 		if (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
 		end else
+			CR CR
+
 			CIPtr@ BootDevice@ arg@ sz@ asm "
 				popv r5, r3
 				popv r5, r2
