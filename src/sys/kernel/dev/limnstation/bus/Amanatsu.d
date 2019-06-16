@@ -120,12 +120,10 @@ procedure AmanatsuDoDevice (* did id -- *)
 end
 
 procedure AmanatsuProbe (* -- *)
-	"amanatsu: probing\n" Printf
-
 	auto a
 	1 a!
 
-	"enumerating devices:\n" Printf
+	"amanatsu: enumerating devices\n" Printf
 
 	while (a@ AmaDevs <)
 		auto id

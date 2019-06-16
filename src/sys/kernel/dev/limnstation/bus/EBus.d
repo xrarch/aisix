@@ -54,15 +54,13 @@ procedure EBusDoBoard (* slot slotspace id -- *)
 end
 
 procedure EBusProbe (* -- *)
-	"ebus: probing\n" Printf
-
 	auto i
 	EBusSlotsStart i!
 
 	auto a
 	0 a!
 
-	"enumerating boards:\n" Printf
+	"ebus: enumerating boards\n" Printf
 
 	while (i@ EBusMax <)
 		auto magic

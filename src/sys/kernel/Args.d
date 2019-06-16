@@ -14,6 +14,10 @@ procedure ArgsInit (* argsptr -- *)
 	ArgsBuffer@ argp@ strcpy
 
 	argp@ dup "aisix arguments: ' %s ' @ 0x%x\n" Printf
+
+	if ("-v" ArgsCheck)
+		1 SysVerbose!
+	end
 end
 
 procedure ArgsValue (* arg -- value or 0 *)

@@ -164,14 +164,13 @@ procedure SysconSetOut (* ptr -- *)
 	end
 end
 
-table SysconNames
-	0
-	"serial console"
-	"a3x boot console"
-	"aisix video console"
-endtable
-
 procedure SysconDefaults (* -- *)
+	pointerof SerialWritePolled SysconSetOut
+
+	SysconTty@ SerialTty!
+end
+
+procedure SysconAttemptVC (* -- *)
 	if (VidConPresent@)
 		pointerof VConsolePutChar SysconSetOut
 
@@ -179,52 +178,43 @@ procedure SysconDefaults (* -- *)
 			SysconTty@ KeyboardTty!
 		end
 	end else
-		pointerof SerialWritePolled SysconSetOut
-
-		SysconTty@ SerialTty!
+		SysconDefaults
 	end
 end
 
 procedure SysconInit (* -- *)
-	auto sca
-	"tty0" ArgsValue sca!
+	TtyAdd SysconTty!
 
-	auto contty
-	TtyAdd dup contty! SysconTty!
+	if (SysVerbose@)
+		SysconAttemptVC
+		return
+	end
 
-	if (sca@ 0 ==)
-		(* defaults *)
+	auto tty0
+	"tty0" ArgsValue tty0!
 
+	if (tty0@ 0 ==)
 		SysconDefaults
-
 		return
 	end
 
-	if (sca@ "serial" strcmp)
-		pointerof SerialWritePolled SysconSetOut
-
-		contty@ SerialTty!
-
+	if (tty0@ "video" strcmp)
+		1 SysVerbose!
+		SysconAttemptVC
 		return
 	end
 
-	if (sca@ "framebuffer" strcmp)
-		if (VidConPresent@)
-			pointerof VConsolePutChar SysconSetOut
-
-			if (KeyboardPresent@)
-				contty@ KeyboardTty!
-			end
-		end else
-			SysconDefaults
-		end
-
-		return
-	end
-
-	if (sca@ "a3x" strcmp sca@ "default" strcmp ||)
+	if (tty0@ "serial" strcmp tty0@ "default" strcmp ||)
 		SysconDefaults
-
 		return
 	end
+
+	if (tty0@ "platform" strcmp)
+		0 SysconEarly!
+
+		pointerof platformPutc SysconSetOut
+		return
+	end
+
+	SysconDefaults
 end

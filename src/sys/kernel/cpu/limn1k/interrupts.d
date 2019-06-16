@@ -13,18 +13,11 @@ procedure InterruptsInit (* -- *)
 
 	auto i
 
-	"setting up syscall vectors: " Printf
 	0xA i!
 	while (i@ 0x10 <)
-		i@ "%d " Printf
-
 		pointerof Syscall i@ TrapRegister
 		i@ 1 + i!
 	end
-
-	CR
-
-	TrapsVT@ InterruptsVT@ "ivt @ 0x%x\ttvt @ 0x%x\n" Printf
 end
 
 procedure IVTRegister (* handler num -- *)

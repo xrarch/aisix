@@ -8,6 +8,7 @@ var AmaKeyboardID 0
 
 var KeyboardPresent 0
 var KeyboardTty 0
+var KeyboardIgnore 0
 
 var KeyboardCapsLock 0
 
@@ -33,6 +34,10 @@ procedure KeyboardInit (* -- *)
 end
 
 procedure AmaKeyboardInt (* -- *)
+	if (KeyboardIgnore@)
+		return
+	end
+
 	auto code
 
 	if (KeyboardTty@ 0 ==)

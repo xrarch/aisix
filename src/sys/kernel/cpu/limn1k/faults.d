@@ -45,16 +45,10 @@ procedure CPUFaultHandler (* tf -- *)
 end
 
 procedure FaultsInit (* -- *)
-	"setting up fault handlers: " Printf
-
 	auto i
 	0 i!
 	while (i@ 10 <)
-		i@ "%d " Printf
-
 		pointerof CPUFaultHandler i@ TrapRegister
 		i@ 1 + i!
 	end
-
-	CR
 end

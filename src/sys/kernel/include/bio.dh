@@ -11,4 +11,7 @@ var BufferMax 0
 var BufferList 0
 var BlocksBase 0
 
+const BUFFER_VALID 2
+const BUFFER_DIRTY 4
+
 const BUFFER_PORTION 20

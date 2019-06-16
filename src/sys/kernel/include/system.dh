@@ -1,0 +1,4 @@
+const AISIX_MAJOR 0
+const AISIX_MINOR 6
+
+var SysVerbose 0

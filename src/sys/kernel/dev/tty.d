@@ -246,8 +246,6 @@ procedure TtyAdd (* -- tty *)
 end
 
 procedure TtyWorker (* -- *)
-	"tty worker thread up\n" Printf
-
 	while (1)
 		auto i
 		0 i!

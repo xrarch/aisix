@@ -2,8 +2,6 @@
 
 procedure DeviceInit (* -- *)
 	DRIVER_MAX GenericDriver_SIZEOF * Calloc devsw!
-
-	devsw@ "devsw @ 0x%x\n" Printf
 end
 
 procedure DeviceDriverAlloc (* type -- driver *)

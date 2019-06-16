@@ -8,6 +8,7 @@ const SerialCmdEnableInt 3
 const SerialInterruptNum 0x2B
 
 var SerialTty 0
+var SerialIgnore 0
 
 procedure SerialInit (* -- *)
 	pointerof SerialInterrupt 0x2B PBInterruptRegister
@@ -21,6 +22,10 @@ procedure SerialInit (* -- *)
 end
 
 procedure SerialInterrupt (* -- *)
+	if (SerialIgnore@)
+		return
+	end
+
 	auto c
 
 	if (SerialTty@ 0 ==) (* serial isnt attached to any tty *)

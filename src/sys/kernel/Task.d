@@ -2,8 +2,6 @@ procedure TaskInit (* -- *)
 	TASK_MAX Task_SIZEOF * Calloc TaskTable!
 
 	0 "aisix_task" TaskCreateInternal KernelTask!
-
-	KernelTask@ "aisix_task @ 0x%x\n" Printf
 end
 
 procedure PIDtoPtr (* pid -- ptr *)

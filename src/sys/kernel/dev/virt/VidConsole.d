@@ -8,8 +8,8 @@ var VCColorFG 0x00
 var VCColorOBG 0x56
 var VCColorOFG 0x00
 
-const VConsoleBG 0x1E
-const VConsoleFG 0x0
+const VConsoleBG 0x1C
+const VConsoleFG 0x00
 
 var VCCurX 0
 var VCCurY 0
@@ -22,15 +22,15 @@ var VCHeight 0
 
 var VCScreenNode 0
 
-const VConsoleFontWidth 6
-const VConsoleFontWidthA 5
+const VConsoleFontWidth 8
+const VConsoleFontWidthA 7
 
 const VConsoleFontBytesPerRow 1
-const VConsoleFontHeight 12
+const VConsoleFontHeight 16
 
-const VConsoleFontBitD 0
+const VConsoleFontBitD 1
 
-const VConsoleMargin 40
+const VConsoleMargin 80
 
 const VCTargetCWidth 80
 const VCTargetCHeight 30
@@ -48,13 +48,11 @@ var VidConPresent 0
 asm "
 
 VConsoleFont:
-	.static dev/virt/font-haiku.bmp
+	.static dev/virt/font-terminus.bmp
 
 "
 
 procedure VidConInit (* -- *)
-	"vidcon: init\n" Printf
-
 	if (GraphicsPresent@ ~~)
 		"vidcon: no graphics, aborting\n" Printf
 		return
@@ -215,8 +213,22 @@ procedure VConsoleDraw (* -- *)
 
 	if (VConsoleX@ 0 ~= VConsoleY@ 0 ~= &&) (* there is at least VConsoleMargin/2 pixels around the edge, do a pretty box *)
 		VConsoleX@ 6 - VConsoleY@ 4 - VCGWidth@ 13 + VCGHeight@ 9 + 0x00 VConsoleRect
-		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x0F VConsoleRect
+		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x1D VConsoleRect
 		VConsoleX@ 4 - VConsoleY@ 2 - VCGWidth@ 8 + VCGHeight@ 4 + VConsoleBG VConsoleRect
+
+		auto titletext
+		"AISIX System Console" titletext!
+
+		auto ttbw
+		titletext@ strlen VConsoleFontWidth * 13 + ttbw!
+
+		VConsoleX@ 6 - VConsoleY@ VConsoleFontHeight - 8 - ttbw@ VConsoleFontHeight 5 + 0x00 VConsoleRect
+		VConsoleX@ 5 - VConsoleY@ VConsoleFontHeight - 7 - ttbw@ 2 - VConsoleFontHeight 4 + 23 VConsoleRect
+
+		titletext@
+		VConsoleX@
+		VConsoleY@ VConsoleFontHeight - 5 -
+		29 VConsoleRenderLine
 	end else (* un-pretty box *)
 		VConsoleX@ VConsoleY@ VCGWidth@ VCGHeight@ VConsoleBG VConsoleRect
 	end
@@ -357,6 +369,25 @@ procedure VConsoleDrawChar (* x y char color -- *)
 	auto x
 	x!
 
+	x@ y@ char@ color@ VCColorBG@ VConsoleDrawFont
+end
+
+procedure VConsoleDrawFont (* x y char fgcolor bgcolor -- *)
+	auto bg
+	bg!
+
+	auto fg
+	fg!
+
+	auto char
+	char!
+
+	auto y
+	y!
+
+	auto x
+	x!
+
 	(* dont draw spaces *)
 	if (char@ ' ' ==)
 		return
@@ -365,6 +396,32 @@ procedure VConsoleDrawChar (* x y char color -- *)
 	auto bmp
 	char@ VConsoleFontBytesPerRow VConsoleFontHeight * * pointerof VConsoleFont + bmp!
 
-	x@ y@ VConsoleFontWidth VConsoleFontHeight VConsoleFontBytesPerRow color@ VCColorBG@ VConsoleFontBitD bmp@ GraphicsBlitBits
+	x@ y@ VConsoleFontWidth VConsoleFontHeight VConsoleFontBytesPerRow fg@ bg@ VConsoleFontBitD bmp@ GraphicsBlitBits
+end
 
+procedure VConsoleRenderLine (* line x y color -- *)
+	auto color
+	color!
+
+	auto y
+	y!
+
+	auto x
+	x!
+
+	auto line
+	line!
+
+	auto i
+	1 i!
+
+	auto c
+	line@ gb c!
+	while (c@ 0 ~=)
+		x@ y@ c@ color@ 0xFF VConsoleDrawFont
+
+		x@ VConsoleFontWidth + x!
+		line@ i@ + gb c!
+		i@ 1 + i!
+	end
 end

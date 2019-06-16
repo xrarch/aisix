@@ -13,8 +13,6 @@ struct KHeapHeader
 endstruct
 
 procedure HeapInit (* -- *)
-	HEAP_PORTION "kheap portion: 1/%d\n" Printf
-
 	auto heapsz
 	PMMTotalMemory@ HEAP_PORTION / 4096 / 1 + 4096 * KHeapSize!
 
@@ -22,7 +20,7 @@ procedure HeapInit (* -- *)
 
 	KHeapStart@ KHeapLast!
 
-	KHeapSize@ KHeapStart@ "kernel heap @ 0x%x; size: %d bytes\n" Printf
+	HEAP_PORTION KHeapSize@ KHeapStart@ "kernel heap @ 0x%x; size: %d bytes; portion: 1/%d\n" Printf
 
 	KHeapSize@ KHeapStart@ KHeapHeader_size + !
 	0 KHeapStart@ KHeapHeader_last + !

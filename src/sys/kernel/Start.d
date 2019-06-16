@@ -35,8 +35,7 @@ end
 procedure BootstrapThread (* -- *)
 	InterruptDisable drop
 
-	"bootstrap thread up\n" Printf
-	TaskCurrent@ Task_Name + @ "current task: %s\n" Printf
+	TaskCurrent@ Task_Name + @ "bootstrap thread up. current task: %s\n" Printf
 
 	BufferInit
 
