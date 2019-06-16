@@ -6,13 +6,15 @@
 
 #include "Start.d"
 
-#include "dev/Dev.d"
+#include "Device.d"
 
 #include "PMM.d"
 #include "Panic.d"
 #include "Heap.d"
+#include "bio.d"
 #include "Args.d"
 #include "Task.d"
 #include "Thread.d"
+#include "Signal.d"
 #include "Syscall.d"
 #include "Debugger.d"

@@ -1,4 +1,6 @@
 struct tty
+	4 Status
+	4 Minor
 	4 KbdBuf
 	4 KbdBufRead
 	4 KbdBufWrite
@@ -9,8 +11,17 @@ struct tty
 	4 DevBufRead
 	4 DevBufWrite
 	4 ActualOut
+	4 PGRP
 endstruct
 
 const TTY_KBD_BUF_SIZE 2048
 const TTY_BIG_BUF_SIZE 32768
 const TTY_DEV_BUF_SIZE 64
+
+const TTY_MAX 16
+
+const TTY_EMPTY 0
+const TTY_USED 1
+
+var TtyTable 0
+var TtyNum 0

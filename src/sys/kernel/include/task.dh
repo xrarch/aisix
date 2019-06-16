@@ -8,8 +8,13 @@ struct Task
 	4 MMUBounds
 	4 RunningThread
 	4 Killed
+	4 Signals
+	4 SigHandlers
 	4 UID
 	4 EUID
+	4 PGRP
+	4 Session
+	4 Job
 endstruct
 
 struct Thread
@@ -44,7 +49,7 @@ const THREAD_RUNNABLE 2
 const THREAD_SLEEPING 3
 const THREAD_PAUSED 4
 
-const KERNEL_STACK_SIZE 8192
+const KERNEL_STACK_SIZE 16384
 
 var SchedulerContext 0
 

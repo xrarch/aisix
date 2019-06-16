@@ -35,7 +35,7 @@ procedure Debugger (* tf -- *)
 
 	while (run@)
 		"> " Printf
-		line@ 255 Gets
+		line@ 255 PolledGets
 
 		if (line@ "exit" strcmp)
 			0 run!

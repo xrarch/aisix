@@ -1,6 +1,8 @@
 var KHeapStart 0x100000
 var KHeapSize 0x0F0000
 
+var KHeapLast 0x0
+
 const HEAP_PORTION 20
 
 struct KHeapHeader
@@ -17,6 +19,8 @@ procedure HeapInit (* -- *)
 	PMMTotalMemory@ HEAP_PORTION / 4096 / 1 + 4096 * KHeapSize!
 
 	KHeapSize@ 4096 / PMMAlloc 4096 * KHeapStart!
+
+	KHeapStart@ KHeapLast!
 
 	KHeapSize@ KHeapStart@ "kernel heap @ 0x%x; size: %d bytes\n" Printf
 
@@ -85,12 +89,18 @@ end
 
 (* first-fit *)
 
-procedure Malloc (* sz -- ptr *)
+procedure Malloc1 (* max last sz -- *)
 	auto rs
 	InterruptDisable rs!
 
 	auto sz
 	sz!
+
+	auto last
+	last!
+
+	auto max
+	max!
 
 	if (sz@ 0 ==)
 		ERR rs@ InterruptRestore return
@@ -100,10 +110,15 @@ procedure Malloc (* sz -- ptr *)
 	sz@ KHeapHeader_SIZEOF + 1 - big!
 
 	auto ept
-	KHeapStart@ ept!
+	if (last@ 0 ~=)
+		last@ ept!
+	end else
+		KHeapStart@ ept!
+	end
 
-	auto max
-	KHeapStart@ KHeapSize@ + max!
+	if (max@ 0 ==)
+		KHeapStart@ KHeapSize@ + max!
+	end
 
 	while (ept@ max@ <)
 		auto size
@@ -123,6 +138,8 @@ procedure Malloc (* sz -- ptr *)
 				if (big@ 1 + size@ ==) (* just the right size *)
 					ept@ KHeapHeader_allocated + 1 sb
 					ept@ KHeapHeader_SIZEOF +
+
+					ept@ KHeapLast!
 
 					rs@ InterruptRestore
 
@@ -151,6 +168,8 @@ procedure Malloc (* sz -- ptr *)
 				1 ept@ KHeapHeader_allocated + sb
 				ept@ KHeapHeader_SIZEOF +
 
+				ept@ KHeapLast!
+
 				rs@ InterruptRestore
 
 				return
@@ -162,9 +181,29 @@ procedure Malloc (* sz -- ptr *)
 
 	rs@ InterruptRestore
 
-	"kernel out of heap\n" Panic
-
 	ERR return (* no space big enough *)
+end
+
+procedure Malloc (* sz -- ptr *)
+	auto sz
+	sz!
+
+	auto r
+	0 KHeapLast@ sz@ Malloc1 r!
+
+	if (r@ ERR ~=)
+		r@ return
+	end
+
+	KHeapLast@ 0 sz@ Malloc1 r!
+
+	if (r@ ERR ~=)
+		r@ return
+	end
+
+	"malloc" Panic
+
+	ERR return
 end
 
 procedure Calloc (* sz -- ptr *)
@@ -206,6 +245,10 @@ procedure HeapMerge (* ptr msize -- *)
 
 	if (last@ 0 ~=) (* we're not the first block *)
 		if (last@ KHeapHeader_allocated + gb 0 ==) (* free, merge the boyo *)
+			if (ptr@ KHeapLast@ ==)
+				last@ KHeapLast!
+			end
+
 			last@ KHeapHeader_size + @ lsize!
 
 			lsize@ msize@ + ns!
@@ -227,6 +270,10 @@ procedure HeapMerge (* ptr msize -- *)
 
 	if (next@ KHeapStart@ KHeapSize@ + <) (* we aren't the last block *)
 		if (next@ KHeapHeader_allocated + gb 0 ==) (* free, merge the boyo *)
+			if (next@ KHeapLast@ ==)
+				ptr@ KHeapLast!
+			end
+
 			next@ KHeapHeader_size + @ lsize!
 
 			lsize@ msize@ + ns!

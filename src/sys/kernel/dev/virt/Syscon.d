@@ -72,7 +72,7 @@ procedure Getc (* -- c *)
 	SysconIn@ Call
 end
 
-procedure Gets (* s max -- *)
+procedure PolledGets (* s max -- *)
 	auto max
 	max!
 
@@ -111,6 +111,37 @@ procedure Gets (* s max -- *)
 	end
 
 	0 s@ len@ + sb
+end
+
+procedure Readline (* s max -- *)
+	auto max
+	max!
+
+	auto s
+	s!
+
+	auto bytes
+	TaskCurrent@ s@ 0 max@ 0 TtyRead bytes!
+
+	if (bytes@ 0 ==)
+		0 s@ sb
+		return
+	end
+
+	if (s@ bytes@ 1 - + gb '\n' ~=)
+		0 s@ sb
+		return
+	end
+
+	0 s@ bytes@ 1 - + sb
+end
+
+procedure Gets (* s max -- *)
+	if (SysconTty@ 0 ==)
+		PolledGets
+	end else
+		Readline
+	end
 end
 
 procedure SysconSetOut (* ptr -- *)

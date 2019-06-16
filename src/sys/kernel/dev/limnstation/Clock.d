@@ -24,7 +24,10 @@ procedure ClockWait (* ms -- *)
 	auto wu
 	ClockUptimeMS@ ms@ + wu!
 
-	while (ClockUptimeMS@ wu@ <) end
+	while (ClockUptimeMS@ wu@ <)
+		THREAD_RUNNABLE ThreadCurrent@ Thread_Status + !
+		yield
+	end
 end
 
 procedure ClockUptime (* -- ms *)

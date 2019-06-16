@@ -118,7 +118,9 @@ procedure VConsoleLongestLine (* -- width *)
 end
 
 procedure VConsoleClear (* -- *)
-	VConsoleX@ VConsoleY@ VConsoleLongestLine VConsoleFontWidth * VCHeight@ VConsoleFontHeight * VConsoleBG VConsoleRect
+	VConsoleX@ VConsoleY@
+	VConsoleLongestLine 1 + VCWidth@ min
+	VConsoleFontWidth * VCHeight@ VConsoleFontHeight * VConsoleBG VConsoleRect
 
 	0 VCCurX!
 	0 VCCurY!

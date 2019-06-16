@@ -53,7 +53,7 @@ procedure AmaKeyboardInt (* -- *)
 			return
 		end
 
-		c@ KeyboardTty@ TtyPutc
+		c@ KeyboardTty@ TtyInput
 
 		AKeyboardPopCode code!
 	end

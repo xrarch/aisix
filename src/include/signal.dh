@@ -10,3 +10,8 @@ const SIGKILL 9
 const SIGBUS 10
 const SIGSEGV 11
 const SIGSYS 12
+
+const SIG_DFL 0
+const SIG_IGN 1
+
+const NSIG 12

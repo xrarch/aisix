@@ -36,7 +36,7 @@ procedure SerialInterrupt (* -- *)
 	SerialReadPolled c!
 	
 	while (c@ ERR ~=)
-		c@ SerialTty@ TtyPutc
+		c@ SerialTty@ TtyInput
 		SerialReadPolled c!
 	end
 end

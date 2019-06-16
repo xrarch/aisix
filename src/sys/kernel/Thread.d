@@ -1,9 +1,9 @@
 procedure StackAlloc (* -- ptr *)
-	KERNEL_STACK_SIZE Malloc
+	KERNEL_STACK_SIZE 4096 / PMMAlloc 4096 *
 end
 
 procedure StackFree (* ptr -- *)
-	Free
+	4096 / KERNEL_STACK_SIZE 4096 /
 end
 
 procedure ThreadInit (* -- *)

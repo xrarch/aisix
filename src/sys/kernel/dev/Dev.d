@@ -3,7 +3,7 @@
 #include "dev/virt/Virt.d"
 #include "dev/tty.d"
 
-procedure DevInit (* -- *)
+procedure IOInit (* -- *)
 	PlatformDevInit
 	TtyInit
 	VirtInit

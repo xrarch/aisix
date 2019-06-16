@@ -33,10 +33,16 @@ procedure AisixStart (* args imagesz loadbase -- *)
 end
 
 procedure BootstrapThread (* -- *)
+	InterruptDisable drop
+
 	"bootstrap thread up\n" Printf
 	TaskCurrent@ Task_Name + @ "current task: %s\n" Printf
 
-	DevInit
+	BufferInit
+
+	DeviceInit
+
+	IOInit
 
 	InterruptEnable drop
 

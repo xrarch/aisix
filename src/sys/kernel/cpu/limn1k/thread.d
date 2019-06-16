@@ -18,6 +18,8 @@ procedure cpu_kernel_thread_create (* func thread -- *)
 
 	func@ ksp@ Context_pc + !
 
+	2 ksp@ Context_rs + !
+
 	(* use half of the stack for the dragonfruit value stack *)
 	kstack@ KERNEL_STACK_SIZE 2 / - ksp@ Context_r5 + !
 end

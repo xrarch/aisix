@@ -1,0 +1,30 @@
+var devsw 0
+
+struct GenericDriver
+	4 Name
+	4 Type
+	4 Major
+	4 devsw
+endstruct
+
+const DRIVER_EMPTY 0
+const DRIVER_BLOCK 1
+const DRIVER_CHAR 2
+
+const DRIVER_MAX 256
+
+struct cdevsw
+	4 Open
+	4 Close
+	4 Read
+	4 Write
+	4 Ioctl
+endstruct
+
+struct bdevsw
+	4 Open
+	4 Close
+	4 Strategy
+	4 Ioctl
+	4 Size
+endstruct

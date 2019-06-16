@@ -43,6 +43,8 @@ procedure TaskExit (* task -- *)
 
 	TASK_ZOMBIE task@ Task_Status + !
 
+	1 task@ Task_Killed + !
+
 	if (task@ Task_Threads + @ 0 >)
 		(* find and destroy all of the task's threads *)
 
@@ -76,12 +78,18 @@ procedure TaskExit (* task -- *)
 
 	task@ Task_Name + @ Free
 
+	task@ Task_SigHandlers + @ Free
+
 	(* TODO: kill all file-descriptors etc etc *)
 end
 
 procedure TaskStab (* task -- *)
 	auto task
 	task!
+
+	if (task@ KernelTask@ ==)
+		"can't stab the kernel task!\n" Panic
+	end
 
 	1 task@ Task_Killed + !
 
@@ -122,6 +130,18 @@ procedure TaskCreateInternal (* parent name -- ptr or ERR *)
 			name@ strdup ptr@ Task_Name + !
 			i@ ptr@ Task_PID + !
 			parent@ ptr@ Task_Parent + !
+
+			0 ptr@ Task_MMUBase + !
+			0xFFFFFFFF ptr@ Task_MMUBounds + !
+
+			if (TaskCurrent@ 0 ~=)
+				if (TaskCurrent@ Task_PGRP + @ 0 ==)
+					(* group leader *)
+					i@ ptr@ Task_PGRP + !
+				end
+			end
+
+			NSIG 4 * Malloc Task_SigHandlers + !
 
 			ptr@ return
 		end
