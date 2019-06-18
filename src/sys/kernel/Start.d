@@ -11,7 +11,7 @@ procedure AisixStart (* args imagesz loadbase -- *)
 
 	AISIX_MINOR AISIX_MAJOR "aisix release %d.%d\n" Printf
 	"Copyright (c) 2019 Will. All Rights Reserved\n" Printf
-	imagesz@ ldbase@ "kernel image loaded at 0x%x; ~%d bytes\n\n" Printf
+	imagesz@ ldbase@ "kernel image @ 0x%x; ~%d bytes\n\n" Printf
 
 	ldbase@ imagesz@ PMMInit
 
