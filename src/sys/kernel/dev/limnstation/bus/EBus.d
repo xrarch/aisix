@@ -73,7 +73,7 @@ procedure EBusProbe (* -- *)
 		i@ EBusDecl_Name + name!
 
 		if (magic@ EBusBoardMagic ==)
-			a@ "\tebus%d: " Printf
+			a@ "\t@%d: " Printf
 
 			a@ i@ tid@ EBusDoBoard
 

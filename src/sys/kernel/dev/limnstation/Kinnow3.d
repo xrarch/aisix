@@ -442,3 +442,38 @@ procedure KinnowRectangle (* x y w h color -- *)
 
 	rs@ InterruptRestore
 end
+
+procedure KinnowLineRectangle (* x y w h color -- *)
+	auto color
+	color!
+
+	auto h
+	h!
+
+	auto w
+	w!
+
+	auto y
+	y!
+
+	auto x
+	x!
+
+	x@ y@ w@ 1 color@ KinnowRectangle
+
+	x@ y@ 1 + 1 h@ 1 - color@ KinnowRectangle
+
+	x@ w@ + 1 -
+	y@ 1 +
+	1
+	h@ 1 -
+	color@
+	KinnowRectangle
+
+	x@ 1 +
+	y@ h@ + 1 -
+	w@ 2 -
+	1
+	color@
+	KinnowRectangle
+end

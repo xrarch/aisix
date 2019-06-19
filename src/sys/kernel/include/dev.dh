@@ -7,24 +7,42 @@ struct GenericDriver
 	4 devsw
 endstruct
 
+struct cdevsw
+	4 Open
+	4 Close
+	4 Ioctl
+	4 Read
+	4 Write
+endstruct
+
+(* semantics of size call limit volume size to 2GB, is this an issue? *)
+struct bdevsw
+	4 Open
+	4 Close
+	4 Ioctl
+	4 Read
+	4 Write
+	4 Size
+endstruct
+
+(* shared bits *)
+struct sdevsw
+	4 Open
+	4 Close
+	4 Ioctl
+endstruct
+
 const DRIVER_EMPTY 0
 const DRIVER_BLOCK 1
 const DRIVER_CHAR 2
 
 const DRIVER_MAX 256
 
-struct cdevsw
-	4 Open
-	4 Close
-	4 Read
-	4 Write
-	4 Ioctl
-endstruct
+var DevList 0
 
-struct bdevsw
-	4 Open
-	4 Close
-	4 Strategy
-	4 Ioctl
-	4 Size
+struct Device
+	4 Name
+	4 DevNum
+	4 Perm
+	4 Owner
 endstruct

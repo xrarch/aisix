@@ -94,7 +94,7 @@ procedure ListAppend (* node list -- *)
 	list@ List_Length + dup @ 1 + swap !
 end
 
-procedure ListInsert (* item list -- *)
+procedure ListInsert1 (* item list -- node *)
 	auto list
 	list!
 
@@ -108,6 +108,12 @@ procedure ListInsert (* item list -- *)
 	0 node@ ListNode_Prev + !
 	0 node@ ListNode_Owner + !
 	node@ list@ ListAppend
+
+	node@
+end
+
+procedure ListInsert (* item list -- *)
+	ListInsert1 drop
 end
 
 procedure ListCreate (* -- list *)

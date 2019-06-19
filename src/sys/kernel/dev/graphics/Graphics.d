@@ -26,6 +26,14 @@ procedure GraphicsRectangle (* x y w h color -- *)
 	end
 end
 
+procedure GraphicsLineRectangle (* x y w h color -- *)
+	if (GraphicsPresent@)
+		KinnowLineRectangle
+	end else
+		drop drop drop drop drop
+	end
+end
+
 procedure GraphicsBlit (* x y w h bmp ignore -- *)
 	if (GraphicsPresent@)
 		KinnowBlit

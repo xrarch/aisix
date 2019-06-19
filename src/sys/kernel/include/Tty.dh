@@ -16,7 +16,7 @@ endstruct
 
 const TTY_KBD_BUF_SIZE 2048
 const TTY_BIG_BUF_SIZE 32768
-const TTY_DEV_BUF_SIZE 64
+const TTY_DEV_BUF_SIZE 16
 
 const TTY_MAX 16
 
@@ -25,3 +25,7 @@ const TTY_USED 1
 
 var TtyTable 0
 var TtyNum 0
+
+var TtyFirst 1
+
+var TtyMajor 0

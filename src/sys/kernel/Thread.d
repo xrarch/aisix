@@ -23,12 +23,17 @@ procedure ThreadCreateInternal (* parent -- ptr or ERR *)
 		auto ptr
 		i@ Thread_SIZEOF * ThreadTable@ + ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Thread_Status + @ THREAD_EMPTY ==)
 			THREAD_PAUSED ptr@ Thread_Status + !
 			task@ ptr@ Thread_Task + !
 
 			ptr@ return
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -81,11 +86,16 @@ procedure ThreadExitAll (* task -- *)
 		auto ptr
 		i@ Thread_SIZEOF * ThreadTable@ + ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Thread_Status + @ THREAD_EMPTY ~=)
 			if (ptr@ Thread_Task + @ task@ ==)
 				ptr@ ThreadExit
 			end
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -103,12 +113,17 @@ procedure ThreadsWakeAll (* task -- *)
 		auto ptr
 		i@ Thread_SIZEOF * ThreadTable@ + ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Thread_Status + @ THREAD_SLEEPING ==)
 			if (ptr@ Thread_Task + @ task@ ==)
 				THREAD_RUNNABLE ptr@ Thread_Status + !
 				0 ptr@ Thread_WaitChan + !
 			end
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -125,6 +140,9 @@ procedure ThreadsWakeup (* wchan -- *)
 		auto ptr
 		i@ Thread_SIZEOF * ThreadTable@ + ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Thread_Status + @ THREAD_SLEEPING ==)
 			if (ptr@ Thread_WaitChan + @ wchan@ ==)
 				THREAD_RUNNABLE ptr@ Thread_Status + !
@@ -132,8 +150,12 @@ procedure ThreadsWakeup (* wchan -- *)
 			end
 		end
 
+		rs@ InterruptRestore
+
 		i@ 1 + i!
 	end
+
+	rs@ InterruptRestore
 end
 
 (* more unixy names *)
@@ -160,6 +182,66 @@ procedure sleep (* wchan -- actually? *)
 	end
 
 	1
+end
+
+procedure sleeplock (* lock -- actually? *)
+	auto lock
+	lock!
+
+	auto rs
+	(* this is ok because interrupt status is per-thread
+	and sleep calls yield which restores the psw of the next
+	thread via swtch *)
+	InterruptDisable rs!
+
+	if (lock@ SleepLock_Thread + @ ThreadCurrent@ ==)
+		rs@ InterruptRestore
+		lock@ "sleeplock: thread already holding lock @ 0x%x\n" Panic
+	end
+
+	while (lock@ SleepLock_Locked + @)
+		if (lock@ sleep ~~)
+			0 return
+		end
+	end
+
+	1 lock@ SleepLock_Locked + !
+	ThreadCurrent@ lock@ SleepLock_Thread + !
+
+	rs@ InterruptRestore
+
+	1
+end
+
+procedure sleepunlock (* lock -- *)
+	auto lock
+	lock!
+
+	auto rs
+	InterruptDisable rs!
+
+	0 lock@ SleepLock_Locked + !
+	0 lock@ SleepLock_Thread + !
+
+	rs@ InterruptRestore
+
+	lock@ wakeup
+end
+
+procedure holdingsleeplock (* lock -- holding? *)
+	auto lock
+	lock!
+
+	auto r
+
+	auto rs
+	InterruptDisable rs!
+
+	lock@ SleepLock_Locked + @ lock@ SleepLock_Thread + @ ThreadCurrent@ == && r!
+
+	rs@ InterruptRestore
+
+	r@
 end
 
 procedure KernelThreadResume (* thread -- *)

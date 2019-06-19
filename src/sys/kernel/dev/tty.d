@@ -5,9 +5,9 @@
 table TtyCDEVSW
 	pointerof TtyOpen
 	pointerof TtyClose
+	pointerof TtyIoctl
 	pointerof TtyRead
 	pointerof TtyWrite
-	pointerof TtyIoctl
 endtable
 
 procedure TtyInit (* -- *)
@@ -15,7 +15,7 @@ procedure TtyInit (* -- *)
 
 	pointerof TtyWorker KernelThreadCreate KernelThreadResume
 
-	TtyCDEVSW DRIVER_CHAR "tty" DeviceAddDriver
+	TtyCDEVSW DRIVER_CHAR "tty" DeviceAddDriver TtyMajor!
 end
 
 procedure TtyMinorToTty (* minor -- tty *)
@@ -37,7 +37,7 @@ procedure TtyMinorToTty (* minor -- tty *)
 	tty@
 end
 
-procedure TtyOpen (* proc minor -- ok? *)
+procedure TtyOpen (* proc minor -- err *)
 	auto minor
 	minor!
 
@@ -47,7 +47,7 @@ procedure TtyOpen (* proc minor -- ok? *)
 	auto dev
 	minor@ TtyMinorToTty dev!
 
-	if (dev@ 0 s<)
+	if (dev@ iserr)
 		dev@ return
 	end
 
@@ -58,7 +58,7 @@ procedure TtyOpen (* proc minor -- ok? *)
 	0
 end
 
-procedure TtyClose (* proc minor -- ok? *)
+procedure TtyClose (* proc minor -- err *)
 	auto minor
 	minor!
 
@@ -68,9 +68,11 @@ procedure TtyClose (* proc minor -- ok? *)
 	auto dev
 	minor@ TtyMinorToTty dev!
 
-	if (dev@ 0 s<)
+	if (dev@ iserr)
 		dev@ return
 	end
+
+	0 dev@ tty_PGRP + !
 
 	0
 end
@@ -94,7 +96,7 @@ procedure TtyRead (* proc buf offset count minor -- bytes *)
 	auto dev
 	minor@ TtyMinorToTty dev!
 
-	if (dev@ 0 s<)
+	if (dev@ iserr)
 		dev@ return
 	end
 
@@ -109,6 +111,12 @@ procedure TtyRead (* proc buf offset count minor -- bytes *)
 		dev@ TtyBbufGetc c!
 		if (c@ -1 ~=)
 			if (c@ 4 ==) (* ^D *)
+				if (i@ 0 ==)
+					0 return
+				end
+
+				4 dev@ TtyBbufPutc
+
 				i@ return
 			end
 
@@ -136,7 +144,7 @@ procedure TtyRead (* proc buf offset count minor -- bytes *)
 	count@ return
 end
 
-procedure TtyWrite (* proc buf offset count minor -- written? *)
+procedure TtyWrite (* proc buf offset count minor -- byteswritten *)
 	auto minor
 	minor!
 
@@ -155,7 +163,7 @@ procedure TtyWrite (* proc buf offset count minor -- written? *)
 	auto dev
 	minor@ TtyMinorToTty dev!
 
-	if (dev@ 0 s<)
+	if (dev@ iserr)
 		dev@ return
 	end
 
@@ -171,7 +179,7 @@ procedure TtyWrite (* proc buf offset count minor -- written? *)
 	count@
 end
 
-procedure TtyIoctl (* proc cmd data minor -- ok? *)
+procedure TtyIoctl (* proc cmd data minor -- err *)
 	auto minor
 	minor!
 
@@ -187,7 +195,7 @@ procedure TtyIoctl (* proc cmd data minor -- ok? *)
 	auto dev
 	minor@ TtyMinorToTty dev!
 
-	if (dev@ 0 s<)
+	if (dev@ iserr)
 		dev@ return
 	end
 
@@ -223,7 +231,24 @@ procedure TtyAdd (* -- tty *)
 		"couldn't allocate tty\n" Panic
 	end
 
-	tty@ tty_Minor + @ "tty: adding tty%d\n" Printf
+	auto minor
+	tty@ tty_Minor + @ minor!
+
+	auto num
+	TtyMajor@ 8 << minor@ | num!
+
+	auto ttyn
+	8 Calloc ttyn!
+
+	if (TtyFirst@)
+		0 TtyFirst!
+		ttyn@ "console" strcpy
+	end else
+		ttyn@ "tty" strcpy
+		minor@ 1 - ttyn@ 3 + itoa
+	end
+
+	0 0 ttyn@ num@ DeviceAdd
 
 	auto kbdbuf
 	TTY_KBD_BUF_SIZE Calloc kbdbuf!
@@ -275,6 +300,9 @@ procedure TtyDevbufPutc (* c tty -- ok? *)
 	auto c
 	c!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto rptr
 
 	tty@ tty_DevBufRead + @ rptr!
@@ -284,6 +312,7 @@ procedure TtyDevbufPutc (* c tty -- ok? *)
 	tty@ tty_DevBufWrite + @ wptr!
 
 	if (wptr@ rptr@ - TTY_DEV_BUF_SIZE >=) (* full *)
+		rs@ InterruptRestore
 		0 return
 	end
 
@@ -295,12 +324,17 @@ procedure TtyDevbufPutc (* c tty -- ok? *)
 
 	wptr@ 1 + tty@ tty_DevBufWrite + !
 
+	rs@ InterruptRestore
+
 	1
 end
 
 procedure TtyDevbufGetc (* tty -- c or -1 *)
 	auto tty
 	tty!
+
+	auto rs
+	InterruptDisable rs!
 
 	auto devbuf
 
@@ -315,10 +349,13 @@ procedure TtyDevbufGetc (* tty -- c or -1 *)
 	tty@ tty_DevBufWrite + @ wptr!
 
 	if (rptr@ wptr@ ==) (* empty *)
+		rs@ InterruptRestore
 		-1 return
 	end
 
 	rptr@ 1 + tty@ tty_DevBufRead + !
+
+	rs@ InterruptRestore
 
 	rptr@ TTY_DEV_BUF_SIZE % devbuf@ + gb
 end
@@ -330,6 +367,9 @@ procedure TtyBbufPutc (* c tty -- ok? *)
 	auto c
 	c!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto rptr
 
 	tty@ tty_BigBufRead + @ rptr!
@@ -339,6 +379,7 @@ procedure TtyBbufPutc (* c tty -- ok? *)
 	tty@ tty_BigBufWrite + @ wptr!
 
 	if (wptr@ rptr@ - TTY_BIG_BUF_SIZE >=) (* full *)
+		rs@ InterruptRestore
 		0 return
 	end
 
@@ -350,12 +391,17 @@ procedure TtyBbufPutc (* c tty -- ok? *)
 
 	wptr@ 1 + tty@ tty_BigBufWrite + !
 
+	rs@ InterruptRestore
+
 	1
 end
 
 procedure TtyBbufGetc (* tty -- c or -1 *)
 	auto tty
 	tty!
+
+	auto rs
+	InterruptDisable rs!
 
 	auto bigbuf
 
@@ -370,10 +416,13 @@ procedure TtyBbufGetc (* tty -- c or -1 *)
 	tty@ tty_BigBufWrite + @ wptr!
 
 	if (rptr@ wptr@ ==) (* empty *)
+		rs@ InterruptRestore
 		-1 return
 	end
 
 	rptr@ 1 + tty@ tty_BigBufRead + !
+
+	rs@ InterruptRestore
 
 	rptr@ TTY_BIG_BUF_SIZE % bigbuf@ + gb
 end
@@ -385,6 +434,9 @@ procedure TtyKbufPutc (* c tty -- ok? *)
 	auto c
 	c!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto rptr
 
 	tty@ tty_KbdBufRead + @ rptr!
@@ -394,6 +446,7 @@ procedure TtyKbufPutc (* c tty -- ok? *)
 	tty@ tty_KbdBufWrite + @ wptr!
 
 	if (wptr@ rptr@ - TTY_KBD_BUF_SIZE >=) (* full *)
+		rs@ InterruptRestore
 		0 return
 	end
 
@@ -405,12 +458,17 @@ procedure TtyKbufPutc (* c tty -- ok? *)
 
 	wptr@ 1 + tty@ tty_KbdBufWrite + !
 
+	rs@ InterruptRestore
+
 	1
 end
 
 procedure TtyKbufGetc (* tty -- c or -1 *)
 	auto tty
 	tty!
+
+	auto rs
+	InterruptDisable rs!
 
 	auto kbdbuf
 
@@ -425,10 +483,13 @@ procedure TtyKbufGetc (* tty -- c or -1 *)
 	tty@ tty_KbdBufWrite + @ wptr!
 
 	if (rptr@ wptr@ ==) (* empty *)
+		rs@ InterruptRestore
 		-1 return
 	end
 
 	rptr@ 1 + tty@ tty_KbdBufRead + !
+
+	rs@ InterruptRestore
 
 	rptr@ TTY_KBD_BUF_SIZE % kbdbuf@ + gb
 end
@@ -436,6 +497,9 @@ end
 procedure TtyKbufRemovec (* tty -- count *)
 	auto tty
 	tty!
+
+	auto rs
+	InterruptDisable rs!
 
 	auto kbdbuf
 
@@ -450,6 +514,7 @@ procedure TtyKbufRemovec (* tty -- count *)
 	tty@ tty_KbdBufWrite + @ wptr!
 
 	if (wptr@ rptr@ - 0 ==) (* already empty *)
+		rs@ InterruptRestore
 		0 return
 	end
 
@@ -459,11 +524,14 @@ procedure TtyKbufRemovec (* tty -- count *)
 	wptr@ 1 - tty@ tty_KbdBufWrite + !
 
 	if (c@ 0x20 <)
+		rs@ InterruptRestore
 		2 return
 	end else
 		if (c@ TtyPrintable ~~)
+			rs@ InterruptRestore
 			0 return
 		end else
+			rs@ InterruptRestore
 			1 return
 		end
 	end
@@ -500,13 +568,21 @@ procedure TtySubmit (* tty -- *)
 
 	auto c1
 
+	auto rs
+	InterruptDisable rs!
+
 	tty@ TtyKbufGetc c1!
 
 	while (c1@ -1 ~=)
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
 		c1@ tty@ TtyBbufPutc drop
 
 		tty@ TtyKbufGetc c1!
 	end
+
+	rs@ InterruptRestore
 
 	tty@ wakeup
 end
@@ -529,6 +605,8 @@ procedure TtyDoInput (* char tty -- *)
 	auto c
 	c!
 
+	auto rc
+
 	if (c@ '\n' ==)
 		if ('\n' tty@ TtyKbufPutc)
 			'\n' tty@ TtyEchoChar
@@ -546,7 +624,6 @@ procedure TtyDoInput (* char tty -- *)
 		end
 
 		if (c@ 21 ==) (* ^U *)
-			auto rc
 			tty@ TtyRubout rc!
 			while (rc@ 0 >)
 				tty@ TtyRubout rc!
@@ -568,7 +645,11 @@ procedure TtyDoInput (* char tty -- *)
 		if (c@ 3 ==) (* ^C *)
 			3 tty@ TtyEchoChar
 
-			tty@ TtySubmit
+			auto rc
+			tty@ TtyKbufRemovec rc!
+			while (rc@ 0 >)
+				tty@ TtyKbufRemovec rc!	
+			end
 
 			SIGINT tty@ tty_PGRP + @ TaskSignalGroup drop
 

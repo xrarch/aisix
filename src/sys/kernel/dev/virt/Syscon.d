@@ -4,13 +4,15 @@ var SysconOut 0
 var SysconIn 0
 var SysconEarly 1
 
-buffer SysconEarlyBuf 1024
-const SysconEarlyBufSz 1024
+buffer SysconEarlyBuf 2048
+const SysconEarlyBufSz 2048
 var SysconEarlyBufPtr 0
 var SysconEarlyBufSP 0
 var SysconEarlyCCount 0
 
 var SysconTty 0
+
+var SysconVC 0
 
 procedure SysconEarlyPut (* c -- *)
 	auto c
@@ -28,6 +30,8 @@ procedure SysconEarlyPut (* c -- *)
 end
 
 procedure SysconDumpEarly (* -- *)
+	0 SysconEarly!
+
 	auto sp
 	SysconEarlyBufSP@ sp!
 
@@ -154,31 +158,52 @@ procedure SysconSetOut (* ptr -- *)
 	ptr@ SysconOut!
 
 	ptr@ SysconTty@ tty_ActualOut + !
-
-	if (SysconEarly@ osc@ ptr@ ~= &&)
-		0 SysconEarly!
-
-		if ("-tty0supl" ArgsCheck ~~)
-			SysconDumpEarly
-		end
-	end
 end
 
-procedure SysconDefaults (* -- *)
+procedure SysconSwitchSerial (* -- ok? *)
+	0 SysconVC!
+
 	pointerof SerialWritePolled SysconSetOut
 
 	SysconTty@ SerialTty!
+
+	1
 end
 
-procedure SysconAttemptVC (* -- *)
+procedure SysconSwitchVC (* earlyprint? -- ok? *)
+	auto ep
+	ep!
+
+	if (SysconVC@)
+		1 return
+	end
+
 	if (VidConPresent@)
+		VConsoleNeedsDraw
+
 		pointerof VConsolePutChar SysconSetOut
+
+		if (SysconEarly@ ep@ &&)
+			if ("-tty0supl" ArgsCheck ~~)
+				SysconDumpEarly
+			end
+		end
 
 		if (KeyboardPresent@)
 			SysconTty@ KeyboardTty!
 		end
+
+		1 SysconVC!
+
+		1 return
 	end else
-		SysconDefaults
+		0 return
+	end
+end
+
+procedure SysconAttemptVC (* -- *)
+	if (1 SysconSwitchVC ~~)
+		SysconSwitchSerial drop
 	end
 end
 
@@ -194,18 +219,17 @@ procedure SysconInit (* -- *)
 	"tty0" ArgsValue tty0!
 
 	if (tty0@ 0 ==)
-		SysconDefaults
+		SysconSwitchSerial drop
 		return
 	end
 
 	if (tty0@ "video" strcmp)
-		1 SysVerbose!
-		SysconAttemptVC
+		SysconAttemptVC 
 		return
 	end
 
 	if (tty0@ "serial" strcmp tty0@ "default" strcmp ||)
-		SysconDefaults
+		SysconSwitchSerial drop
 		return
 	end
 
@@ -216,5 +240,5 @@ procedure SysconInit (* -- *)
 		return
 	end
 
-	SysconDefaults
+	SysconSwitchSerial drop
 end

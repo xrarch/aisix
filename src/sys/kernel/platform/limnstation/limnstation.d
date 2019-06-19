@@ -6,3 +6,4 @@
 #include "platform/limnstation/memory.d"
 #include "platform/limnstation/interrupt.d"
 #include "platform/limnstation/mmu.d"
+#include "platform/limnstation/shutdown.d"

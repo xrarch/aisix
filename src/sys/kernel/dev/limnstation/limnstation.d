@@ -4,6 +4,8 @@
 #include "dev/limnstation/Serial.d"
 #include "dev/limnstation/Keyboard.d"
 
+#include "dev/limnstation/FwBlock.d"
+
 (* graphics devices dont get initialized here *)
 #include "dev/limnstation/Kinnow3.d"
 
@@ -18,4 +20,6 @@ procedure PlatformDevInit (* -- *)
 	BusProbe
 
 	GraphicsLateInit
+
+	FwBlockInit
 end

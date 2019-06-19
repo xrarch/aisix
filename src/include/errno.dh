@@ -64,11 +64,6 @@ const	-EMLINK	-31
 const	-EPIPE	-32
 const	-EFAULT	-33
 
-(* really just checks if its negative *)
-procedure iserr (* num -- iserr? *)
-	0 s<
-end
-
 table aisix_errno
 	"Operation succeeded"
 	"Operation not permitted"
@@ -84,7 +79,7 @@ table aisix_errno
 	"Try again"
 	"Out of memory"
 	"Permission denied"
-	"Not a block device"
+	"Not supported by device"
 	"Device or resource busy"
 	"File exists"
 	"Cross-device link"

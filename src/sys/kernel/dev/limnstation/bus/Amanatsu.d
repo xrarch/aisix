@@ -130,7 +130,7 @@ procedure AmanatsuProbe (* -- *)
 		a@ AmanatsuPoll id!
 
 		if (id@ 0 ~=)
-			a@ "\tamanatsu%d: " Printf
+			a@ "\t@%d: " Printf
 
 			a@ id@ AmanatsuDoDevice
 

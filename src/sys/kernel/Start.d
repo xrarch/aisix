@@ -29,7 +29,7 @@ procedure AisixStart (* args imagesz loadbase -- *)
 
 	Scheduler
 
-	while (1) end
+	"scheduler returned\n" Panic
 end
 
 procedure BootstrapThread (* -- *)

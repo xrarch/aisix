@@ -22,13 +22,13 @@ var VCHeight 0
 
 var VCScreenNode 0
 
-const VConsoleFontWidth 8
-const VConsoleFontWidthA 7
+const VConsoleFontWidth 6
+const VConsoleFontWidthA 5
 
 const VConsoleFontBytesPerRow 1
-const VConsoleFontHeight 16
+const VConsoleFontHeight 12
 
-const VConsoleFontBitD 1
+const VConsoleFontBitD 0
 
 const VConsoleMargin 80
 
@@ -48,9 +48,13 @@ var VidConPresent 0
 asm "
 
 VConsoleFont:
-	.static dev/virt/font-terminus.bmp
+	.static dev/virt/font-haiku.bmp
 
 "
+
+procedure VConsoleNeedsDraw (* -- *)
+	1 VCNeedsDraw!
+end
 
 procedure VidConInit (* -- *)
 	if (GraphicsPresent@ ~~)
@@ -128,6 +132,10 @@ end
 
 procedure VConsoleRect (* x y w h color -- *)
 	GraphicsRectangle
+end
+
+procedure VConsoleBox (* x y w h color -- *)
+	GraphicsLineRectangle
 end
 
 procedure VConsoleScroll (* rows -- *)
@@ -212,8 +220,8 @@ procedure VConsoleDraw (* -- *)
 	0 VCCurY!
 
 	if (VConsoleX@ 0 ~= VConsoleY@ 0 ~= &&) (* there is at least VConsoleMargin/2 pixels around the edge, do a pretty box *)
-		VConsoleX@ 6 - VConsoleY@ 4 - VCGWidth@ 13 + VCGHeight@ 9 + 0x00 VConsoleRect
-		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x1D VConsoleRect
+		VConsoleX@ 6 - VConsoleY@ 4 - VCGWidth@ 13 + VCGHeight@ 9 + 0x00 VConsoleBox
+		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x1D VConsoleBox
 		VConsoleX@ 4 - VConsoleY@ 2 - VCGWidth@ 8 + VCGHeight@ 4 + VConsoleBG VConsoleRect
 
 		auto titletext
@@ -222,8 +230,8 @@ procedure VConsoleDraw (* -- *)
 		auto ttbw
 		titletext@ strlen VConsoleFontWidth * 13 + ttbw!
 
-		VConsoleX@ 6 - VConsoleY@ VConsoleFontHeight - 8 - ttbw@ VConsoleFontHeight 5 + 0x00 VConsoleRect
-		VConsoleX@ 5 - VConsoleY@ VConsoleFontHeight - 7 - ttbw@ 2 - VConsoleFontHeight 4 + 23 VConsoleRect
+		VConsoleX@ 6 - VConsoleY@ VConsoleFontHeight - 8 - ttbw@ VConsoleFontHeight 5 + 0x00 VConsoleBox
+		VConsoleX@ 5 - VConsoleY@ VConsoleFontHeight - 7 - ttbw@ 2 - VConsoleFontHeight 4 + 151 VConsoleRect
 
 		titletext@
 		VConsoleX@

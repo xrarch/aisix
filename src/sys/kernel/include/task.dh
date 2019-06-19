@@ -28,8 +28,8 @@ endstruct
 var TaskTable 0
 var ThreadTable 0
 
-const TASK_MAX 1024
-const THREAD_MAX 2048
+const TASK_MAX 256
+const THREAD_MAX 512
 
 const TASK_EMPTY 0
 const TASK_USED 1
@@ -59,3 +59,8 @@ var InitTask 0
 
 var TaskCurrent 0
 var ThreadCurrent 0
+
+struct SleepLock
+	4 Locked
+	4 Thread
+endstruct

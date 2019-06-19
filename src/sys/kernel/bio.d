@@ -1,5 +1,6 @@
 procedure BufferInit (* -- *)
 	ListCreate BufferList!
+	ListCreate BufferDirtyList!
 
 	PMMTotalMemory@ BUFFER_PORTION / 4096 / 1 + BufferMax!
 
@@ -14,7 +15,10 @@ procedure BufferInit (* -- *)
 	0 i!
 
 	while (i@ BufferMax@ <)
-		BufAlloc BufferList@ ListInsert
+		auto buf
+
+		BufAlloc buf!
+		buf@ BufferList@ ListInsert1 buf@ Buffer_Node + !
 
 		i@ 1 + i!
 	end
@@ -22,20 +26,181 @@ end
 
 procedure BufAlloc (* -- buf *)
 	auto buf
-	Buffer_SIZEOF Malloc buf!
+	Buffer_SIZEOF Calloc buf!
 
-	0 buf@ Buffer_Refcount + !
-	-1 buf@ Buffer_Blockno + !
-	-1 buf@ Buffer_Dev + !
-
-	BlocksBase@ buf@ Buffer_Block + !
+	BlocksBase@ 4096 * buf@ Buffer_Block + !
 	BlocksBase@ 1 + BlocksBase!
+
+	buf@
 end
 
-procedure bget (* -- *)
+procedure strategy (* proc buf drv minor -- err *)
+	auto minor
+	minor!
 
+	auto drv
+	drv!
+
+	auto buf
+	buf!
+
+	auto proc
+	proc!
+
+	if (buf@ Buffer_Lock + holdingsleeplock ~~)
+		buf@ "strategy: not holding lock on buf @ 0x%x\n" Panic
+	end
+
+	if (buf@ Buffer_Flags + @ BUFFER_VALID BUFFER_DIRTY | & BUFFER_VALID ==)
+		buf@ "strategy: nothing to do to buf @ 0x%x\nis this really a problem?\n" Panic
+	end
+
+	auto dsw
+	drv@ GenericDriver_devsw + @ dsw!
+
+	auto s
+
+	if (buf@ Buffer_Flags + @ BUFFER_DIRTY & BUFFER_DIRTY ==)
+		proc@ buf@ minor@ dsw@ bdevsw_Write + @ Call s!
+	end else
+		proc@ buf@ minor@ dsw@ bdevsw_Read + @ Call s!
+	end
+
+	if (s@ iserr)
+		s@ return
+	end
+
+	while (buf@ Buffer_Flags + @ BUFFER_VALID BUFFER_DIRTY | & BUFFER_VALID ~=)
+		if (buf@ sleep ~~)
+			-EINTR return
+		end
+	end
+
+	0
 end
 
-procedure bread (* -- *)
+procedure bget (* blockno dev -- buf *)
+	auto dev
+	dev!
 
+	auto blockno
+	blockno!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto pnode
+	auto n
+	BufferList@ ListHead n!
+
+	while (n@ 0 ~=)
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
+		n@ ListNodeValue pnode!
+
+		if (pnode@ Buffer_Dev + @ dev@ ==)
+			if (pnode@ Buffer_Blockno + @ blockno@ ==)
+				if (pnode@ Buffer_Lock + sleeplock ~~)
+					rs@ InterruptRestore
+					-EINTR return
+				end
+
+				pnode@ Buffer_Refcount + @ 1 + pnode@ Buffer_Refcount + !
+
+				rs@ InterruptRestore
+				pnode@ return
+			end
+		end
+
+		n@ ListNode_Next + @ n!
+	end
+
+	rs@ InterruptRestore
+	(* breathing space *)
+	InterruptDisable rs!
+
+	BufferList@ ListTail n!
+
+	while (n@ 0 ~=)
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
+		n@ ListNodeValue pnode!
+
+		if (pnode@ Buffer_Refcount + @ 0 ==)
+			if (pnode@ Buffer_Flags + @ BUFFER_DIRTY & 0 ==)
+				if (pnode@ Buffer_Lock + sleeplock ~~)
+					rs@ InterruptRestore
+					-EINTR return
+				end
+
+				dev@ pnode@ Buffer_Dev + !
+				blockno@ pnode@ Buffer_Blockno + !
+				0 pnode@ Buffer_Flags + !
+				1 pnode@ Buffer_Refcount + !
+
+				rs@ InterruptRestore
+				pnode@ return
+			end
+		end
+
+		n@ ListNode_Prev + @ n!
+	end
+
+	"bget: no buffers\n" Panic
+end
+
+procedure bread (* blockno dev -- buf *)
+	auto buf
+	bget buf!
+
+	if (buf@ iserr)
+		buf@ return
+	end
+
+	if (buf@ Buffer_Flags + @ BUFFER_VALID & 0 ==)
+		auto r
+		TaskCurrent@ buf@ DevStrategy r!
+
+		if (r@ iserr)
+			r@ return
+		end
+	end
+
+	buf@
+end
+
+procedure bwrite (* buf -- err *)
+	auto buf
+	buf!
+
+	if (buf@ Buffer_Lock + holdingsleeplock ~~)
+		buf@ "bwrite: not holding lock on buf @ 0x%x\n" Panic
+	end
+
+	buf@ Buffer_Flags + @ BUFFER_DIRTY | buf@ Buffer_Flags + !
+
+	TaskCurrent@ buf@ DevStrategy
+end
+
+procedure brelse (* buf -- *)
+	auto buf
+	buf!
+
+	if (buf@ Buffer_Lock + holdingsleeplock ~~)
+		buf@ "brelse: not holding lock on buf @ 0x%x\n" Panic
+	end
+
+	auto node
+	buf@ Buffer_Node + @ node!
+
+	buf@ Buffer_Refcount + @ 1 - buf@ Buffer_Refcount + !
+
+	if (buf@ Buffer_Refcount + @ 0 ==)
+		node@ BufferList@ ListDelete
+		node@ BufferList@ ListAppend
+	end
+
+	buf@ Buffer_Lock + sleepunlock
 end

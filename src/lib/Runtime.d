@@ -11,6 +11,17 @@ procedure Call (* ... ptr -- ... *)
 	"
 end
 
+procedure abs (* v -- absv *)
+	auto v
+	v!
+
+	if (v@ 0 s<)
+		0 v@ - return
+	end
+
+	v@
+end
+
 procedure max (* n1 n2 -- max *)
 	auto n2
 	n2!

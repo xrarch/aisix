@@ -17,6 +17,7 @@ procedure ArgsInit (* argsptr -- *)
 
 	if ("-v" ArgsCheck)
 		1 SysVerbose!
+		"-v: verbose boot\n" Printf
 	end
 end
 

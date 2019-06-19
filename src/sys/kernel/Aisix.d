@@ -18,3 +18,4 @@
 #include "Signal.d"
 #include "Syscall.d"
 #include "Debugger.d"
+#include "Shutdown.d"
