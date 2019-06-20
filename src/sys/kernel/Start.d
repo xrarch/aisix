@@ -31,7 +31,6 @@ procedure AisixStart (* args imagesz loadbase -- *)
 
 	"scheduler returned\n" Panic
 end
-
 procedure BootstrapThread (* -- *)
 	InterruptDisable drop
 
@@ -42,6 +41,8 @@ procedure BootstrapThread (* -- *)
 	DeviceInit
 
 	IOInit
+
+	SyncInit
 
 	InterruptEnable drop
 

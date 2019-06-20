@@ -45,4 +45,5 @@ struct Device
 	4 DevNum
 	4 Perm
 	4 Owner
+	4 Type
 endstruct

@@ -31,16 +31,13 @@ procedure FwBlockInit (* -- *)
 	0 i!
 
 	while (i@ FwBlockCount <)
-		auto num
-		FwBlockMajor@ 8 << i@ | num!
-
 		auto bfwn
 		15 Calloc bfwn!
 
 		bfwn@ "bfw" strcpy
 		i@ bfwn@ 3 + itoa
 
-		0 0 bfwn@ num@ DeviceAdd
+		0 0 bfwn@ i@ FwBlockMajor@ DeviceAdd
 
 		i@ 1 + i!
 	end
@@ -171,8 +168,6 @@ procedure FwBlockWrite (* proc buf minor -- err *)
 		-ENOTBLK return
 	end
 
-	"writing ooo\n" Printf
-
 	buf@ Buffer_Flags + @ BUFFER_VALID | buf@ Buffer_Flags + !
 	buf@ Buffer_Flags + @ BUFFER_DIRTY ~ & buf@ Buffer_Flags + !
 
@@ -207,7 +202,11 @@ procedure FwBlockIoctl (* proc cmd data minor -- err *)
 	end
 
 	if (cmd@ BFWIOCTLSETPATH ==)
+		auto rs
+		InterruptDisable rs!
+
 		if (dev@ FwBlockDev_Path + @ 0 ~=) (* path can only be assigned once per reboot *)
+			rs@ InterruptRestore
 			-ENXIO return
 		end
 
@@ -215,6 +214,7 @@ procedure FwBlockIoctl (* proc cmd data minor -- err *)
 		data@ a3xDevTreeWalk node!
 
 		if (node@ 0 ==)
+			rs@ InterruptRestore
 			-ENXIO return
 		end
 
@@ -229,16 +229,18 @@ procedure FwBlockIoctl (* proc cmd data minor -- err *)
 		a3xDeviceExit
 
 		if (sz@ 0 ==)
+			rs@ InterruptRestore
 			-ENXIO return
 		end
+
+		data@ strdup dev@ FwBlockDev_Path + !
 
 		wm@ dev@ FwBlockDev_WriteMethod + !
 		rm@ dev@ FwBlockDev_ReadMethod + !
 		sz@ dev@ FwBlockDev_Size + !
 		node@ dev@ FwBlockDev_Node + !
 
-		data@ strdup dev@ FwBlockDev_Path + !
-
+		rs@ InterruptRestore
 		0 return
 	end
 

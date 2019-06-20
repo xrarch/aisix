@@ -30,6 +30,7 @@ procedure ThreadCreateInternal (* parent -- ptr or ERR *)
 			THREAD_PAUSED ptr@ Thread_Status + !
 			task@ ptr@ Thread_Task + !
 
+			rs@ InterruptRestore
 			ptr@ return
 		end
 
@@ -154,8 +155,6 @@ procedure ThreadsWakeup (* wchan -- *)
 
 		i@ 1 + i!
 	end
-
-	rs@ InterruptRestore
 end
 
 (* more unixy names *)
@@ -172,10 +171,15 @@ procedure sleep (* wchan -- actually? *)
 	auto me
 	ThreadCurrent@ me!
 
+	auto rs
+	InterruptDisable rs!
+
 	wchan@ me@ Thread_WaitChan + !
 	THREAD_SLEEPING me@ Thread_Status + !
 
-	yield
+	sched
+
+	rs@ InterruptRestore
 
 	if (TaskCurrent@ Task_Killed + @)
 		0 return
@@ -201,6 +205,7 @@ procedure sleeplock (* lock -- actually? *)
 
 	while (lock@ SleepLock_Locked + @)
 		if (lock@ sleep ~~)
+			rs@ InterruptRestore
 			0 return
 		end
 	end
@@ -219,6 +224,11 @@ procedure sleepunlock (* lock -- *)
 
 	auto rs
 	InterruptDisable rs!
+
+	if (lock@ SleepLock_Thread + @ ThreadCurrent@ ~=)
+		rs@ InterruptRestore
+		lock@ "sleepunlock: thread wasn't holding lock @ 0x%x\n" Panic
+	end
 
 	0 lock@ SleepLock_Locked + !
 	0 lock@ SleepLock_Thread + !
@@ -264,15 +274,18 @@ procedure Scheduler (* -- *)
 
 	platform_interrupt_throwaway
 
-	while (1)
-		InterruptEnable drop
+	InterruptEnable drop
 
+	while (1)
 		auto i
 		0 i!
 
 		while (i@ THREAD_MAX <)
 			auto ptr
 			i@ Thread_SIZEOF * ThreadTable@ + ptr!
+
+			auto rs
+			InterruptDisable rs!
 
 			if (ptr@ Thread_Status + @ THREAD_RUNNABLE ==)
 				if (TaskCurrent@ 0 ~=)
@@ -293,25 +306,32 @@ procedure Scheduler (* -- *)
 				ptr@ Thread_Context + @ SchedulerContext swtch
 			end
 
+			rs@ InterruptRestore
+
 			i@ 1 + i!
 		end
 	end
 end
 
 (* hard leap into scheduler context *)
-procedure SchedLeap (* -- *)
+procedure sched (* -- *)
 	SchedulerContext@ ThreadCurrent@ Thread_Context + swtch
 end
 
 (* more unixy name for the above *)
 procedure yield (* -- *)
-	SchedLeap
+	auto rs
+	InterruptDisable rs!
+
+	THREAD_RUNNABLE ThreadCurrent@ Thread_Status + !
+	sched
+
+	rs@ InterruptRestore
 end
 
 (* called from clock interrupt *)
 procedure ThreadTick (* -- *)
 	if (ThreadCurrent@ 0 ~= ThreadCurrent@ Thread_Status + @ THREAD_RUNNING == &&)
-		THREAD_RUNNABLE ThreadCurrent@ Thread_Status + !
 		yield
 	end
 end

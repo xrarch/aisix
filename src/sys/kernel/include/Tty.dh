@@ -16,7 +16,7 @@ endstruct
 
 const TTY_KBD_BUF_SIZE 2048
 const TTY_BIG_BUF_SIZE 32768
-const TTY_DEV_BUF_SIZE 16
+const TTY_DEV_BUF_SIZE 8
 
 const TTY_MAX 16
 

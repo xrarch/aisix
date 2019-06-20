@@ -51,6 +51,9 @@ procedure PMMBMSet (* bit v -- *)
 	auto enta
 	ent@ PMMBitmap + enta!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto entv
 	enta@ gb entv!
 
@@ -63,6 +66,8 @@ procedure PMMBMSet (* bit v -- *)
 	end
 
 	log@ enta@ sb
+
+	rs@ InterruptRestore
 end
 
 procedure PMMBMGet (* bit -- v *)
@@ -75,10 +80,17 @@ procedure PMMBMGet (* bit -- v *)
 	bit@ 8 / ent!
 	bit@ 8 % off!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto entv
 	ent@ PMMBitmap + gb entv!
 
-	entv@ off@ bitget return
+	entv@ off@ bitget
+
+	rs@ InterruptRestore
+
+	return
 end
 
 procedure PMMFree (* start size -- *)

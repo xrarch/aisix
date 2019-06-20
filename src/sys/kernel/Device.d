@@ -12,7 +12,11 @@ procedure DeviceDriverAlloc (* type -- driver *)
 	auto i
 	0 i!
 
+	auto rs
+
 	while (i@ DRIVER_MAX <)
+		InterruptDisable rs!
+
 		auto ptr
 		i@ GenericDriver_SIZEOF * devsw@ + ptr!
 
@@ -22,6 +26,8 @@ procedure DeviceDriverAlloc (* type -- driver *)
 
 			ptr@ return
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -37,9 +43,12 @@ procedure DeviceNumMinor (* dev -- min *)
 	0xFF &
 end
 
-procedure DeviceAdd (* owner perm name dev -- *)
-	auto dev
-	dev!
+procedure DeviceAdd (* owner perm name minor major -- *)
+	auto maj
+	maj!
+
+	auto min
+	min!
 
 	auto name
 	name!
@@ -53,10 +62,20 @@ procedure DeviceAdd (* owner perm name dev -- *)
 	auto sdev
 	Device_SIZEOF Malloc sdev!
 
+	auto num
+	maj@ 8 << min@ | num!
+
+	auto drv
+	maj@ DeviceDriverByMajor drv!
+	if (drv@ iserr)
+		maj@ "tried to add device to nonexistent driver %d\n" Panic
+	end
+
 	name@ strdup sdev@ Device_Name + !
-	dev@ sdev@ Device_DevNum + !
+	num@ sdev@ Device_DevNum + !
 	perm@ sdev@ Device_Perm + !
 	owner@ sdev@ Device_Owner + !
+	drv@ GenericDriver_Type + @ sdev@ Device_Type + !
 
 	sdev@ DevList@ ListInsert
 end
@@ -65,19 +84,28 @@ procedure DeviceByName (* name -- dev or -ENODEV *)
 	auto name
 	name!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto n
 	DevList@ ListHead n!
 
 	while (n@ 0 ~=)
+		rs@ InterruptRestore
+		rs@ InterruptDisable
+
 		auto pnode
 		n@ ListNodeValue pnode!
 
 		if (pnode@ Device_Name + @ name@ strcmp)
+			rs@ InterruptRestore
 			pnode@ return
 		end
 
 		n@ ListNodeNext n!
 	end
+
+	rs@ InterruptRestore
 
 	-ENODEV
 end
@@ -124,14 +152,20 @@ procedure DeviceDriverByName (* name -- driver or -ENODEV *)
 	0 i!
 
 	while (i@ DRIVER_MAX <)
+		auto rs
+		InterruptDisable rs!
+
 		auto ptr
 		i@ GenericDriver_SIZEOF * devsw@ + ptr!
 
 		if (ptr@ GenericDriver_Type + @ DRIVER_EMPTY ~=)
 			if (ptr@ GenericDriver_Name + @ name@ strcmp)
+				rs@ InterruptRestore
 				ptr@ return
 			end
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -214,12 +248,15 @@ procedure DevIoctl (* proc cmd data num -- err *)
 	proc@ cmd@ data@ num@ DeviceNumMinor dsw@ sdevsw_Ioctl + @ Call
 end
 
-procedure DevStrategy (* proc buf -- err *)
+procedure DevStrategy (* locked? proc buf -- err *)
 	auto buf
 	buf!
 
 	auto proc
 	proc!
+
+	auto locked
+	locked!
 
 	auto num
 	buf@ Buffer_Dev + @ num!
@@ -235,7 +272,7 @@ procedure DevStrategy (* proc buf -- err *)
 	end
 
 	(* implemented at bio.d *)
-	proc@ buf@ drv@ num@ DeviceNumMinor strategy
+	locked@ proc@ buf@ drv@ num@ DeviceNumMinor strategy
 end
 
 procedure DevSize (* proc minor -- err *)

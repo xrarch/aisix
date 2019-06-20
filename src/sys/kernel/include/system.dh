@@ -1,5 +1,5 @@
 const AISIX_MAJOR 0
-const AISIX_MINOR 6
+const AISIX_MINOR 7
 
 var SysVerbose 0
 

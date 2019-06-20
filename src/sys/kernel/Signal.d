@@ -29,7 +29,12 @@ procedure TaskSignalInternal (* sig task -- *)
 	auto sig
 	sig!
 
+	auto rs
+	InterruptDisable rs!
+
 	task@ Task_Signals + 1 sig@ << | task@ Task_Signals + !
+
+	rs@ InterruptRestore
 
 	(* just kill it for now who cares *)
 	task@ TaskStab
@@ -81,6 +86,9 @@ procedure TaskSignalGroup (* sig pgrp -- sent? *)
 		auto ptr
 		i@ PIDtoPtr ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Task_Status + @ TASK_EMPTY ~=)
 			if (ptr@ Task_PGRP + @ pgrp@ ==)
 				if (sig@ ptr@ TaskSignal 0 s>)
@@ -88,6 +96,8 @@ procedure TaskSignalGroup (* sig pgrp -- sent? *)
 				end 
 			end
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end

@@ -234,9 +234,6 @@ procedure TtyAdd (* -- tty *)
 	auto minor
 	tty@ tty_Minor + @ minor!
 
-	auto num
-	TtyMajor@ 8 << minor@ | num!
-
 	auto ttyn
 	8 Calloc ttyn!
 
@@ -248,7 +245,7 @@ procedure TtyAdd (* -- tty *)
 		minor@ 1 - ttyn@ 3 + itoa
 	end
 
-	0 0 ttyn@ num@ DeviceAdd
+	0 0 ttyn@ minor@ TtyMajor@ DeviceAdd
 
 	auto kbdbuf
 	TTY_KBD_BUF_SIZE Calloc kbdbuf!
@@ -355,9 +352,9 @@ procedure TtyDevbufGetc (* tty -- c or -1 *)
 
 	rptr@ 1 + tty@ tty_DevBufRead + !
 
-	rs@ InterruptRestore
-
 	rptr@ TTY_DEV_BUF_SIZE % devbuf@ + gb
+
+	rs@ InterruptRestore
 end
 
 procedure TtyBbufPutc (* c tty -- ok? *)
@@ -422,9 +419,9 @@ procedure TtyBbufGetc (* tty -- c or -1 *)
 
 	rptr@ 1 + tty@ tty_BigBufRead + !
 
-	rs@ InterruptRestore
-
 	rptr@ TTY_BIG_BUF_SIZE % bigbuf@ + gb
+
+	rs@ InterruptRestore
 end
 
 procedure TtyKbufPutc (* c tty -- ok? *)
@@ -489,9 +486,9 @@ procedure TtyKbufGetc (* tty -- c or -1 *)
 
 	rptr@ 1 + tty@ tty_KbdBufRead + !
 
-	rs@ InterruptRestore
-
 	rptr@ TTY_KBD_BUF_SIZE % kbdbuf@ + gb
+
+	rs@ InterruptRestore
 end
 
 procedure TtyKbufRemovec (* tty -- count *)
@@ -535,6 +532,8 @@ procedure TtyKbufRemovec (* tty -- count *)
 			1 return
 		end
 	end
+
+	rs@ InterruptRestore
 end
 
 procedure TtyRubout (* tty -- rc *)
@@ -619,8 +618,7 @@ procedure TtyDoInput (* char tty -- *)
 		tty@ TtyRubout drop
 	end else
 		if (c@ 26 ==)
-			"^Z received, resetting machine" Printf
-			cpu_reset
+			Reboot
 		end
 
 		if (c@ 21 ==) (* ^U *)

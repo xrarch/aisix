@@ -19,3 +19,4 @@
 #include "Syscall.d"
 #include "Debugger.d"
 #include "Shutdown.d"
+#include "Sync.d"

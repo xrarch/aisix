@@ -31,10 +31,25 @@ procedure BufAlloc (* -- buf *)
 	BlocksBase@ 4096 * buf@ Buffer_Block + !
 	BlocksBase@ 1 + BlocksBase!
 
+	-1 buf@ Buffer_Dev + !
+	-1 buf@ Buffer_Blockno + !
+
 	buf@
 end
 
-procedure strategy (* proc buf drv minor -- err *)
+procedure buflock (* buf -- err *)
+	Buffer_Lock + sleeplock
+end
+
+procedure bufunlock (* buf -- *)
+	Buffer_Lock + sleepunlock
+end
+
+procedure buflocked (* buf -- locked? *)
+	Buffer_Lock + holdingsleeplock
+end
+
+procedure strategy (* locked proc buf drv minor -- err *)
 	auto minor
 	minor!
 
@@ -47,12 +62,17 @@ procedure strategy (* proc buf drv minor -- err *)
 	auto proc
 	proc!
 
-	if (buf@ Buffer_Lock + holdingsleeplock ~~)
-		buf@ "strategy: not holding lock on buf @ 0x%x\n" Panic
+	auto locked
+	locked!
+
+	if (locked@)
+		if (buf@ buflocked ~~)
+			buf@ "strategy: not holding lock on buf @ 0x%x\n" Panic
+		end
 	end
 
 	if (buf@ Buffer_Flags + @ BUFFER_VALID BUFFER_DIRTY | & BUFFER_VALID ==)
-		buf@ "strategy: nothing to do to buf @ 0x%x\nis this really a problem?\n" Panic
+		buf@ "strategy: nothing to do to buf @ 0x%x\n" Panic
 	end
 
 	auto dsw
@@ -101,7 +121,7 @@ procedure bget (* blockno dev -- buf *)
 
 		if (pnode@ Buffer_Dev + @ dev@ ==)
 			if (pnode@ Buffer_Blockno + @ blockno@ ==)
-				if (pnode@ Buffer_Lock + sleeplock ~~)
+				if (pnode@ buflock ~~)
 					rs@ InterruptRestore
 					-EINTR return
 				end
@@ -130,7 +150,7 @@ procedure bget (* blockno dev -- buf *)
 
 		if (pnode@ Buffer_Refcount + @ 0 ==)
 			if (pnode@ Buffer_Flags + @ BUFFER_DIRTY & 0 ==)
-				if (pnode@ Buffer_Lock + sleeplock ~~)
+				if (pnode@ buflock ~~)
 					rs@ InterruptRestore
 					-EINTR return
 				end
@@ -161,7 +181,7 @@ procedure bread (* blockno dev -- buf *)
 
 	if (buf@ Buffer_Flags + @ BUFFER_VALID & 0 ==)
 		auto r
-		TaskCurrent@ buf@ DevStrategy r!
+		1 TaskCurrent@ buf@ DevStrategy r!
 
 		if (r@ iserr)
 			r@ return
@@ -171,7 +191,7 @@ procedure bread (* blockno dev -- buf *)
 	buf@
 end
 
-procedure bwrite (* buf -- err *)
+procedure bwrite (* buf -- *)
 	auto buf
 	buf!
 
@@ -180,8 +200,6 @@ procedure bwrite (* buf -- err *)
 	end
 
 	buf@ Buffer_Flags + @ BUFFER_DIRTY | buf@ Buffer_Flags + !
-
-	TaskCurrent@ buf@ DevStrategy
 end
 
 procedure brelse (* buf -- *)
@@ -202,5 +220,73 @@ procedure brelse (* buf -- *)
 		node@ BufferList@ ListAppend
 	end
 
-	buf@ Buffer_Lock + sleepunlock
+	buf@ bufunlock
+end
+
+procedure flushall (* dev -- err *)
+	auto dev
+	dev!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto n
+	BufferList@ ListHead n!
+
+	while (n@ 0 ~=)
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
+		auto pnode
+		n@ ListNodeValue pnode!
+
+		if (pnode@ Buffer_Flags + @ BUFFER_DIRTY & BUFFER_DIRTY ==)
+			if (pnode@ Buffer_Dev + @ dev@ ==)
+				auto r
+				0 TaskCurrent@ pnode@ DevStrategy r!
+
+				if (r@ iserr)
+					r@ return
+				end
+			end
+		end
+
+		n@ ListNode_Next + @ n!
+	end
+
+	rs@ InterruptRestore
+
+	0
+end
+
+procedure flushblockdevs (* -- err *)
+	auto rs
+	InterruptDisable rs!
+
+	auto n
+	DevList@ ListHead n!
+
+	while (n@ 0 ~=)
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
+		auto pnode
+		n@ ListNodeValue pnode!
+
+		if (pnode@ Device_Type + @ DRIVER_BLOCK ==)
+			auto r
+			pnode@ Device_DevNum + @ flushall r!
+
+			if (r@ iserr)
+				rs@ InterruptRestore
+				r@ return
+			end
+		end
+
+		n@ ListNodeNext n!
+	end
+
+	rs@ InterruptRestore
+
+	0
 end

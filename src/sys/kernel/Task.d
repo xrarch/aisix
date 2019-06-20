@@ -15,14 +15,24 @@ procedure TaskAddThread (* task -- *)
 	auto task
 	task!
 
+	auto rs
+	InterruptDisable rs!
+
 	task@ Task_Threads + @ 1 + task@ Task_Threads + !
+
+	rs@ InterruptRestore
 end
 
 procedure TaskRemoveThread (* task -- *)
 	auto task
 	task!
 
+	auto rs
+	InterruptDisable rs!
+
 	task@ Task_Threads + @ 1 - task@ Task_Threads + !
+
+	rs@ InterruptRestore
 
 	if (task@ Task_Threads + @ 0 s<=) (* no more threads left in the task, task is a zombie *)
 		if (task@ Task_Status + @ TASK_ZOMBIE ~=)
@@ -60,6 +70,9 @@ procedure TaskExit (* task -- *)
 		auto ptr
 		i@ PIDtoPtr ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Task_Status + @ TASK_EMPTY ~=)
 			if (ptr@ Task_Parent + @ task@ ==)
 				InitTask@ ptr@ Task_Parent + !
@@ -70,6 +83,8 @@ procedure TaskExit (* task -- *)
 				end
 			end
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end
@@ -123,6 +138,9 @@ procedure TaskCreateInternal (* parent name -- ptr or ERR *)
 		auto ptr
 		i@ PIDtoPtr ptr!
 
+		auto rs
+		InterruptDisable rs!
+
 		if (ptr@ Task_Status + @ TASK_EMPTY ==)
 			TASK_USED ptr@ Task_Status + !
 			name@ strdup ptr@ Task_Name + !
@@ -141,8 +159,11 @@ procedure TaskCreateInternal (* parent name -- ptr or ERR *)
 
 			NSIG 4 * Malloc Task_SigHandlers + !
 
+			rs@ InterruptRestore
 			ptr@ return
 		end
+
+		rs@ InterruptRestore
 
 		i@ 1 + i!
 	end

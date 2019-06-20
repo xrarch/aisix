@@ -25,7 +25,6 @@ procedure ClockWait (* ms -- *)
 	ClockUptimeMS@ ms@ + wu!
 
 	while (ClockUptimeMS@ wu@ <)
-		THREAD_RUNNABLE ThreadCurrent@ Thread_Status + !
 		yield
 	end
 end

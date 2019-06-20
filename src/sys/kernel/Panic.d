@@ -10,7 +10,5 @@ procedure Panic (* fstr -- *)
 
 	cpu_panic
 
-	asm "brk"
-
 	while (1) end
 end
