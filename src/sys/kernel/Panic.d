@@ -8,7 +8,7 @@ procedure Panic (* fstr -- *)
 	"aisix PANIC: " Printf
 	Printf
 
-	cpu_panic
+	platform_panic
 
 	while (1) end
 end

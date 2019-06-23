@@ -7,3 +7,9 @@
 #include "platform/limnstation/interrupt.d"
 #include "platform/limnstation/mmu.d"
 #include "platform/limnstation/shutdown.d"
+
+asm "
+
+.include platform/limnstation/panic.s
+
+"

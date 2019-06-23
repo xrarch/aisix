@@ -179,15 +179,20 @@ procedure bread (* blockno dev -- buf *)
 		buf@ return
 	end
 
+	auto rs
+	InterruptDisable rs!
+
 	if (buf@ Buffer_Flags + @ BUFFER_VALID & 0 ==)
 		auto r
 		1 TaskCurrent@ buf@ DevStrategy r!
 
 		if (r@ iserr)
+			rs@ InterruptRestore
 			r@ return
 		end
 	end
 
+	rs@ InterruptRestore
 	buf@
 end
 
@@ -199,7 +204,12 @@ procedure bwrite (* buf -- *)
 		buf@ "bwrite: not holding lock on buf @ 0x%x\n" Panic
 	end
 
+	auto rs
+	InterruptDisable rs!
+
 	buf@ Buffer_Flags + @ BUFFER_DIRTY | buf@ Buffer_Flags + !
+
+	rs@ InterruptRestore
 end
 
 procedure brelse (* buf -- *)
@@ -210,6 +220,9 @@ procedure brelse (* buf -- *)
 		buf@ "brelse: not holding lock on buf @ 0x%x\n" Panic
 	end
 
+	auto rs
+	InterruptDisable rs!
+
 	auto node
 	buf@ Buffer_Node + @ node!
 
@@ -219,6 +232,8 @@ procedure brelse (* buf -- *)
 		node@ BufferList@ ListDelete
 		node@ BufferList@ ListAppend
 	end
+
+	rs@ InterruptRestore
 
 	buf@ bufunlock
 end

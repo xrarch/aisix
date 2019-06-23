@@ -621,6 +621,10 @@ procedure TtyDoInput (* char tty -- *)
 			Reboot
 		end
 
+		if (c@ 24 ==)
+			"test panic\n" Panic
+		end
+
 		if (c@ 21 ==) (* ^U *)
 			tty@ TtyRubout rc!
 			while (rc@ 0 >)
