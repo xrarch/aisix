@@ -76,5 +76,5 @@ setenv boot-args boot:auto=aisix -boot:nodelay
 | console=(video/serial/platform/default) | Use option as system console. Overridden to video by -v.     |
 | rd=[dev]                                | Try to use dev (mnemonic) as automatic root device           |
 | -nographics                             | Don't initialize graphics subsystem                          |
-| -graphics,nobg                          | Don't draw AISIX logo                                        |
+| -graphics,nobg                          | Don't draw AISIX logo, don't clear screen                    |
 | -graphics,noclear                       | Don't clear screen with solid color                          |
