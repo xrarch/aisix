@@ -1,15 +1,31 @@
-var CIPtr 0
+var a3xCIPtr 0
+var a3xFwctx 0
 
-procedure a3xInit (* -- *)
-	CIPtr!
+procedure a3xInit (* fwctx a3xCIPtr -- *)
+	a3xCIPtr!
+	a3xFwctx!
+end
+
+procedure a3xReturn (* code -- *)
+	asm "
+
+	popv r5, k0
+
+	lri.l sp, a3xFwctx
+
+	pop ivt
+
+	ret
+
+	"
 end
 
 asm "
 
 ;r30 - call num
-_CIC_Call:
+_a3xCIC_Call:
 	push r29
-	lri.l r29, CIPtr
+	lri.l r29, a3xCIPtr
 	add r30, r30, r29
 	lrr.l r30, r30
 
@@ -20,29 +36,29 @@ _CIC_Call:
 .e:
 	br r30
 
-_CIC_Putc === 0
-_CIC_Getc === 4
-_CIC_Gets === 8
-_CIC_DevTree === 16
-_CIC_Malloc === 20
-_CIC_Calloc === 24
-_CIC_Free === 28
+_a3xCIC_Putc === 0
+_a3xCIC_Getc === 4
+_a3xCIC_Gets === 8
+_a3xCIC_DevTree === 16
+_a3xCIC_Malloc === 20
+_a3xCIC_Calloc === 24
+_a3xCIC_Free === 28
 
-_CIC_DevTreeWalk === 32
-_CIC_DeviceParent === 36
-_CIC_DeviceSelectNode === 40
-_CIC_DeviceSelect === 44
-_CIC_DeviceDGetProperty === 48
-_CIC_DeviceDGetMethod === 52
-_CIC_DeviceDCallMethod === 56
-_CIC_DeviceExit === 60
+_a3xCIC_DevTreeWalk === 32
+_a3xCIC_DeviceParent === 36
+_a3xCIC_DeviceSelectNode === 40
+_a3xCIC_DeviceSelect === 44
+_a3xCIC_DeviceDGetProperty === 48
+_a3xCIC_DeviceDGetMethod === 52
+_a3xCIC_DeviceDCallMethod === 56
+_a3xCIC_DeviceExit === 60
 
 ; buffer maxchars --
 a3xGets:
 	push r30
 
-	li r30, _CIC_Gets
-	call _CIC_Call
+	li r30, _a3xCIC_Gets
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -51,8 +67,8 @@ a3xGets:
 a3xPutc:
 	push r30
 
-	li r30, _CIC_Putc
-	call _CIC_Call
+	li r30, _a3xCIC_Putc
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -61,8 +77,8 @@ a3xPutc:
 a3xGetc:
 	push r30
 
-	li r30, _CIC_Getc
-	call _CIC_Call
+	li r30, _a3xCIC_Getc
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -71,8 +87,8 @@ a3xGetc:
 a3xAPIDevTree:
 	push r30
 
-	li r30, _CIC_DevTree
-	call _CIC_Call
+	li r30, _a3xCIC_DevTree
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -81,8 +97,8 @@ a3xAPIDevTree:
 a3xMalloc:
 	push r30
 
-	li r30, _CIC_Malloc
-	call _CIC_Call
+	li r30, _a3xCIC_Malloc
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -91,8 +107,8 @@ a3xMalloc:
 a3xCalloc:
 	push r30
 
-	li r30, _CIC_Calloc
-	call _CIC_Call
+	li r30, _a3xCIC_Calloc
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -101,8 +117,8 @@ a3xCalloc:
 a3xFree:
 	push r30
 
-	li r30, _CIC_Free
-	call _CIC_Call
+	li r30, _a3xCIC_Free
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -111,8 +127,8 @@ a3xFree:
 a3xDevTreeWalk:
 	push r30
 
-	li r30, _CIC_DevTreeWalk
-	call _CIC_Call
+	li r30, _a3xCIC_DevTreeWalk
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -121,8 +137,8 @@ a3xDevTreeWalk:
 a3xDeviceParent:
 	push r30
 
-	li r30, _CIC_DeviceParent
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceParent
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -131,8 +147,8 @@ a3xDeviceParent:
 a3xDeviceSelectNode:
 	push r30
 
-	li r30, _CIC_DeviceSelectNode
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceSelectNode
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -141,8 +157,8 @@ a3xDeviceSelectNode:
 a3xDeviceSelect:
 	push r30
 
-	li r30, _CIC_DeviceSelect
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceSelect
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -151,8 +167,8 @@ a3xDeviceSelect:
 a3xDGetProperty:
 	push r30
 
-	li r30, _CIC_DeviceDGetProperty
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceDGetProperty
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -161,8 +177,8 @@ a3xDGetProperty:
 a3xDGetMethod:
 	push r30
 
-	li r30, _CIC_DeviceDGetMethod
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceDGetMethod
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -171,8 +187,8 @@ a3xDGetMethod:
 a3xDCallMethod:
 	push r30
 
-	li r30, _CIC_DeviceDCallMethod
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceDCallMethod
+	call _a3xCIC_Call
 
 	pop r30
 	ret
@@ -181,8 +197,8 @@ a3xDCallMethod:
 a3xDeviceExit:
 	push r30
 
-	li r30, _CIC_DeviceExit
-	call _CIC_Call
+	li r30, _a3xCIC_DeviceExit
+	call _a3xCIC_Call
 
 	pop r30
 	ret

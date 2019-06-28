@@ -19,6 +19,11 @@ asm preamble "
 
 Entry:
 
+push ivt
+
+;push firmware context
+pushv r5, sp
+
 ;r0 contains pointer to API
 pushv r5, r0
 
@@ -32,7 +37,7 @@ b Main
 
 "
 
-procedure Main (* ciptr bootdev args -- *)
+procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
 
 	(* remember the boot device *)
@@ -97,6 +102,8 @@ procedure Main (* ciptr bootdev args -- *)
 	end
 
 	Prompt
+
+	0 a3xReturn
 end
 
 procedure DoFile (* args f -- *)
@@ -118,7 +125,8 @@ procedure DoFile (* args f -- *)
 		end else
 			CR CR
 
-			CIPtr@ BootDevice@ arg@ sz@ asm "
+			a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
+				popv r5, r4
 				popv r5, r3
 				popv r5, r2
 				popv r5, r1

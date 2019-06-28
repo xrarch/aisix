@@ -41,6 +41,15 @@ procedure FwBlockInit (* -- *)
 
 		i@ 1 + i!
 	end
+
+	auto bbfw
+	0 FwBlockMinorToBFW bbfw!
+
+	if (bbfw@ iserr)
+		return
+	end
+
+	"[BOOTNODE]" a3xBootNode@ bbfw@ FwBlockAssign drop
 end
 
 procedure FwBlockMinorToBFW (* minor -- bfw *)
@@ -56,6 +65,45 @@ procedure FwBlockMinorToBFW (* minor -- bfw *)
 	FwBlockTable@ minor@ FwBlockDev_SIZEOF * + bfw!
 
 	bfw@
+end
+
+procedure FwBlockAssign (* path node bfw -- err *)
+	auto bfw
+	bfw!
+
+	auto node
+	node!
+
+	auto path
+	path!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto rm
+	auto wm
+	auto sz
+
+	node@ a3xDeviceSelectNode
+		"readBlock" a3xDGetMethod rm!
+		"writeBlock" a3xDGetMethod wm!
+		"blocks" a3xDGetProperty sz!
+	a3xDeviceExit
+
+	if (sz@ 0 ==)
+		rs@ InterruptRestore
+		-ENXIO return
+	end
+
+	path@ strdup bfw@ FwBlockDev_Path + !
+
+	wm@ bfw@ FwBlockDev_WriteMethod + !
+	rm@ bfw@ FwBlockDev_ReadMethod + !
+	sz@ bfw@ FwBlockDev_Size + !
+	node@ bfw@ FwBlockDev_Node + !
+
+	rs@ InterruptRestore
+	0 return
 end
 
 procedure FwBlockOpen (* proc minor -- err *)
@@ -218,30 +266,11 @@ procedure FwBlockIoctl (* proc cmd data minor -- err *)
 			-ENXIO return
 		end
 
-		auto rm
-		auto wm
-		auto sz
-
-		node@ a3xDeviceSelectNode
-			"readBlock" a3xDGetMethod rm!
-			"writeBlock" a3xDGetMethod wm!
-			"blocks" a3xDGetProperty sz!
-		a3xDeviceExit
-
-		if (sz@ 0 ==)
-			rs@ InterruptRestore
-			-ENXIO return
-		end
-
-		data@ strdup dev@ FwBlockDev_Path + !
-
-		wm@ dev@ FwBlockDev_WriteMethod + !
-		rm@ dev@ FwBlockDev_ReadMethod + !
-		sz@ dev@ FwBlockDev_Size + !
-		node@ dev@ FwBlockDev_Node + !
+		auto r
+		data@ node@ dev@ FwBlockAssign r!
 
 		rs@ InterruptRestore
-		0 return
+		r@ return
 	end
 
 	if (cmd@ BFWIOCTLGETPATH ==)

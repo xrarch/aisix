@@ -4,12 +4,14 @@ asm "
 
 "
 
-procedure platform_start (* args imagesz -- *)
+procedure platform_start (* node args imagesz -- *)
 	auto imagesz
 	imagesz!
 
 	auto args
 	args!
+
+	a3xBootNode!
 
 	MMUInit
 

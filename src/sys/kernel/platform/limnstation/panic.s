@@ -3,4 +3,8 @@ platform_panic:
 
 	call platform_interrupt_throwaway
 
-	call cpu_panic
+	call platform_firmware_restore
+
+	;shouldn't reach here
+.hang:
+	b .hang

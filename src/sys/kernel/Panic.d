@@ -5,7 +5,7 @@ procedure Panic (* fstr -- *)
 
 	1 SysconSwitchVC drop
 
-	"aisix PANIC: " Printf
+	"\naisix PANIC: " Printf
 	Printf
 
 	platform_panic

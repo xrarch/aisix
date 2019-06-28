@@ -15,6 +15,7 @@ struct Task
 	4 PGRP
 	4 Session
 	4 Job
+	4 PWD
 endstruct
 
 struct Thread

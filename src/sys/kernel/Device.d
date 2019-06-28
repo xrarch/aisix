@@ -76,6 +76,7 @@ procedure DeviceAdd (* owner perm name minor major -- *)
 	perm@ sdev@ Device_Perm + !
 	owner@ sdev@ Device_Owner + !
 	drv@ GenericDriver_Type + @ sdev@ Device_Type + !
+	drv@ sdev@ Device_Driver + !
 
 	sdev@ DevList@ ListInsert
 end
@@ -92,7 +93,7 @@ procedure DeviceByName (* name -- dev or -ENODEV *)
 
 	while (n@ 0 ~=)
 		rs@ InterruptRestore
-		rs@ InterruptDisable
+		InterruptDisable rs!
 
 		auto pnode
 		n@ ListNodeValue pnode!

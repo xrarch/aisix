@@ -12,6 +12,9 @@ asm preamble "
 
 Entry:
 
+;r4 contains fwctx
+pushv r5, r4
+
 ;r0 contains pointer to API
 pushv r5, r0
 
@@ -28,7 +31,7 @@ b Main
 var args 0
 var BootDevice 0
 
-procedure Main (* ciptr bootdev args -- *)
+procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
 
 	(* remember the boot device *)

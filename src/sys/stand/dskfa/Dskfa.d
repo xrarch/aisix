@@ -20,6 +20,9 @@ asm preamble "
 
 Entry:
 
+;r4 contains fwctx
+pushv r5, r4
+
 ;r0 contains pointer to API
 pushv r5, r0
 
@@ -100,7 +103,7 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	dn@
 end
 
-procedure Main (* ciptr bootdev args -- *)
+procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
 
 	(* remember the boot device *)

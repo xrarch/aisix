@@ -1,6 +1,5 @@
 procedure BufferInit (* -- *)
 	ListCreate BufferList!
-	ListCreate BufferDirtyList!
 
 	PMMTotalMemory@ BUFFER_PORTION / 4096 / 1 + BufferMax!
 

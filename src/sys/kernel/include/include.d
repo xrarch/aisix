@@ -3,6 +3,7 @@
 #include "include/tty.dh"
 #include "include/bio.dh"
 #include "include/dev.dh"
+#include "include/vfs.dh"
 
 #include "../../include/const.dh"
 #include "../../include/errno.dh"

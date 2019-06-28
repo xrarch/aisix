@@ -42,8 +42,10 @@ var DevList 0
 
 struct Device
 	4 Name
+	4 Driver
 	4 DevNum
 	4 Perm
 	4 Owner
 	4 Type
+	4 Superblock
 endstruct

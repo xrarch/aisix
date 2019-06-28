@@ -11,7 +11,6 @@ endstruct
 (* dynamic *)
 var BufferMax 0
 var BufferList 0
-var BufferDirtyList 0
 var BlocksBase 0
 
 const BUFFER_VALID 2

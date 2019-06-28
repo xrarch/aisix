@@ -44,7 +44,11 @@ procedure BootstrapThread (* -- *)
 
 	SyncInit
 
+	VFSInit
+
 	InterruptEnable drop
+
+	MountRoot
 
 	while (1) yield end
 end

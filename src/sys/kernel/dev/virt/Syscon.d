@@ -224,12 +224,14 @@ procedure SysconInit (* -- *)
 	end
 
 	if (tty0@ "video" strcmp)
-		SysconAttemptVC 
+		SysconAttemptVC
+		tty0@ Free
 		return
 	end
 
 	if (tty0@ "serial" strcmp tty0@ "default" strcmp ||)
 		SysconSwitchSerial drop
+		tty0@ Free
 		return
 	end
 
@@ -237,8 +239,11 @@ procedure SysconInit (* -- *)
 		0 SysconEarly!
 
 		pointerof platformPutc SysconSetOut
+		tty0@ Free
 		return
 	end
 
 	SysconSwitchSerial drop
+
+	tty0@ Free
 end
