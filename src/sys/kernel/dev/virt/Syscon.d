@@ -184,7 +184,7 @@ procedure SysconSwitchVC (* earlyprint? -- ok? *)
 		pointerof VConsolePutChar SysconSetOut
 
 		if (SysconEarly@ ep@ &&)
-			if ("-tty0supl" ArgsCheck ~~)
+			if ("-consupl" ArgsCheck ~~)
 				SysconDumpEarly
 			end
 		end
@@ -216,7 +216,7 @@ procedure SysconInit (* -- *)
 	end
 
 	auto tty0
-	"tty0" ArgsValue tty0!
+	"console" ArgsValue tty0!
 
 	if (tty0@ 0 ==)
 		SysconSwitchSerial drop

@@ -66,3 +66,15 @@ If you're impatient, type this command instead:
 ```
 setenv boot-args boot:auto=aisix -boot:nodelay
 ```
+
+## Boot Options
+
+| Option                                  | Effect                                                       |
+|-----------------------------------------|--------------------------------------------------------------|
+| -v                                      | Graphical verbose boot                                       |
+| -consupl                                | Don't print early messsages after switching to video console |
+| console=(video/serial/platform/default) | Use option as system console. Overridden to video by -v.     |
+| rd=[dev]                                | Try to use dev (mnemonic) as automatic root device           |
+| -nographics                             | Don't initialize graphics subsystem                          |
+| -graphics,nobg                          | Don't draw AISIX logo                                        |
+| -graphics,noclear                       | Don't clear screen with solid color                          |
