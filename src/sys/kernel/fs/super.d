@@ -123,17 +123,21 @@ end
 
 procedure UserRootDev (* -- dev *)
 	auto ubuf
-	256 Malloc ubuf!
+	256 Calloc ubuf!
 
 	auto dev
 	-1 dev!
 
 	while (dev@ -1 ==)
-		"rootdev = " Printf
+		while (ubuf@ strlen 0 ==)
+			"rootdev = " Printf
 
-		ubuf@ 255 Gets
+			ubuf@ 255 Gets
+		end
 
 		ubuf@ ResolveRootDev dev!
+
+		0 ubuf@ sb
 	end
 
 	ubuf@ Free

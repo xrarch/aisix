@@ -8,8 +8,8 @@ var VCColorFG 0x00
 var VCColorOBG 0x56
 var VCColorOFG 0x00
 
-const VConsoleBG 0x1C
-const VConsoleFG 0x00
+const VConsoleBG 154
+const VConsoleFG 0x0F
 
 var VCCurX 0
 var VCCurY 0
@@ -19,8 +19,6 @@ var VConsoleY 0
 
 var VCWidth 0
 var VCHeight 0
-
-var VCScreenNode 0
 
 const VConsoleFontWidth 6
 const VConsoleFontWidthA 5
@@ -215,28 +213,44 @@ procedure VConsoleBack (* -- *)
 	VCCurX@ 1 - VCCurX!
 end
 
+procedure VConsoleUIBox (* title x y w h -- *)
+	auto h
+	h!
+
+	auto w
+	w!
+
+	auto y
+	y!
+
+	auto x
+	x!
+
+	auto title
+	title!
+
+	x@ y@ w@ h@ 0x0F VConsoleRect
+	x@ 1 + y@ 1 + w@ h@ 25 VConsoleRect
+	x@ 1 + y@ 1 + w@ 1 - h@ 1 - 29 VConsoleRect
+	x@ 10 + y@ 20 + w@ 18 - h@ 28 - 0x0F VConsoleRect
+	x@ 10 + y@ 20 + w@ 19 - h@ 29 - 25 VConsoleRect
+	x@ 11 + y@ 21 + w@ 21 - h@ 31 - 0x0F VConsoleRect
+	x@ 12 + y@ 22 + w@ 22 - h@ 32 - 29 VConsoleRect
+
+	auto tw
+	title@ strlen VConsoleFontWidth * tw!
+
+	title@ x@ w@ 2 / tw@ 2 / - + y@ 5 + 0 VConsoleRenderLine
+end
+
 procedure VConsoleDraw (* -- *)
 	0 VCCurX!
 	0 VCCurY!
 
 	if (VConsoleX@ 0 ~= VConsoleY@ 0 ~= &&) (* there is at least VConsoleMargin/2 pixels around the edge, do a pretty box *)
-		VConsoleX@ 6 - VConsoleY@ 4 - VCGWidth@ 13 + VCGHeight@ 9 + 0x00 VConsoleBox
-		VConsoleX@ 5 - VConsoleY@ 3 - VCGWidth@ 10 + VCGHeight@ 6 + 0x1D VConsoleBox
-		VConsoleX@ 4 - VConsoleY@ 2 - VCGWidth@ 8 + VCGHeight@ 4 + VConsoleBG VConsoleRect
+		"AISIX System Console" VConsoleX@ 15 - VConsoleY@ 25 - VCGWidth@ 30 + VCGHeight@ 40 + VConsoleUIBox
 
-		auto titletext
-		"AISIX System Console" titletext!
-
-		auto ttbw
-		titletext@ strlen VConsoleFontWidth * 13 + ttbw!
-
-		VConsoleX@ 6 - VConsoleY@ VConsoleFontHeight - 8 - ttbw@ VConsoleFontHeight 5 + 0x00 VConsoleBox
-		VConsoleX@ 5 - VConsoleY@ VConsoleFontHeight - 7 - ttbw@ 2 - VConsoleFontHeight 4 + 151 VConsoleRect
-
-		titletext@
-		VConsoleX@
-		VConsoleY@ VConsoleFontHeight - 5 -
-		29 VConsoleRenderLine
+		VConsoleX@ 4 - VConsoleY@ 4 - VCGWidth@ 10 + VCGHeight@ 10 + VConsoleBG VConsoleRect
 	end else (* un-pretty box *)
 		VConsoleX@ VConsoleY@ VCGWidth@ VCGHeight@ VConsoleBG VConsoleRect
 	end
