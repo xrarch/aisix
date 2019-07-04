@@ -647,7 +647,6 @@ procedure TtyDoInput (* char tty -- *)
 		if (c@ 3 ==) (* ^C *)
 			3 tty@ TtyEchoChar
 
-			auto rc
 			tty@ TtyKbufRemovec rc!
 			while (rc@ 0 >)
 				tty@ TtyKbufRemovec rc!	
