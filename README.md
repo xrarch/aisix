@@ -36,7 +36,6 @@ Again, replace `disk.img` with the name of your aisix disk image.
 
 Graphical boot (recommended, cooler):
 `./vm/vm.sh -dks ./disk.img`
-
 Headless (serial port) boot:
 `./vm/headless.sh -dks ./disk.img`
 
