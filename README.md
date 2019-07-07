@@ -46,7 +46,7 @@ At the a3x firmware prompt, the following command should work to boot the image:
 
 `boot /ebus/platformboard/citron/dks/0`
 
-At the bootloader's `>>` prompt, type `aisix -v` or just press enter. AISIX should boot! (as far as it can at the moment)
+At the bootloader's `>>` prompt, type `aisix -v`. AISIX should boot! (as far as it can at the moment)
 
 If you want to avoid these long-winded commands, it's possible to make the firmware do it automatically.
 
