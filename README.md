@@ -20,6 +20,8 @@ Then, run the following commands with the LIMN sdk folder in your current direct
 
 Again, replace `disk.img` with the name of your disk image.
 
+`./sdk/fsutil.sh ./disk.img f`
+
 `./aisix/build-boot.sh ./disk.img`
 
 `./aisix/build-stand.sh ./disk.img`
@@ -34,11 +36,13 @@ Again, replace `disk.img` with the name of your aisix disk image.
 
 `./vm/vm.sh -dks ./disk.img`
 
+If you're doing a graphical boot, press `.` at the graphical box, and then type `2` and press enter to drop into the firmware prompt.
+
 At the a3x firmware prompt, the following command should work to boot the image:
 
 `boot /ebus/platformboard/citron/dks/0`
 
-At the bootloader's `>>` prompt, type `aisix` or just press enter. AISIX should boot! (as far as it can at the moment)
+At the bootloader's `>>` prompt, type `aisix -v` or just press enter. AISIX should boot! (as far as it can at the moment)
 
 If you want to avoid these long-winded commands, it's possible to make the firmware do it automatically.
 
@@ -56,7 +60,7 @@ It sets the variable auto-boot? to true, to tell the firmware to automatically t
 If you want to automate the bootloader prompt as well, type the following command at the firmware prompt:
 
 ```
-setenv boot-args boot:auto=aisix
+setenv boot-args boot:auto=aisix -v
 ```
 
 The bootloader, by default, will have a two second delay to give an opportunity to cancel the boot.
@@ -64,7 +68,7 @@ The bootloader, by default, will have a two second delay to give an opportunity 
 If you're impatient, type this command instead:
 
 ```
-setenv boot-args boot:auto=aisix -boot:nodelay
+setenv boot-args boot:auto=aisix -boot:nodelay -v
 ```
 
 ## Boot Options
