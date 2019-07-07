@@ -16,7 +16,7 @@ Replace `disk.img` with the desired name of your disk image.
 
 `dd if=/dev/zero of=disk.img bs=4096 count=1024`
 
-Then, run the following commands with the LIMN sdk folder in your current directory:
+Then, run the following commands, with the LIMN sdk folder in your current directory:
 
 Again, replace `disk.img` with the name of your disk image.
 
@@ -30,11 +30,15 @@ Again, replace `disk.img` with the name of your disk image.
 
 ## Booting
 
-Run the following command with the LIMNstation emulator (`./vm/`) in your current directory:
+Run one of the following commands, with the LIMNstation emulator (`./vm/`) in your current directory.
 
 Again, replace `disk.img` with the name of your aisix disk image.
 
+Graphical boot (recommended, cooler):
 `./vm/vm.sh -dks ./disk.img`
+
+Headless (serial port) boot:
+`./vm/headless.sh -dks ./disk.img`
 
 If you're doing a graphical boot, press `.` at the graphical box, and then type `2` and press enter to drop into the firmware prompt.
 
