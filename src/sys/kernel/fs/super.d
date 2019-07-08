@@ -63,6 +63,7 @@ procedure SuperRead (* data flags name dev -- superblock *)
 	auto data
 	data!
 
+
 	auto s
 	dev@ SuperGet s!
 
@@ -94,6 +95,8 @@ procedure SuperRead (* data flags name dev -- superblock *)
 	0 s@ Superblock_Covered + !
 	0 s@ Superblock_ReadOnly + !
 	0 s@ Superblock_Dirty + !
+
+	s@ SuperblockList@ ListInsert
 
 	s@
 end

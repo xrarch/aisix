@@ -10,7 +10,7 @@ A long-term goal is a windowed GUI, short term goals are to finish the standalon
 
 ## Building
 
-Create a blank disk image.
+Run the following command to create a blank disk image.
 
 Replace `disk.img` with the desired name of your disk image.
 

@@ -1,6 +1,7 @@
 var FSList 0
 
 var SuperblockList 0
+var VnodeList 0
 
 var RootVnode 0
 
