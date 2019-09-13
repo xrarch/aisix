@@ -49,13 +49,11 @@ procedure AFSInit (* -- *)
 	AFSSuperblockCache AFSSuperblock_Magic + @
 	if (AFSSuperblockMagic ~=)
 		"AFS: Invalid superblock\n" Panic
-		while (1) end
 	end
 
 	AFSSuperblockCache AFSSuperblock_Version + gb
 	if (AFSSuperblockVersion ~=)
 		"AFS: Bad version on superblock\n" Panic
-		while (1) end
 	end
 
 	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock

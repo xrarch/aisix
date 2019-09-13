@@ -178,6 +178,8 @@ end
 
 procedure Panic (* errorstr -- *)
 	"panic: %s\n" Printf
+
+	-1 a3xReturn
 end
 
 
