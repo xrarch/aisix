@@ -1,41 +1,20 @@
-#include "../lib/a3x.d"
-#include "../lib/a3x_names.d"
-#include "../../lib/Runtime.d"
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/a3x/a3x.h"
+
+externconst AFSErrors
+extern ArgsInit
+extern AFSInit
+extern IDiskInit
+extern ArgsValue
+extern ArgsCheck
+extern AFSLoadFile
+extern AFSPrintList
 
 var args 0
 var BootDevice 0
+
 var TotalRAM 0
-
-#include "IDisk.d"
-#include "aisixfat.d"
-#include "Args.d"
-
-asm preamble "
-
-.org 0x100000
-
-.ds ANTE
-.dl Entry
-
-Entry:
-
-push ivt
-
-;push firmware context
-pushv r5, sp
-
-;r0 contains pointer to API
-pushv r5, r0
-
-;r1 contains devnode
-pushv r5, r1
-
-;r2 contains args
-pushv r5, r2
-
-b Main
-
-"
+public TotalRAM
 
 procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
@@ -56,9 +35,9 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 		args@ "kernel args: %s\n" Printf
 	end
 
-	"/memory" DeviceSelect
-		"totalRAM" DGetProperty TotalRAM!
-	DeviceExit
+	"/memory" a3xDeviceSelect
+		"totalRAM" a3xDGetProperty TotalRAM!
+	a3xDeviceExit
 
 	BootDevice@ IDiskInit
 	AFSInit
@@ -71,14 +50,14 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 		if ("-boot:nodelay" ArgsCheck ~~)
 			auto cn
-			"/clock" DevTreeWalk cn!
+			"/clock" a3xDevTreeWalk cn!
 
 			if (cn@ 0 ~=)
 				"press 'p' in the next 2 seconds to cancel.\n" Printf
 
-				cn@ DeviceSelectNode
-					2000 "wait" DCallMethod drop
-				DeviceExit
+				cn@ a3xDeviceSelectNode
+					2000 "wait" a3xDCallMethod drop
+				a3xDeviceExit
 			end
 		end
 

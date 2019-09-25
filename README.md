@@ -22,7 +22,7 @@ Again, replace `disk.img` with the name of your disk image.
 
 `./sdk/fsutil.sh ./disk.img f`
 
-`./aisix/build-boot.sh ./disk.img`
+`./aisix/make-bootable.sh ./disk.img`
 
 `./aisix/build-stand.sh ./disk.img`
 

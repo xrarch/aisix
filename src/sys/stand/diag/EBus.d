@@ -1,3 +1,5 @@
+#include "<df>/dragonfruit.h"
+
 const EBusSlotsStart 0xC0000000
 const EBusSlots 7
 const EBusSlotSpace 0x8000000

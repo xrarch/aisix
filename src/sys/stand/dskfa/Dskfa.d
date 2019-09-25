@@ -1,40 +1,16 @@
-#include "../../lib/a3x.d"
-#include "../../lib/a3x_names.d"
-#include "../../../lib/Runtime.d"
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/a3x/a3x.h"
+
+extern IDiskInit
+extern Prompt
+extern PromptYN
 
 var args 0
 var BootDevice 0
 
 (* 1: disk. 2: logical. *)
 var DeviceType 0
-
-#include "IDisk.d"
-#include "Partition.d"
-#include "Prompt.d"
-
-asm preamble "
-
-.org 0x200000
-
-.ds VNIX
-
-Entry:
-
-;r4 contains fwctx
-pushv r5, r4
-
-;r0 contains pointer to API
-pushv r5, r0
-
-;r1 contains devnode
-pushv r5, r1
-
-;r2 contains args
-pushv r5, r2
-
-b Main
-
-"
+public DeviceType
 
 procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	auto arg
@@ -62,7 +38,7 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	disk@ strdup nd!
 
 	auto dn
-	nd@ DevTreeWalk dn!
+	nd@ a3xDevTreeWalk dn!
 
 	nd@ Free
 
@@ -79,9 +55,9 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 
 	auto wbm
 
-	dn@ DeviceSelectNode
-		"writeBlock" DGetMethod wbm!
-	DeviceExit
+	dn@ a3xDeviceSelectNode
+		"writeBlock" a3xDGetMethod wbm!
+	a3xDeviceExit
 
 	if (wbm@ 0 ==)
 		disk@ "%s isn't a writable block device.\n" Printf
@@ -92,9 +68,9 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	disk@ Free
 
 	auto dpbd
-	dn@ DeviceSelectNode
-		"bootAlias" DGetProperty dpbd!
-	DeviceExit
+	dn@ a3xDeviceSelectNode
+		"bootAlias" a3xDGetProperty dpbd!
+	a3xDeviceExit
 
 	if (dpbd@ 0 ~=)
 		dpbd@ dn!
@@ -113,9 +89,9 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	a3xInit
 
 	auto dpbd
-	BootDevice@ DeviceSelectNode
-		"bootAlias" DGetProperty dpbd!
-	DeviceExit
+	BootDevice@ a3xDeviceSelectNode
+		"bootAlias" a3xDGetProperty dpbd!
+	a3xDeviceExit
 
 	if (dpbd@ 0 ~=)
 		dpbd@ BootDevice!
@@ -146,9 +122,9 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	auto dt
 
-	dn@ DeviceSelectNode
-		"type" DGetProperty dt!
-	DeviceExit
+	dn@ a3xDeviceSelectNode
+		"type" a3xDGetProperty dt!
+	a3xDeviceExit
 
 	if (dt@ "disk" strcmp)
 		"device type: raw disk\n" Printf

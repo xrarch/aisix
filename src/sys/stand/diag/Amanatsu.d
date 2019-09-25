@@ -1,3 +1,7 @@
+#include "<df>/dragonfruit.h"
+
+#include "citron.h"
+
 const AmaPortDev 0x30
 const AmaPortMID 0x31
 const AmaPortCMD 0x32

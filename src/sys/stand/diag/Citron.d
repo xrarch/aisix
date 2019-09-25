@@ -1,7 +1,7 @@
+#include "citron.h"
+
 (* citron bus functions *)
 (* disabling and restoring interrupts is up to the user of these functions *)
-
-const DCitronBase 0xF8000000
 
 procedure DCitronInb (* port -- byte *)
 	4 * DCitronBase + gb

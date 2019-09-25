@@ -1,3 +1,5 @@
+#include "<df>/dragonfruit.h"
+
 struct VDB
 	16 Label
 	128 PartitionTable
@@ -10,6 +12,10 @@ struct PTE
 	1 Status
 	3 Unused
 endstruct
+
+extern PromptYN
+extern IWriteBlock
+extern IReadBlock
 
 var VDB 0
 

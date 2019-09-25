@@ -1,3 +1,8 @@
+#include "<df>/dragonfruit.h"
+
+externconst DeviceType
+extern PartitionDisk
+
 procedure PromptYN (* prompt -- *)
 	auto r
 	2 Calloc r!

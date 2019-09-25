@@ -1,3 +1,5 @@
+#include "<df>/platform/a3x/a3x.h"
+
 var IDiskBD 0
 
 procedure IDiskInit (* bootdev -- *)
@@ -11,9 +13,9 @@ procedure IReadBlock (* block buffer -- *)
 	auto block
 	block!
 
-	IDiskBD@ DeviceSelectNode
-		buf@ block@ "readBlock" DCallMethod drop drop
-	DeviceExit
+	IDiskBD@ a3xDeviceSelectNode
+		buf@ block@ "readBlock" a3xDCallMethod drop drop
+	a3xDeviceExit
 end
 
 procedure IWriteBlock (* block buffer -- *)
@@ -23,7 +25,7 @@ procedure IWriteBlock (* block buffer -- *)
 	auto block
 	block!
 
-	IDiskBD@ DeviceSelectNode
-		buf@ block@ "writeBlock" DCallMethod drop drop
-	DeviceExit
+	IDiskBD@ a3xDeviceSelectNode
+		buf@ block@ "writeBlock" a3xDCallMethod drop drop
+	a3xDeviceExit
 end

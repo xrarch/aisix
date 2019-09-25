@@ -1,11 +1,10 @@
 #!/bin/bash
 
-path=$(dirname $0)
+diagpath=$(dirname $0)/src/sys/stand/diag
+dskfapath=$(dirname $0)/src/sys/stand/dskfa
 
-mkdir -p ${path}/tmp/
+make --directory=${diagpath}
+make --directory=${dskfapath}
 
-./sdk/dragonc.sh -flat ${path}/src/sys/stand/diag/Diag.d ${path}/tmp/diag.a3x
-./sdk/dragonc.sh -flat ${path}/src/sys/stand/dskfa/Dskfa.d ${path}/tmp/dskfa.a3x
-
-./sdk/fsutil.sh $1 w /diag.a3x ${path}/tmp/diag.a3x
-./sdk/fsutil.sh $1 w /dskfa.a3x ${path}/tmp/dskfa.a3x
+./sdk/fsutil.sh $1 w /diag.a3x ${diagpath}/diag.a3x
+./sdk/fsutil.sh $1 w /dskfa.a3x ${dskfapath}/dskfa.a3x

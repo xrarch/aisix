@@ -1,6 +1,7 @@
-#include "EBus.d"
-#include "Citron.d"
-#include "Amanatsu.d"
+#include "<df>/dragonfruit.h"
+
+extern EBusDump
+extern AmanatsuDump
 
 procedure PromptYN (* -- *)
 	auto r

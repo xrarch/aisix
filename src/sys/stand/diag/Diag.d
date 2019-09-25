@@ -1,35 +1,11 @@
-#include "../../lib/a3x.d"
-#include "../../lib/a3x_names.d"
-#include "../../../lib/Runtime.d"
-
-#include "Prompt.d"
-
-asm preamble "
-
-.org 0x200000
-
-.ds VNIX
-
-Entry:
-
-;r4 contains fwctx
-pushv r5, r4
-
-;r0 contains pointer to API
-pushv r5, r0
-
-;r1 contains devnode
-pushv r5, r1
-
-;r2 contains args
-pushv r5, r2
-
-b Main
-
-"
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/a3x/a3x.h"
 
 var args 0
 var BootDevice 0
+
+extern PromptYN
+extern Prompt
 
 procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
@@ -44,9 +20,9 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	auto pf
 
-	"/" DeviceSelect
-		"platform" DGetProperty pf!
-	DeviceExit
+	"/" a3xDeviceSelect
+		"platform" a3xDGetProperty pf!
+	a3xDeviceExit
 
 	if (pf@ 0 ==) return end
 

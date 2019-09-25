@@ -1,3 +1,5 @@
+#include "<df>/dragonfruit.h"
+
 var ArgsBuffer 0
 
 procedure ArgsInit (* argsptr -- *)

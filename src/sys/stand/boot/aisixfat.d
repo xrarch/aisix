@@ -1,3 +1,9 @@
+#include "<df>/dragonfruit.h"
+
+externconst TotalRAM
+extern IReadBlock
+extern Panic
+
 (* extremely simple, read-only implementation of aisixfat, only reads root directory *)
 
 const AFSSuperblockNumber 0x0
@@ -40,6 +46,7 @@ table AFSErrors
 	"ok"
 	"not enough memory"
 endtable
+public AFSErrors
 
 procedure AFSInit (* -- *)
 	"AFS: Mounting filesystem\n" Printf
