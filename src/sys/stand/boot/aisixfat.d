@@ -4,7 +4,7 @@ externconst TotalRAM
 extern IReadBlock
 extern Panic
 
-(* extremely simple, read-only implementation of aisixfat, only reads root directory *)
+(* extremely simple, read-only implementation of aisixfat *)
 
 const AFSSuperblockNumber 0x0
 const AFSSuperblockCache 0x110000
@@ -45,6 +45,7 @@ table AFSErrors
 	"not found"
 	"ok"
 	"not enough memory"
+	"not a file"
 endtable
 public AFSErrors
 
@@ -62,8 +63,6 @@ procedure AFSInit (* -- *)
 	if (AFSSuperblockVersion ~=)
 		"AFS: Bad version on superblock\n" Panic
 	end
-
-	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
 procedure AFSLoadFile (* name destptr -- ok? size *)
@@ -105,27 +104,7 @@ procedure AFSLoadFile (* name destptr -- ok? size *)
 	size@ 4096 * 1
 end
 
-procedure AFSPrintList (* -- *)
-	"volume root listing:\n" Printf
-	"\tNAME\tBYTES\n" Printf
-
-	auto i
-	0 i!
-	while (i@ 64 <)
-		auto off
-		i@ 64 * AFSRootCache + off!
-
-		if (off@ AFSDirEnt_type + gb 1 ==)
-			off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + "\t/%s\t%d\n" Printf
-		end
-
-		i@ 1 + i!
-	end
-
-	"done.\n" Printf
-end
-
-procedure AFSFileByName (* name -- entrypointer *)
+procedure AFSDirentByName (* name -- dirent *)
 	auto name
 	name!
 
@@ -139,16 +118,135 @@ procedure AFSFileByName (* name -- entrypointer *)
 		auto off
 		i@ 64 * AFSRootCache + off!
 
-		if (off@ AFSDirEnt_type + gb 1 ==)
-			if (off@ AFSDirEnt_name + name@ strcmp)
-				off@ return
-			end
+		if (off@ AFSDirEnt_name + name@ strcmp)
+			off@ return
 		end
 
 		i@ 1 + i!
 	end
 
 	0
+end
+
+procedure AFSPathSeek (* path -- dirent *)
+	auto path
+	path!
+
+	auto pcomp
+	256 Calloc pcomp!
+
+	auto last
+	2 last!
+
+	auto dirent
+	-1 dirent!
+
+	AFSReadRoot
+
+	while (path@ 0 ~=)
+		path@ pcomp@ '/' 255 strntok path!
+
+		if (pcomp@ strlen 0 ==)
+			pcomp@ Free dirent@ return
+		end
+
+		if (last@ 2 ~=)
+			pcomp@ Free
+			0 return
+		end
+
+		if (dirent@ -1 ~=)
+			dirent@ AFSDirEnt_startblock + @ AFSRootCache IReadBlock
+		end
+
+		pcomp@ AFSDirentByName dirent!
+		if (dirent@ 0 ==)
+			pcomp@ Free
+			0 return
+		end
+
+		dirent@ AFSDirEnt_type + gb last!
+	end
+
+	pcomp@ Free
+
+	dirent@
+end
+
+procedure AFSPrintList (* path -- *)
+	auto path
+	path!
+
+	if (path@ strlen 0 ==)
+		AFSReadRoot
+	end else
+
+	if (path@ "/" strcmp)
+		AFSReadRoot
+	end else
+		auto dirent
+		path@ AFSPathSeek dirent!
+		if (dirent@ 0 ==)
+			path@ "couldn't find %s\n" Printf
+			return
+		end
+
+		if (dirent@ AFSDirEnt_type + gb 2 ~=)
+			path@ "%s isn't a directory\n" Printf
+			return
+		end
+
+		dirent@ AFSDirEnt_startblock + @ AFSRootCache IReadBlock
+	end
+
+	end
+
+	path@ "%s:\n" Printf
+	"\tNAME\tBYTES\n" Printf
+
+	auto i
+	0 i!
+	while (i@ 64 <)
+		auto off
+		i@ 64 * AFSRootCache + off!
+
+		if (off@ AFSDirEnt_type + gb 0 ~=)
+			off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + 
+
+			if (off@ AFSDirEnt_type + gb 1 ==)
+				"\t%s\t%d\n"
+			end else
+				"\t%s/\t%d\n"
+			end
+
+			Printf
+		end
+
+		i@ 1 + i!
+	end
+
+	CR
+end
+
+procedure AFSFileByName (* path -- dirent *)
+	auto path
+	path!
+
+	auto dirent
+	path@ AFSPathSeek dirent!
+	if (dirent@ 0 ==)
+		0 return
+	end
+
+	if (dirent@ AFSDirEnt_type + gb 1 ~=)
+		0 return
+	end
+
+	dirent@
+end
+
+procedure AFSReadRoot (* -- *)
+	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
 var AFSFatCached 0xFFFFFFFF

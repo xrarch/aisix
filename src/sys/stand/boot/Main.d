@@ -102,8 +102,6 @@ procedure DoFile (* args f -- *)
 		if (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
 		end else
-			CR CR
-
 			a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
 				popv r5, r4
 				popv r5, r3
@@ -126,9 +124,9 @@ procedure Prompt (* -- *)
 	auto word
 	256 Calloc word!
 
-	AFSPrintList
+	"/" AFSPrintList
 
-	"Type name of standalone program, or 'exit' to return.\nPress return to boot the kernel with normal args.\n" Printf
+	"Type name of standalone program, 'exit' to return, or 'ls' to list files.\nPress return to boot the kernel with normal args.\n" Printf
 
 	while (Go@)
 		"\t>> " Printf
@@ -141,10 +139,19 @@ procedure Prompt (* -- *)
 			if (word@ "exit" strcmp)
 				0 Go!
 			end else
+
+			if (word@ "ls" strcmp)
+				if (nw@ 0 ~=)
+					nw@ 1 + nw!
+				end
+				nw@ AFSPrintList
+			end else
 				if (nw@ 0 ~=)
 					nw@ 1 + nw!
 				end
 				nw@ word@ DoFile
+			end
+
 			end
 		end else
 			args@ "aisix" DoFile
