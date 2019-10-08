@@ -179,9 +179,7 @@ procedure AFSPrintList (* path -- *)
 
 	if (path@ strlen 0 ==)
 		AFSReadRoot
-	end else
-
-	if (path@ "/" strcmp)
+	end elseif (path@ "/" strcmp)
 		AFSReadRoot
 	end else
 		auto dirent
@@ -197,8 +195,6 @@ procedure AFSPrintList (* path -- *)
 		end
 
 		dirent@ AFSDirEnt_startblock + @ AFSRootCache IReadBlock
-	end
-
 	end
 
 	path@ "%s:\n" Printf
@@ -249,7 +245,7 @@ procedure AFSReadRoot (* -- *)
 	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
-var AFSFatCached 0xFFFFFFFF
+var AFSFatCached -1
 procedure AFSReadFATBlock (* fatblock -- *)
 	auto fatblock
 	fatblock!

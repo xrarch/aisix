@@ -98,19 +98,17 @@ procedure DoFile (* args f -- *)
 	buf@ 0x200000 AFSLoadFile r! sz!
 	if (r@ 1 ~=)
 		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
-	end else
-		if (0x200000@ 0x58494E56 ~=)
+	end elseif (0x200000@ 0x58494E56 ~=)
 			buf@ "%s is not a standalone program\n" Printf
-		end else
-			a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
-				popv r5, r4
-				popv r5, r3
-				popv r5, r2
-				popv r5, r1
-				popv r5, r0
-				call 0x200004
-			"
-		end
+	end else
+		a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
+			popv r5, r4
+			popv r5, r3
+			popv r5, r2
+			popv r5, r1
+			popv r5, r0
+			call 0x200004
+		"
 	end
 end
 
@@ -138,9 +136,7 @@ procedure Prompt (* -- *)
 		if (word@ strlen 0 >)
 			if (word@ "exit" strcmp)
 				0 Go!
-			end else
-
-			if (word@ "ls" strcmp)
+			end elseif (word@ "ls" strcmp)
 				if (nw@ 0 ~=)
 					nw@ 1 + nw!
 				end
@@ -150,8 +146,6 @@ procedure Prompt (* -- *)
 					nw@ 1 + nw!
 				end
 				nw@ word@ DoFile
-			end
-
 			end
 		end else
 			args@ "aisix" DoFile
