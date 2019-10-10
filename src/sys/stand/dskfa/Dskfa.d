@@ -12,13 +12,11 @@ var BootDevice 0
 var DeviceType 0
 public DeviceType
 
-procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
-	auto arg
-	arg!
-
+procedure CheckInvalid { arg -- dn }
 	if (arg@ 0 ==)
 		"no disk name provided.\n" Printf
-		0 return
+		0 dn!
+		return
 	end
 
 	auto disk
@@ -27,30 +25,12 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	auto nw
 	arg@ disk@ ' ' 255 strntok nw!
 
-
-
-	(* THIS IS VERY BAD: WHY DO I HAVE TO DO THIS?
-		the DevTreeWalk a3x call should NOT be writing
-		to the path string, but it ends up putting a
-		zero at the start!! why???
-	 *)
-	auto nd
-	disk@ strdup nd!
-
-	auto dn
-	nd@ a3xDevTreeWalk dn!
-
-	nd@ Free
-
-
-
-
-
+	disk@ a3xDevTreeWalk dn!
 
 	if (dn@ 0 ==)
 		disk@ "%s is an invalid disk path.\n" Printf
 		disk@ Free
-		0 return
+		0 dn! return
 	end
 
 	auto wbm
@@ -62,7 +42,7 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	if (wbm@ 0 ==)
 		disk@ "%s isn't a writable block device.\n" Printf
 		disk@ Free
-		0 return
+		0 dn! return
 	end
 
 	disk@ Free
@@ -75,8 +55,6 @@ procedure CheckInvalid (* arg -- devnode OR 0 if invalid *)
 	if (dpbd@ 0 ~=)
 		dpbd@ dn!
 	end
-
-	dn@
 end
 
 procedure Main (* fwctx ciptr bootdev args -- *)

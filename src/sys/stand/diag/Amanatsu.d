@@ -56,26 +56,23 @@ procedure AmanatsuReadB (* -- long *)
 	AmaPortB DCitronInl
 end
 
-procedure AmanatsuIDtoLabel (* id -- label *)
-	auto id
-	id!
-
+procedure AmanatsuIDtoLabel { id -- label }
 	auto i
 	0 i!
 
 	auto p
 	AmaIDs p!
-
+	
 	while (i@ AmaIDN <)
 		if (p@ @ id@ ==)
-			p@ 4 + @ return
+			p@ 4 + @ label! return
 		end
 
-		p@ 8 + p!
-		i@ 1 + i!
+		8 p +=
+		1 i +=
 	end
 
-	"unknown"
+	"unknown" label!
 end
 
 procedure AmanatsuDump (* -- *)
@@ -94,7 +91,7 @@ procedure AmanatsuDump (* -- *)
 			mid@ AmanatsuIDtoLabel mid@ i@ "\t%d\t%x\t%s\n" Printf
 		end
 
-		i@ 1 + i!
+		1 i +=
 	end
 
 	CR

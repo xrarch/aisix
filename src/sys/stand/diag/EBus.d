@@ -24,7 +24,7 @@ procedure EBusDump (* -- *)
 			bp@ i@ "\t%d\t%x\tN/A\t\tNo board installed\n" Printf		
 		end
 
-		i@ 1 + i!
+		1 i +=
 	end
 
 	"\t7\tf8000000\tN/A\t\tPBOARD\n\n" Printf

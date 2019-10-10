@@ -81,15 +81,20 @@ procedure Prompt (* -- *)
 		PartitionDisk
 	end else
 		if (r@ 2 ==)
+			auto dfo
+			1 dfo!
+
 			if (DeviceType@ 1 ==)
 				"\nyou are trying to put a filesystem on a raw disk. this will destroy\nany existing partition table. you probably want to put this filesystem\non a partition instead.\n" Printf
 
 				if ("\nare you sure that this is what you want" PromptYN ~~)
-					return
+					0 dfo!
 				end 
 			end
 
-			FormatDisk
+			if (dfo@)
+				FormatDisk
+			end
 		end
 	end
 end

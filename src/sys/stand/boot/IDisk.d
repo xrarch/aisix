@@ -6,13 +6,7 @@ procedure IDiskInit (* bootdev -- *)
 	IDiskBD!
 end
 
-procedure IReadBlock (* block buffer -- *)
-	auto buf
-	buf!
-
-	auto block
-	block!
-
+procedure IReadBlock { block buf -- }
 	IDiskBD@ a3xDeviceSelectNode
 		buf@ block@ "readBlock" a3xDCallMethod drop drop
 	a3xDeviceExit

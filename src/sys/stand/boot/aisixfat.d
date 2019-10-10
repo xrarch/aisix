@@ -65,17 +65,12 @@ procedure AFSInit (* -- *)
 	end
 end
 
-procedure AFSLoadFile (* name destptr -- ok? size *)
-	auto destptr
-	destptr!
-
-	AFSFileByName
-	if (dup 0 ==)
-		0 return
-	end
-
+procedure AFSLoadFile { name destptr } (* -- size ok? *)
 	auto entryptr
-	entryptr!
+	name@ AFSFileByName entryptr!
+	if (entryptr@ 0 ==)
+		0 0 return
+	end
 
 	auto cblock
 	auto size
@@ -98,18 +93,16 @@ procedure AFSLoadFile (* name destptr -- ok? size *)
 		cblock@ AFSBlockStatus cblock!
 
 		destptr@ 4096 + destptr!
-		i@ 1 + i!
+		1 i +=
 	end
 
 	size@ 4096 * 1
 end
 
-procedure AFSDirentByName (* name -- dirent *)
-	auto name
-	name!
-
+procedure AFSDirentByName { name -- dirent }
 	if (name@ strlen 0 ==)
-		0 return
+		0 dirent!
+		return
 	end
 
 	auto i
@@ -119,26 +112,23 @@ procedure AFSDirentByName (* name -- dirent *)
 		i@ 64 * AFSRootCache + off!
 
 		if (off@ AFSDirEnt_name + name@ strcmp)
-			off@ return
+			off@ dirent!
+			return
 		end
 
-		i@ 1 + i!
+		1 i +=
 	end
 
-	0
+	0 dirent!
 end
 
-procedure AFSPathSeek (* path -- dirent *)
-	auto path
-	path!
-
+procedure AFSPathSeek { path -- dirent }
 	auto pcomp
 	256 Calloc pcomp!
 
 	auto last
 	2 last!
 
-	auto dirent
 	-1 dirent!
 
 	AFSReadRoot
@@ -147,12 +137,15 @@ procedure AFSPathSeek (* path -- dirent *)
 		path@ pcomp@ '/' 255 strntok path!
 
 		if (pcomp@ strlen 0 ==)
-			pcomp@ Free dirent@ return
+			pcomp@ Free
+			if (dirent@ -1 ==) 0 dirent! end
+			return
 		end
 
 		if (last@ 2 ~=)
 			pcomp@ Free
-			0 return
+			0 dirent!
+			return
 		end
 
 		if (dirent@ -1 ~=)
@@ -162,21 +155,17 @@ procedure AFSPathSeek (* path -- dirent *)
 		pcomp@ AFSDirentByName dirent!
 		if (dirent@ 0 ==)
 			pcomp@ Free
-			0 return
+			0 dirent!
+			return
 		end
 
 		dirent@ AFSDirEnt_type + gb last!
 	end
 
 	pcomp@ Free
-
-	dirent@
 end
 
-procedure AFSPrintList (* path -- *)
-	auto path
-	path!
-
+procedure AFSPrintList { path -- }
 	if (path@ strlen 0 ==)
 		AFSReadRoot
 	end elseif (path@ "/" strcmp)
@@ -218,27 +207,23 @@ procedure AFSPrintList (* path -- *)
 			Printf
 		end
 
-		i@ 1 + i!
+		1 i +=
 	end
 
 	CR
 end
 
-procedure AFSFileByName (* path -- dirent *)
-	auto path
-	path!
-
-	auto dirent
+procedure AFSFileByName { path -- dirent }
 	path@ AFSPathSeek dirent!
 	if (dirent@ 0 ==)
-		0 return
+		0 dirent!
+		return
 	end
 
 	if (dirent@ AFSDirEnt_type + gb 1 ~=)
-		0 return
+		0 dirent!
+		return
 	end
-
-	dirent@
 end
 
 procedure AFSReadRoot (* -- *)
@@ -246,10 +231,7 @@ procedure AFSReadRoot (* -- *)
 end
 
 var AFSFatCached -1
-procedure AFSReadFATBlock (* fatblock -- *)
-	auto fatblock
-	fatblock!
-
+procedure AFSReadFATBlock { fatblock -- }
 	if (fatblock@ AFSFatCached@ ~=) (* only read in new block if not already in cache *)
 		fatblock@ AFSSuperblockCache AFSSuperblock_FATStart + @ +
 		AFSFATCache IReadBlock
@@ -257,10 +239,7 @@ procedure AFSReadFATBlock (* fatblock -- *)
 	end
 end
 
-procedure AFSBlockStatus (* blocknum -- status *)
-	auto bnum
-	bnum!
-
+procedure AFSBlockStatus { bnum -- status }
 	auto fatblock
 	auto fatoff
 
@@ -268,5 +247,5 @@ procedure AFSBlockStatus (* blocknum -- status *)
 	bnum@ 4096 % fatoff!
 
 	fatblock@ AFSReadFATBlock
-	fatoff@ 4 * AFSFATCache + @
+	fatoff@ 4 * AFSFATCache + @ status!
 end

@@ -2,10 +2,7 @@
 
 var ArgsBuffer 0
 
-procedure ArgsInit (* argsptr -- *)
-	auto argp
-	argp!
-
+procedure ArgsInit { argp -- }
 	if (argp@ 0 ==)
 		return
 	end
@@ -13,10 +10,7 @@ procedure ArgsInit (* argsptr -- *)
 	argp@ ArgsBuffer!
 end
 
-procedure ArgsValue (* arg -- value or 0 *)
-	auto arg
-	arg!
-
+procedure ArgsValue { arg -- out }
 	if (ArgsBuffer@ 0 ==)
 		0 return
 	end
@@ -30,7 +24,6 @@ procedure ArgsValue (* arg -- value or 0 *)
 	auto nt
 	ArgsBuffer@ nt!
 
-	auto out
 	0 out!
 
 	while (nt@ 0 ~=)
@@ -49,14 +42,9 @@ procedure ArgsValue (* arg -- value or 0 *)
 
 	wordbuf@ Free
 	namebuf@ Free
-
-	out@
 end
 
-procedure ArgsCheck (* arg -- present? *)
-	auto arg
-	arg!
-
+procedure ArgsCheck { arg -- present }
 	if (ArgsBuffer@ 0 ==)
 		0 return
 	end
@@ -67,17 +55,16 @@ procedure ArgsCheck (* arg -- present? *)
 	auto nt
 	ArgsBuffer@ nt!
 
-	auto out
-	0 out!
+	0 present!
 
 	while (nt@ 0 ~=)
 		nt@ wordbuf@ ' ' 255 strntok nt!
 		if (wordbuf@ arg@ strcmp)
-			1 out! break
+			1 present! break
 		end
 	end
 
 	wordbuf@ Free
 
-	out@
+	present@
 end

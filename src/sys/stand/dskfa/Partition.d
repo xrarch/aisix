@@ -42,7 +42,7 @@ procedure VDBFix (* -- ok? *)
 
 	auto ynr
 
-	"this disk's vol. descriptor block is corrupt or empty.\nwrite new one" PromptYN ynr!
+	"this disk's volume descriptor block is corrupt or empty.\nwrite new one" PromptYN ynr!
 
 	if (ynr@ ~~) 0 return end
 
@@ -75,30 +75,15 @@ procedure VDBFix (* -- ok? *)
 	1 return
 end
 
-procedure PTEGet (* ent -- label blocks status *)
-	auto ent
-	ent!
-
+procedure PTEGet { ent -- label blocks status }
 	VDB@ VDB_PartitionTable + ent@ PTE_SIZEOF * + ent!
 
-	ent@ PTE_Label +
-	ent@ PTE_Blocks + @
-	ent@ PTE_Status + gb
+	ent@ PTE_Label + label!
+	ent@ PTE_Blocks + @ blocks!
+	ent@ PTE_Status + gb status!
 end
 
-procedure PTESet (* label blocks status ent -- *)
-	auto ent
-	ent!
-
-	auto status
-	status!
-
-	auto blocks
-	blocks!
-
-	auto label
-	label!
-
+procedure PTESet { label blocks status ent -- }
 	auto ptb
 	VDB@ VDB_PartitionTable + ptb!
 	ptb@ ent@ PTE_SIZEOF * + ptb!
@@ -138,7 +123,7 @@ procedure PTInfo (* -- *)
 			blocks@ dup 4096 * "\tsize: %d bytes (%d blocks)\n" Printf
 		end
 
-		i@ 1 + i!
+		1 i +=
 	end
 
 	CR
@@ -147,13 +132,18 @@ end
 procedure PartitionDisk (* -- *)
 	LoadVDB
 
-	if (VDBFix ~~)
-		"vdb invalid. cannot continue.\n" Printf
-		return
-	end
+	auto v
+	VDBValid v!
 
-	if ("dump current partition info" PromptYN)
-		PTInfo
+	if (v@)
+		if ("dump current partition info" PromptYN)
+			PTInfo
+		end
+	end else
+		if (VDBFix ~~)
+			"vdb invalid. cannot continue.\n" Printf
+			return
+		end
 	end
 
 	FreeVDB

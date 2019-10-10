@@ -85,21 +85,16 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	0 a3xReturn
 end
 
-procedure DoFile (* args f -- *)
-	auto buf
-	buf!
-
-	auto arg
-	arg!
-
+procedure DoFile { arg buf -- }
 	auto sz
 
 	auto r
 	buf@ 0x200000 AFSLoadFile r! sz!
+
 	if (r@ 1 ~=)
 		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
 	end elseif (0x200000@ 0x58494E56 ~=)
-			buf@ "%s is not a standalone program\n" Printf
+		buf@ "%s is not a standalone program\n" Printf
 	end else
 		a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
 			popv r5, r4
@@ -138,13 +133,14 @@ procedure Prompt (* -- *)
 				0 Go!
 			end elseif (word@ "ls" strcmp)
 				if (nw@ 0 ~=)
-					nw@ 1 + nw!
+					1 nw +=
 				end
 				nw@ AFSPrintList
 			end else
 				if (nw@ 0 ~=)
-					nw@ 1 + nw!
+					1 nw +=
 				end
+
 				nw@ word@ DoFile
 			end
 		end else
@@ -161,22 +157,3 @@ procedure Panic (* errorstr -- *)
 
 	-1 a3xReturn
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
