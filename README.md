@@ -10,15 +10,11 @@ A long-term goal is a windowed GUI, short term goals are to finish the standalon
 
 ## Building
 
-Run the following command to create a blank disk image.
-
-Replace `disk.img` with the desired name of your disk image.
+Run the following command to create a blank disk image. Replace `disk.img` with the desired name of your disk image.
 
 `dd if=/dev/zero of=disk.img bs=4096 count=1024`
 
-Then, run the following commands, with the LIMN sdk folder in your current directory:
-
-Again, replace `disk.img` with the name of your disk image.
+Then, run the following commands, with the LIMN sdk folder in your current directory (again, replace `disk.img` with the name of your disk image):
 
 `./sdk/fsutil.sh ./disk.img f`
 
