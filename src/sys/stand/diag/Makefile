@@ -9,7 +9,7 @@ all: diag.a3x
 
 diag.a3x: $(OBJ)
 	$(LD) diag.a3x L/a3x/_start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
-	$(OBJTOOL) flatten diag.a3x 0x200000
+	$(OBJTOOL) flatten diag.a3x 0x80000
 
 %.o: %.d
 	$(DC) $< $@

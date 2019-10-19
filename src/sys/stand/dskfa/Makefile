@@ -9,7 +9,7 @@ all: dskfa.a3x
 
 dskfa.a3x: $(OBJ)
 	$(LD) dskfa.a3x L/a3x/_start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
-	$(OBJTOOL) flatten dskfa.a3x 0x200000
+	$(OBJTOOL) flatten dskfa.a3x 0x80000
 
 %.o: %.d
 	$(DC) $< $@

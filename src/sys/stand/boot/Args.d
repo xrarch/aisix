@@ -12,7 +12,8 @@ end
 
 procedure ArgsValue { arg -- out }
 	if (ArgsBuffer@ 0 ==)
-		0 return
+		0 out!
+		return
 	end
 
 	auto wordbuf
@@ -46,7 +47,8 @@ end
 
 procedure ArgsCheck { arg -- present }
 	if (ArgsBuffer@ 0 ==)
-		0 return
+		0 present!
+		return
 	end
 
 	auto wordbuf

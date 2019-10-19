@@ -16,6 +16,8 @@ var BootDevice 0
 var TotalRAM 0
 public TotalRAM
 
+const LoadBase 0x80000
+
 procedure Main (* fwctx ciptr bootdev args -- *)
 	args!
 
@@ -29,15 +31,20 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	"==============================\n" Printf
 
-	BootDevice@ "boot1 on dev%x\n" Printf
+	BootDevice@ "aisixboot: boot1 on dev%x\n" Printf
 
 	if (args@ 0 ~=)
-		args@ "kernel args: %s\n" Printf
+		args@ "aisixboot: kernel args: %s\n" Printf
 	end
 
 	"/memory" a3xDeviceSelect
 		"totalRAM" a3xDGetProperty TotalRAM!
 	a3xDeviceExit
+
+	if (TotalRAM@ LoadBase <)
+		LoadBase 1024 / "aisixboot: I refuse to run with less than %dKB of RAM.\n" Printf
+		-1 a3xReturn
+	end
 
 	BootDevice@ IDiskInit
 	AFSInit
@@ -89,11 +96,11 @@ procedure DoFile { arg buf -- }
 	auto sz
 
 	auto r
-	buf@ 0x200000 AFSLoadFile r! sz!
+	buf@ LoadBase AFSLoadFile r! sz!
 
 	if (r@ 1 ~=)
 		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
-	end elseif (0x200000@ 0x58494E56 ~=)
+	end elseif (LoadBase@ 0x58494E56 ~=)
 		buf@ "%s is not a standalone program\n" Printf
 	end else
 		a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
@@ -102,7 +109,7 @@ procedure DoFile { arg buf -- }
 			popv r5, r2
 			popv r5, r1
 			popv r5, r0
-			call 0x200004
+			call 0x80004 ;dependent on LoadBase
 		"
 	end
 end

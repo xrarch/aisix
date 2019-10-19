@@ -1,9 +1,0 @@
-const AISIX_MAJOR 0
-const AISIX_MINOR 7
-
-var SysVerbose 0
-
-(* really just checks if its negative *)
-procedure iserr (* num -- iserr? *)
-	0 s<
-end
