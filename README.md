@@ -36,18 +36,16 @@ Graphical boot (recommended, cooler):
 Headless (serial port) boot:
 `./vm/headless.sh -dks ./disk.img`
 
-If you're doing a graphical boot, press `.` at the graphical box, and then type `2` and press enter to drop into the firmware prompt.
-
 At the a3x firmware prompt, the following command should work to boot the image:
 
-`boot /ebus/platformboard/citron/dks/0`
+`boot /disks/0`
 
 If you want to avoid these long-winded commands, it's possible to make the firmware do it automatically.
 
 At the firmware prompt, type the following sequence of commmands:
 
 ```
-setenv boot-dev /ebus/platformboard/citron/dks/0
+setenv boot-dev /disks/0
 setenv auto-boot? true
 ```
 
