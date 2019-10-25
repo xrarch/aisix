@@ -20,7 +20,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	auto pf
 
-	"/" a3xDeviceSelect
+	"/platform" a3xDeviceSelect
 		"platform" a3xDGetProperty pf!
 	a3xDeviceExit
 

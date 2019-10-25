@@ -55,7 +55,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	if (ab@ 0 ~=)
 		ab@ "automatic load: boot:auto=%s\n" Printf
 
-		if ("-boot:nodelay" ArgsCheck ~~)
+		if ("boot:nodelay" ArgsCheck ~~)
 			auto cn
 			"/clock" a3xDevTreeWalk cn!
 
