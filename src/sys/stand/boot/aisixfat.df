@@ -50,18 +50,18 @@ endtable
 public AFSErrors
 
 procedure AFSInit (* -- *)
-	"AFS: Mounting filesystem\n" Printf
+	"aisixboot: mounting filesystem\n" Printf
 
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock
 
 	AFSSuperblockCache AFSSuperblock_Magic + @
 	if (AFSSuperblockMagic ~=)
-		"AFS: Invalid superblock\n" Panic
+		"aisixboot: invalid superblock\n" Panic
 	end
 
 	AFSSuperblockCache AFSSuperblock_Version + gb
 	if (AFSSuperblockVersion ~=)
-		"AFS: Bad version on superblock\n" Panic
+		"aisixboot: bad version on superblock\n" Panic
 	end
 end
 
