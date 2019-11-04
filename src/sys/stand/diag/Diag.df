@@ -21,10 +21,10 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	auto pf
 
 	"/platform" a3xDeviceSelect
-		"platform" a3xDGetProperty pf!
+		"model" a3xDGetProperty pf!
 	a3xDeviceExit
 
-	if (pf@ 0 ==) return end
+	if (pf@ 0 ==) "no /platform:model property?\n" Printf return end
 
 	if ("LIMNstation,1" pf@ strcmp ~~)
 		pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway"

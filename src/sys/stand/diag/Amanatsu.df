@@ -79,7 +79,7 @@ procedure AmanatsuDump (* -- *)
 	auto i
 	1 i!
 
-	"== amanatsu dump ==\n\tSLOT\tMID\t\tTYPE\n" Printf
+	"== amanatsu dump ==\n\tUNIT\tMID\t\tTYPE\n" Printf
 
 	"\t0\t00000000\tCONTROLLER\n" Printf
 
