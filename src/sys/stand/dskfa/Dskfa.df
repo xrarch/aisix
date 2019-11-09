@@ -101,7 +101,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	auto dt
 
 	dn@ a3xDeviceSelectNode
-		"type" a3xDGetProperty dt!
+		"deviceType" a3xDGetProperty dt!
 	a3xDeviceExit
 
 	if (dt@ "disk" strcmp)
@@ -109,13 +109,13 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 		1 DeviceType!
 	end
 
-	if (dt@ "logical" strcmp)
+	if (dt@ "disk-logical" strcmp)
 		"device type: logical volume\n" Printf
 		2 DeviceType!
 	end
 
 	if (DeviceType@ 0 ==)
-		"couldn't determine device type.\n" Printf
+		"couldn't determine disk type.\n" Printf
 		return
 	end
 

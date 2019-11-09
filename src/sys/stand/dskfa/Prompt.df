@@ -21,7 +21,7 @@ procedure PromptYN (* prompt -- *)
 	0 return
 end
 
-procedure PromptON (* ... numopt prompt -- *)
+procedure PromptON (* ... numopt prompt -- num *)
 	CR
 
 	Printf
@@ -62,7 +62,7 @@ procedure Prompt (* -- *)
 	while (r@ 3 > r@ 0 == ||)
 		"partition the disk"
 		"format the disk with a new filesystem"
-		"exit"
+		"exit (preserve data)"
 		3
 		"which would you like to do? keep in mind that either are very likely to destroy\nany data currently existing on the volume.\n"
 		PromptON r!
