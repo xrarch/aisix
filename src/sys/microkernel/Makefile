@@ -9,8 +9,8 @@ LD      =  $(OBJTOOL) link
 all: aisix
 
 aisix: $(OBJ) start.o
-	$(LD) aisix start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
-	$(OBJTOOL) flatten aisix 0x80000
+	$(LD) aisix.bin start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
+	$(OBJTOOL) flatten aisix.bin 0x80000
 
 start.o: start.s
 	$(AS) start.s start.o
