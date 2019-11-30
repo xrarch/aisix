@@ -82,7 +82,7 @@ procedure AFSLoadFile { name destptr } (* -- size ok? *)
 	destptr@ size@ 4096 * + nmem!
 
 	if (nmem@ TotalRAM@ >=)
-		0 2 return (* not enough memory *)
+		size@ 4096 * 2 return (* not enough memory *)
 	end
 
 	auto i

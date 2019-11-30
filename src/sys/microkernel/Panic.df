@@ -1,0 +1,11 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+extern PlatformPanic
+
+procedure Panic (* ... fstr -- *)
+	"microkernel panic: " Printf
+	Printf
+
+	PlatformPanic
+end

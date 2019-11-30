@@ -1,0 +1,22 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+extern ArgsInit
+extern InterruptsInit
+extern MachineInfo
+extern PMMInit
+
+procedure Main { ksz args -- }
+	args@ ArgsInit
+
+	"aisix microkernel coming up\n" Printf
+	ksz@ "boot image ~%d bytes\n" Printf
+
+	MachineInfo
+
+	InterruptsInit
+
+	PMMInit
+
+	while (1) end
+end

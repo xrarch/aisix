@@ -1,0 +1,109 @@
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/a3x/a3x.h"
+#include "<inc>/mk.h"
+
+extern Main
+
+const KBase 0x80000
+
+procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
+	auto ksz
+	ksz!
+
+	auto args
+	args!
+
+	(* remember the boot device *)
+	auto bootdev
+	bootdev!
+
+	(* initialize the client interface *)
+	a3xInit
+
+	"/platform" a3xDeviceSelect
+		"model" a3xDGetProperty MachineType!
+	a3xDeviceExit
+
+	"/cpu" a3xDeviceSelect
+		"model" a3xDGetProperty MachineCPU!
+	a3xDeviceExit
+
+	"/bus" a3xDeviceSelect
+		"model" a3xDGetProperty MachineBus!
+	a3xDeviceExit
+
+	auto tram
+
+	"/memory" a3xDeviceSelect
+		"totalRAM" a3xDGetProperty tram!
+	a3xDeviceExit
+
+	KBase ksz@ +
+	4096 / 1 + 4096 * (* round to nearest 4096 bytes, ceil *)
+	MachineRAMBase!
+
+	tram@ MachineRAMBase@ - MachineRAMSize!
+
+	"\nmicrokernel log to a3x console\n" Printf
+
+	ksz@ args@ Main
+end
+
+procedure ResetBus (* -- *)
+	"/bus" a3xDeviceSelect
+		"reset" a3xDCallMethod drop
+	a3xDeviceExit
+end
+
+procedure Shutdown (* -- *)
+	ResetBus
+
+	0 a3xReturn
+end
+
+procedure Reboot (* -- *)
+	"/cpu" a3xDeviceSelect
+		"reset" a3xDCallMethod drop
+	a3xDeviceExit
+
+	while (1) end
+end
+
+procedure PlatformPanic (* -- *)
+	-1 a3xReturn
+end
+
+var AisixIVT 0
+
+procedure InterruptsInit (* -- *)
+	256 4 * Calloc AisixIVT!
+
+	if (AisixIVT@ -1 ==)
+		"couldn't allocate ivt\n" Panic
+	end
+
+	auto a3xIVT
+	asm "
+		pushv r5, ivt
+	" a3xIVT!
+
+	(* copy a3x fault handlers for now *)
+	auto i
+	0 i!
+	while (i@ 10 <)
+		a3xIVT@ i@ 4 * + @
+		i@
+		InterruptRegister
+
+		1 i +=
+	end
+
+	(* set new ivt *)
+	AisixIVT@ asm "
+		popv r5, ivt
+	"
+end
+
+procedure InterruptRegister (* handler num -- *)
+	4 * AisixIVT@ + !
+end

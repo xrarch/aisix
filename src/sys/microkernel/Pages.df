@@ -1,0 +1,39 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+var PMMBitmap 0
+
+var Pages 0
+
+procedure PMMInit (* -- *)
+	auto pages
+	MachineRAMSize@ 4096 / pages!
+
+	pages@ 8 / 1 + Calloc PMMBitmap!
+
+	pages@ Pages!
+
+	if (PMMBitmap@ -1 ==)
+		"couldn't allocate pages bitmap\n" Panic
+	end
+
+	pages@ "managing %d pages\n" Printf
+end
+
+procedure private FindHole { start -- hole }
+	auto pmb
+	PMMBitmap@ pmb!
+
+	auto pc
+	Pages@ pc!
+
+	while (start@ pc@ <)
+		if (pmb@ start@ 8 / + @ 0xFF ==)
+			start@ 8 + start!
+		end
+	end
+end
+
+procedure PMMAlloc { pages -- addr }
+	
+end
