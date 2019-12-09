@@ -88,8 +88,6 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	end
 
 	Prompt
-
-	0 a3xReturn
 end
 
 procedure DoFile { arg buf -- }
