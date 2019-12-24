@@ -1,0 +1,126 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+struct Service
+	64 Name
+	4 PID
+endstruct
+
+var ServiceList 0
+
+var ServiceIRQMap 0
+
+var ServiceIRQTypeMap 0
+
+extern PlatformFaultsInit
+
+procedure ServiceInit (* -- *)
+	ListCreate ServiceList!
+
+	1 PMMAlloc ServiceIRQMap!
+
+	if (ServiceIRQMap@ -1 ==)
+		"couldn't allocate service IRQ map\n" Panic
+	end
+
+	1 PMMAlloc ServiceIRQTypeMap!
+
+	if (ServiceIRQTypeMap@ -1 ==)
+		"couldn't allocate service IRQ type map\n" Panic
+	end
+
+	ServiceIRQMap@ 4096 0 memset
+	ServiceIRQTypeMap@ 4096 0 memset
+
+	PlatformFaultsInit
+end
+
+procedure ServiceAdd { name pid -- ok }
+	if (ServiceList@ 0 ==)
+		"ServiceAdd\n" Panic
+	end
+
+	if (name@ ServiceByName -1 ~=)
+		-1 ok!
+		return
+	end
+
+	auto service
+	Service_SIZEOF Calloc service!
+
+	if (service@ ERR ==)
+		"ServiceAdd: couldn't allocate service\n" Panic
+	end
+
+	service@ Service_Name + name@ 63 strncpy
+	pid@ service@ Service_PID + !
+
+	service@ ServiceList@ ListInsert
+
+	1 ok!
+end
+
+procedure ServiceByName { name -- pid }
+	if (ServiceList@ 0 ==)
+		"ServiceByName\n" Panic
+	end
+
+	auto n
+	ServiceList@ List_Head + @ n!
+
+	while (n@ 0 ~=)
+		auto pnode
+		n@ ListNodeValue
+		pnode!
+
+		if (pnode@ Service_Name + name@ strcmp)
+			pnode@ Service_PID + @ pid!
+			return
+		end
+
+		n@ ListNodeNext n!
+	end
+
+	-1 pid!
+end
+
+extern PlatformKernelEntry
+
+extern PlatformInterruptRegister
+
+extern PlatformMaskIRQ
+
+procedure KernelInterruptRegister { func irq -- }
+	pointerof PlatformKernelEntry irq@ PlatformInterruptRegister
+
+	func@ irq@ 4 * ServiceIRQMap@ + !
+	1 irq@ 4 * ServiceIRQTypeMap@ + !
+end
+
+procedure ServiceInterruptRegister { pid irq -- }
+	pointerof PlatformKernelEntry irq@ PlatformInterruptRegister
+
+	pid@ irq@ 4 * ServiceIRQMap@ + !
+	0 irq@ 4 * ServiceIRQTypeMap@ + !
+end
+
+procedure ServiceKernelEntry { irq -- }
+	auto type
+	irq@ 4 * ServiceIRQTypeMap@ + @ type!
+
+	auto service
+	irq@ 4 * ServiceIRQMap@ + @ service!
+
+	if (service@ 0 ==)
+		irq@ "ServiceKernelEntry: no service for IRQ %x!\n" Panic
+	end
+
+	if (type@ 0 ==)
+		irq@ PlatformMaskIRQ
+
+		(* MESSAGE SERVICE *)
+		"implement service messaging\n" Panic
+	end else
+		irq@ service@ Call
+	end
+end

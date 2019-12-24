@@ -1,0 +1,64 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+extern TARImage
+
+procedure BootImage (* -- *)
+	"starting boot servers\n" Printf
+
+	auto ptr
+	pointerof TARImage ptr!
+
+	while (ptr@ 257 + "ustar" strcmp)
+		auto fsize
+		ptr@ 0x7c + atoi fsize!
+
+		""
+
+		fsize@ ptr@ ptr@ 512 + BootServerStart
+
+		CR
+
+		fsize@ 511 + 512 / 1 + 512 * ptr +=
+	end
+end
+
+extern ProcessNew
+
+extern ProcessInfo
+
+extern ThreadResume
+
+extern a3xGetc
+
+procedure private BootServerStart { size name aixo -- }
+	name@ " starting %s...\n" Printf
+
+	if (aixo@ AIXOExecutable ~~)
+		"bad boot server: couldn't execute image\n" Panic
+	end
+
+	if (aixo@ AIXOCodeType AIXOTypeLimn1k ~=)
+		"bad boot server: not for this architecture\n" Panic
+	end
+
+	auto entry
+	"_aisix_start" aixo@ AIXOSymbolByName entry!
+
+	if (entry@ -1 ==)
+		"bad boot server: no _aisix_start symbol\n" Panic
+	end
+
+	auto proc
+
+	entry@
+	1
+	1
+	name@
+	size@ "\t%d\t" Printf
+	aixo@ AIXOCode dup "0x%x\t" Printf
+	aixo@ AIXOCodeSize dup "0x%x\t" Printf
+	aixo@ AIXOHeapSize dup "0x%x\t" Printf
+	aixo@ AIXOStackSize dup "0x%x\t" Printf
+	ProcessNew proc!
+end

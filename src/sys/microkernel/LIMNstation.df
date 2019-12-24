@@ -6,6 +6,8 @@ extern Main
 
 const KBase 0x80000
 
+var Kr5 0
+
 procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 	auto ksz
 	ksz!
@@ -43,6 +45,15 @@ procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 	MachineRAMBase!
 
 	tram@ MachineRAMBase@ - MachineRAMSize!
+
+	4096 Malloc Kr5!
+
+	if (Kr5@ ERR ==)
+		"no kernel dragonfruit stack :(\n" Printf
+		return
+	end
+
+	4096 Kr5 +=
 
 	"\nmicrokernel log to a3x console\n" Printf
 
@@ -93,7 +104,7 @@ procedure InterruptsInit (* -- *)
 	while (i@ 10 <)
 		a3xIVT@ i@ 4 * + @
 		i@
-		InterruptRegister
+		PlatformInterruptRegister
 
 		1 i +=
 	end
@@ -104,6 +115,296 @@ procedure InterruptsInit (* -- *)
 	"
 end
 
-procedure InterruptRegister (* handler num -- *)
+procedure PlatformFaultsInit { -- }
+	auto i
+	0 i!
+	while (i@ 10 <)
+		pointerof PlatformFault
+		i@
+		KernelInterruptRegister
+
+		1 i +=
+	end
+
+	while (i@ 16 <)
+		pointerof PlatformSyscall
+		i@
+		KernelInterruptRegister
+
+		1 i +=
+	end
+end
+
+extern Syscall
+
+procedure PlatformSyscall { num -- }
+	auto sysnum
+
+	auto ksp
+	CurrentThread@ Thread_StackFrame + @ ksp!
+
+	ksp@ TrapFrame_r0 + @ sysnum!
+
+	auto ret
+	sysnum@ Syscall ret!
+
+	ret@ ksp@ TrapFrame_r0 + !
+end
+
+table FaultsNames
+	"Division by zero"
+	"Invalid opcode"
+	"Segmentation fault"
+	"Privilege violation"
+	"General fault"
+	"Breakpoint"
+	"Unknown"
+	"Bus error"
+	"Unknown"
+	"Spurious interrupt"
+endtable
+
+extern ThreadFree
+
+const MMUConfigBadAddr 0xB8000010
+
+procedure PlatformFault { fault -- }
+	auto ksp
+	CurrentThread@ Thread_StackFrame + @ ksp!
+
+	auto fa
+	asm "
+
+	pushv r5, fa
+
+	" fa!
+
+	fa@ [fault@]FaultsNames@ "%s at pc0x%x " Printf
+
+	if (fault@ 2 ==)
+		MMUConfigBadAddr@ "(vaddr = 0x%x) " Printf
+	end
+
+	if (ksp@ TrapFrame_rs + @ 1 & 0 ==)
+		"occurred in kernel mode!\n" Panic
+	end
+
+	"killed thread\n" Printf
+
+	PlatformSegmentDump
+
+	CurrentThread@ ThreadFree
+
+	ThreadPick
+end
+
+procedure PlatformInterruptRegister (* handler num -- *)
 	4 * AisixIVT@ + !
+end
+
+procedure PlatformPrepareKStack { pc thread -- }
+	auto kstack
+	thread@ Thread_KernelStackAddr + @ kstack!
+
+	auto ksp
+	kstack@ 4096 + TrapFrame_SIZEOF - ksp!
+
+	ksp@ thread@ Thread_StackFrame + !
+
+	ksp@ TrapFrame_SIZEOF 0 memset
+
+	pc@ ksp@ TrapFrame_pc + !
+
+	7 ksp@ TrapFrame_rs + !
+
+	STACKMAPADDR thread@ Thread_StackSize + @ + ksp@ TrapFrame_usp + !
+	HEAPMAPADDR ksp@ TrapFrame_r0 + !
+	thread@ Thread_Process + @ Process_HeapSize + @ ksp@ TrapFrame_r1 + !
+end
+
+const MMUConfigSEG0REAL 0xB8000014
+const MMUConfigSEG0SIZE 0xB8000018
+const MMUConfigSEG0MAP 0xB800001C
+
+const MMUConfigSEG1REAL 0xB8000020
+const MMUConfigSEG1SIZE 0xB8000024
+const MMUConfigSEG1MAP 0xB8000028
+
+const MMUConfigSEG2REAL 0xB800002C
+const MMUConfigSEG2SIZE 0xB8000030
+const MMUConfigSEG2MAP 0xB8000034
+
+const MMUConfigSEG3REAL 0xB8000038
+const MMUConfigSEG3SIZE 0xB800003C
+const MMUConfigSEG3MAP 0xB8000040
+
+procedure PlatformSwitchSegments { thread -- }
+	auto proc
+	thread@ Thread_Process + @ proc!
+
+	proc@ Process_ImagePhysAddr + @ MMUConfigSEG0REAL!
+	proc@ Process_ImageSize + @ MMUConfigSEG0SIZE!
+	IMAGEMAPADDR MMUConfigSEG0MAP!
+
+	thread@ Thread_StackPhysAddr + @ MMUConfigSEG1REAL!
+	thread@ Thread_StackSize + @ MMUConfigSEG1SIZE!
+	STACKMAPADDR MMUConfigSEG1MAP!
+
+	proc@ Process_HeapPhysAddr + @ MMUConfigSEG2REAL!
+	proc@ Process_HeapSize + @ MMUConfigSEG2SIZE!
+	HEAPMAPADDR MMUConfigSEG2MAP!
+
+	thread@ Thread_UserSegPhysAddr + @ MMUConfigSEG3REAL!
+	thread@ Thread_UserSegSize + @ MMUConfigSEG3SIZE!
+	USERSEGMAPADDR MMUConfigSEG3MAP!
+end
+
+procedure PlatformSegmentDump { -- }
+	"SEG\tPHYS\tMAP\tSIZE\n" Printf
+
+	auto ptr
+	MMUConfigSEG0REAL ptr!
+
+	auto i
+	0 i!
+
+	while (ptr@ MMUConfigSEG3MAP <)
+		auto phys
+		ptr@ @ phys!
+
+		auto size
+		ptr@ 4 + @ size!
+
+		auto map
+		ptr@ 8 + @ map!
+
+		size@ map@ phys@ i@ "%d\t%x\t%x\t%d\n" Printf
+
+		12 ptr +=
+		1 i +=
+	end
+end
+
+procedure PlatformThreadResume { thread -- }
+	thread@ Thread_StackFrame + @ asm "
+		popv r5, sp
+
+		popa
+		pop usp
+		iret
+	"
+end
+
+procedure PlatformUnmaskIRQ { irq -- }
+	irq@ asm "
+
+	popv r5, r0
+	iunmask r0
+
+	"
+end
+
+procedure PlatformMaskIRQ { irq -- }
+	irq@ asm "
+
+	popv r5, r0
+	imask r0
+
+	"
+end
+
+extern ServiceKernelEntry
+
+extern ThreadResume
+
+asm "
+
+PlatformKernelEntry:
+.global PlatformKernelEntry
+	push usp
+	pusha
+
+	mov k0, r0
+
+	lri.l r0, CurrentThread
+	addi r0, r0, Thread_StackFrame
+	srr.l r0, sp
+
+	lri.l r5, Kr5
+
+	pushv r5, k0
+
+	call ServiceKernelEntry
+
+	call ThreadResume
+
+.hang:
+	b .hang
+"
+
+const DCitronBase 0xF8000000
+
+procedure private DCitronInb (* port -- byte *)
+	4 * DCitronBase + gb
+end
+
+procedure private DCitronIni (* port -- int *)
+	4 * DCitronBase + gi
+end
+
+procedure private DCitronInl (* port -- long *)
+	4 * DCitronBase + @
+end
+
+procedure private DCitronOutb (* byte port -- *)
+	4 * DCitronBase + sb
+end
+
+procedure private DCitronOuti (* int port -- *)
+	4 * DCitronBase + si
+end
+
+procedure private DCitronOutl (* long port -- *)
+	4 * DCitronBase + !
+end
+
+procedure private DCitronCommand (* command port -- *)
+	auto pbase
+	4 * DCitronBase + pbase!
+
+	while (pbase@ gb 0 ~=) end
+
+	auto cmd
+	cmd!
+
+	cmd@ pbase@ sb
+
+	while (pbase@ gb 0 ~=) end
+end
+
+(* doesn't wait for the device to report the operation as completed before returning *)
+procedure private DCitronCommandASync (* command port -- *)
+	auto pbase
+	4 * DCitronBase + pbase!
+
+	while (pbase@ gb 0 ~=) end
+
+	auto cmd
+	cmd!
+
+	cmd@ pbase@ sb
+end
+
+const ClockPortCmd 0x20
+const ClockPortA 0x21
+
+extern KernelInterruptRegister
+
+extern ThreadPick
+
+procedure PlatformStartClock { -- }
+	pointerof ThreadPick 0x22 KernelInterruptRegister
+
+	50 ClockPortA DCitronOutl
+	0x1 ClockPortCmd DCitronCommand
 end

@@ -1,0 +1,37 @@
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/aisix/aisix.h"
+
+extern HeapDump
+
+procedure Main (* -- *)
+	"service!\n" Printf
+
+	auto buf
+	256 Malloc buf!
+
+	buf@ 255 Gets
+
+	buf@ "I got: %s\n" Printf
+	
+	"done.\n" Printf
+end
+
+procedure Getc { -- c }
+	asm "
+
+	li r0, 3
+	sys 0
+	pushv r5, r0
+
+	" c!
+end
+
+procedure Putc { c -- }
+	c@ asm "
+
+	popv r5, r1
+	li r0, 0
+	sys 0
+
+	"
+end

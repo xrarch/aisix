@@ -13,27 +13,117 @@ procedure PMMInit (* -- *)
 
 	pages@ Pages!
 
-	if (PMMBitmap@ -1 ==)
+	if (PMMBitmap@ ERR ==)
 		"couldn't allocate pages bitmap\n" Panic
 	end
 
 	pages@ "managing %d pages\n" Printf
 end
 
-procedure private FindHole { start -- hole }
+procedure private CheckRow { pages start -- real }
+	auto pmb
+	PMMBitmap@ pmb!
+
+	auto rb
+	pmb@ start@ 8 / + @ rb!
+
+	auto boff
+	0 boff!
+
+	while (rb@ boff@ bitget)
+		if (boff@ 32 >=)
+			"CheckRow\n" Panic
+		end
+
+		1 start +=
+		1 boff +=
+	end
+
+	auto max
+	start@ pages@ + max!
+
+	start@ real!
+
+	while (start@ max@ <)
+		if (boff@ 32 ==)
+			pmb@ start@ 8 / + @ rb!
+			0 boff!
+		end
+
+		if (rb@ boff@ bitget)
+			-1 real! return
+		end
+
+		1 start +=
+		1 boff +=
+	end
+end
+
+procedure private PMMSetString { with pages start -- }
+	auto max
+	pages@ start@ + max!
+
+	if (max@ Pages@ >=)
+		"PMMSetString\n" Panic
+	end
+
+	auto pmb
+	PMMBitmap@ pmb!
+
+	while (start@ max@ <)
+		auto rbp
+		start@ 8 / pmb@ + rbp!
+
+		rbp@ gb start@ 8 %
+		if (with@ 1 ==)
+			bitset
+		end else
+			bitclear
+		end
+
+		rbp@ sb
+
+		1 start +=
+	end
+end
+
+procedure PMMFree { pages addr -- }
+	if (addr@ 4096 % 0 ~=)
+		"PMMFree\n" Panic
+	end
+
+	0
+	pages@
+	addr@ MachineRAMBase@ - 4096 /
+	PMMSetString
+end
+
+procedure PMMAlloc { pages -- addr }
 	auto pmb
 	PMMBitmap@ pmb!
 
 	auto pc
 	Pages@ pc!
 
-	while (start@ pc@ <)
-		if (pmb@ start@ 8 / + @ 0xFF ==)
-			start@ 8 + start!
-		end
-	end
-end
+	auto i
+	0 i!
 
-procedure PMMAlloc { pages -- addr }
-	
+	ERR addr!
+
+	while (i@ pc@ <)
+		auto rb
+		pmb@ i@ 8 / + @ rb!
+
+		if (rb@ 0xFFFFFFFF ~=)
+			auto start
+			pages@ i@ CheckRow start!
+
+			if (start@ -1 ~=)
+				1 pages@ start@ PMMSetString
+				start@ 4096 * MachineRAMBase@ + addr! return
+			end
+		end
+
+		32 i +=
+	end
 end

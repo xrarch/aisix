@@ -1,0 +1,80 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+const SYSCALLNUM 5
+
+table Syscalls
+	pointerof SyscallPutc
+	pointerof SyscallExit
+	pointerof SyscallYield
+	pointerof SyscallGetc
+	pointerof SyscallSetUserID
+endtable
+
+extern ThreadFree
+
+extern ThreadPick
+
+extern ProcessUser
+
+procedure Syscall { num -- ret }
+	if (num@ SYSCALLNUM >=)
+		-1 ret!
+		return
+	end
+
+	[num@]Syscalls@ Call ret!
+end
+
+
+(* call 0 *)
+procedure SyscallPutc { -- ret }
+	if (ProcessUser 0 ==)
+		auto c
+		CurrentThread@ Thread_StackFrame + @ TrapFrame_r1 + @ c!
+
+		c@ Putc
+
+		0 ret!
+	end else
+		-1 ret!
+	end
+end
+
+(* call 1 *)
+procedure SyscallExit { -- ret }
+	CurrentThread@ ThreadFree
+
+	ThreadPick
+
+	0 ret!
+end
+
+(* call 2 *)
+procedure SyscallYield { -- ret }
+	ThreadPick
+
+	0 ret!
+end
+
+(* call 3 *)
+procedure SyscallGetc { -- ret }
+	if (ProcessUser 0 ==)
+		Getc ret!
+	end else
+		-1 ret!
+	end
+end
+
+extern ProcessSetUserID
+
+(* call 4 *)
+procedure SyscallSetUserID { -- ret }
+	if (ProcessUser 0 ==)
+		CurrentThread@ Thread_StackFrame + @ TrapFrame_r1 + @ ProcessSetUserID
+
+		0 ret!
+	end else
+		-1 ret!
+	end
+end

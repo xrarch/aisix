@@ -1,0 +1,28 @@
+#include "<df>/dragonfruit.h"
+
+asm "
+
+add r5, r0, r1
+
+hlt
+
+call Main
+
+"
+
+procedure Main (* -- *)
+	asm "hlt"
+
+	"aa!\n" Printf
+
+	while (1) end
+end
+
+procedure Putc { c -- }
+	c@ asm "
+
+	popv r5, r0
+	.db 0xF1
+
+	"
+end

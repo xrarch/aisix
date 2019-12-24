@@ -1,0 +1,311 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+var ThreadTable 0
+public ThreadTable
+
+var ProcessTable 0
+public ProcessTable
+
+var CurrentThread 0
+public CurrentThread
+
+var NextThread 0
+public NextThread
+
+procedure ThreadInit (* -- *)
+	THREADNUM Thread_SIZEOF * 4096 / 1 + PMMAlloc ThreadTable!
+	PROCNUM Process_SIZEOF * 4096 / 1 + PMMAlloc ProcessTable!
+
+	if (ThreadTable@ ERR ==)
+		"couldn't allocate thread table\n" Panic
+	end
+
+	if (ProcessTable@ ERR ==)
+		"couldn't allocate process table\n" Panic
+	end
+
+	PROCNUM THREADNUM "max %d threads, %d processes\n" Printf
+
+	auto i
+	0 i!
+
+	while (i@ THREADNUM <)
+		auto thp
+		i@ Thread_SIZEOF * ThreadTable@ + thp!
+
+		thp@ Thread_SIZEOF 0 memset
+
+		SLOT_FREE thp@ Thread_Flags + !
+
+		1 i +=
+	end
+
+	0 i!
+
+	while (i@ PROCNUM <)
+		i@ Process_SIZEOF * ProcessTable@ + thp!
+
+		thp@ Process_SIZEOF 0 memset
+
+		1 thp@ Process_FreeSlot + !
+
+		1 i +=
+	end
+end
+
+procedure private ThreadAllocateTID { -- tid }
+	auto i
+	0 i!
+
+	while (i@ THREADNUM <)
+		auto thp
+		i@ Thread_SIZEOF * ThreadTable@ + thp!
+
+		if (thp@ Thread_Flags + @ SLOT_FREE & SLOT_FREE ==)
+			0 thp@ Thread_Flags + !
+
+			thp@ tid!
+			return
+		end
+
+		1 i +=
+	end
+
+	"ThreadFindTID: no threads left\n" Panic
+end
+
+procedure private ThreadFreeTID { tid -- }
+	SLOT_FREE tid@ Thread_Flags + !
+end
+
+extern PlatformPrepareKStack
+
+procedure ThreadNew { stacksize proc pc -- tid }
+	ThreadAllocateTID tid!
+
+	proc@ tid@ Thread_Process + !
+
+	auto stack
+	stacksize@ 4096 / 1 + PMMAlloc stack!
+
+	if (stack@ -1 ==)
+		tid@ ThreadFreeTID
+		-1 tid!
+		return
+	end
+
+	stack@ tid@ Thread_StackPhysAddr + !
+	stacksize@ tid@ Thread_StackSize + !
+
+	0 tid@ Thread_UserSegPhysAddr + !
+	0 tid@ Thread_UserSegSize + !
+
+	auto kstack
+	1 PMMAlloc kstack!
+
+	if (kstack@ -1 ==)
+		tid@ ThreadFreeTID
+		-1 tid!
+		return
+	end
+
+	kstack@ tid@ Thread_KernelStackAddr + !
+
+	1 proc@ Process_ThreadCount + +=
+
+	pc@ tid@ PlatformPrepareKStack
+end
+
+procedure ThreadFree { tid -- }
+	tid@ Thread_StackSize + @ 4096 / 1 +
+	tid@ Thread_StackPhysAddr + @ PMMFree
+
+	1 tid@ Thread_KernelStackAddr + @ PMMFree
+
+	auto proc
+	tid@ Thread_Process + @ proc!
+
+	1 proc@ Process_ThreadCount + -=
+
+	if (proc@ Process_ThreadCount@ 0 ==)
+		proc@ ProcessFree
+	end
+
+	tid@ ThreadFreeTID
+end
+
+extern PlatformSwitchSegments
+
+extern PlatformThreadResume
+
+procedure ThreadResume { -- }
+	if (NextThread@ 0 ~=)
+		NextThread@ CurrentThread!
+
+		0 NextThread!
+	end
+
+	auto tid
+
+	CurrentThread@ tid!
+
+	tid@ PlatformSwitchSegments
+
+	tid@ PlatformThreadResume
+end
+
+procedure ThreadPick { -- }
+	auto q
+	CurrentThread@ ThreadTable@ - Thread_SIZEOF / q!
+
+	1 q +=
+
+	auto i
+	0 i!
+
+	while (i@ THREADNUM <)
+		auto tid
+		q@ THREADNUM % Thread_SIZEOF * ThreadTable@ + tid!
+
+		if (tid@ Thread_Flags + @ 0 ==)
+			tid@ NextThread!
+			return
+		end
+
+		1 q +=
+		1 i +=
+	end
+
+	"no threads to run!\n" Panic
+end
+
+(* =========== process management =========== *)
+
+var NextPID 1
+
+procedure private ProcessAllocateSlot { -- ptr }
+	auto i
+	0 i!
+
+	while (i@ PROCNUM <)
+		auto thp
+		i@ Process_SIZEOF * ProcessTable@ + thp!
+
+		if (thp@ Process_FreeSlot + @)
+			0 thp@ Process_FreeSlot + !
+
+			if (NextPID@ 0xFFFFFFFF ==)
+				"ProcessAllocateSlot: whoa ran out of our 4 billion PIDs somehow\n" Panic
+			end
+
+			NextPID@ thp@ Process_ProcessID + !
+			1 NextPID +=
+
+			thp@ ptr!
+			return
+		end
+
+		1 i +=
+	end
+
+	"ProcessAllocateSlot: no procs left\n" Panic
+end
+
+procedure private ProcessFreeSlot { ptr -- }
+	1 ptr@ Process_FreeSlot + !
+end
+
+procedure ProcessNew { entry system wired name img imgsz heapsz stacksz -- proc }
+	ProcessAllocateSlot proc!
+
+	proc@ Process_Name + name@ PROCNAMESIZE 1 - strncpy
+
+	0 proc@ Process_UserID + !
+
+	img@ proc@ Process_ImagePhysAddr + !
+	imgsz@ proc@ Process_ImageSize + !
+
+	wired@ proc@ Process_Wired + !
+
+	auto heap
+	heapsz@ 4096 / 1 + PMMAlloc heap!
+
+	if (heap@ -1 ==)
+		proc@ ProcessFreeSlot
+		-1 proc!
+		return
+	end
+
+	heap@ proc@ Process_HeapPhysAddr + !
+	heapsz@ proc@ Process_HeapSize + !
+
+	system@ proc@ Process_System + !
+
+	stacksz@ proc@ entry@ ThreadNew proc@ Process_MainThread + !
+end
+
+procedure ProcessFree { proc -- }
+	if (proc@ Process_ThreadCount + @ 0 >)
+		"ProcessFree: can't free process with extant threads\n" Panic
+	end
+
+	if (proc@ Process_Wired + @ ~~)
+		proc@ Process_ImageSize + @ 4096 / 1 +
+		proc@ Process_ImagePhysAddr + @ PMMFree
+	end
+
+	proc@ Process_HeapSize + @ 4096 / 1 +
+	proc@ Process_HeapPhysAddr + @ PMMFree
+
+	proc@ ProcessFreeSlot
+end
+
+procedure ProcessInfo { proc -- }
+	proc@ Process_Name + "proc name: %s\n" Printf
+
+	proc@ Process_UserID + @ "proc user: %d\n" Printf
+
+	proc@ Process_ImagePhysAddr + @ "proc image phys addr: %x\n" Printf
+	proc@ Process_ImageSize + @ "proc image size: %d\n" Printf
+
+	proc@ Process_HeapPhysAddr + @ "proc heap phys addr: %x\n" Printf
+	proc@ Process_HeapSize + @ "proc heap size: %d\n" Printf
+
+	proc@ Process_ThreadCount + @ "proc thread count: %d\n" Printf
+
+	proc@ Process_MainThread + @ "proc main thread: %x\n" Printf
+
+	proc@ Process_Wired + @ "proc wired: %d\n" Printf
+
+	proc@ Process_System + @ "process system: %d\n" Printf
+
+	proc@ Process_FreeSlot + @ "process free slot: %d\n" Printf
+
+	auto tid
+	proc@ Process_MainThread + @ tid!
+
+	tid@ Thread_StackPhysAddr + @ "main thread stack addr: %x\n" Printf
+end
+
+procedure ProcessUser { -- user }
+	CurrentThread@ Thread_Process + @ Process_UserID + @ user!
+end
+
+procedure ProcessSetUserID { uid -- }
+	uid@ CurrentThread@ Thread_Process + @ Process_UserID + !
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
