@@ -13,8 +13,6 @@ procedure BootImage (* -- *)
 		auto fsize
 		ptr@ 0x7c + atoi fsize!
 
-		""
-
 		fsize@ ptr@ ptr@ 512 + BootServerStart
 
 		CR
@@ -32,10 +30,10 @@ extern ThreadResume
 extern a3xGetc
 
 procedure private BootServerStart { size name aixo -- }
-	name@ " starting %s...\n" Printf
+	name@ " starting %s... " Printf
 
 	if (aixo@ AIXOExecutable ~~)
-		"bad boot server: couldn't execute image\n" Panic
+		"bad boot server: not an executable image\n" Panic
 	end
 
 	if (aixo@ AIXOCodeType AIXOTypeLimn1k ~=)
@@ -51,8 +49,8 @@ procedure private BootServerStart { size name aixo -- }
 
 	auto proc
 
+	0
 	entry@
-	1
 	1
 	name@
 	size@ "\t%d\t" Printf

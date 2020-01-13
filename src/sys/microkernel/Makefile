@@ -6,10 +6,10 @@ AS      = ../../../../sdk/asm.sh
 OBJTOOL = ../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: aisix
+all: aisix.image
 
-aisix: aisix.bin ../services/boot/bootimage.tar
-	cat aisix.bin ../services/boot/bootimage.tar > aisix
+aisix.image: aisix.bin ../services/boot/bootimage.tar
+	cat aisix.bin ../services/boot/bootimage.tar > aisix.image
 
 aisix.bin: $(OBJ) start.o end.o
 	$(LD) aisix.bin start.o $(OBJ) L/generic/lib.o L/a3x/lib.o end.o
@@ -25,6 +25,4 @@ end.o: end.s
 	$(DC) incdir=./include/ $< $@
 
 cleanup:
-	rm *.o
-	rm *.bin
-	rm aisix
+	rm ${OBJ} aisix.bin aisix.image

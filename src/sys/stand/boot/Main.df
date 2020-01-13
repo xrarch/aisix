@@ -29,13 +29,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	args@ ArgsInit
 
-	"==============================\n" Printf
-
-	BootDevice@ "aisixboot: boot1 on dev%x\n" Printf
-
-	if (args@ 0 ~=)
-		args@ "aisixboot: kernel args: %s\n" Printf
-	end
+	CR
 
 	"/memory" a3xDeviceSelect
 		"totalRAM" a3xDGetProperty TotalRAM!
@@ -53,37 +47,25 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	"boot:auto" ArgsValue ab!
 
 	if (ab@ 0 ~=)
-		ab@ "automatic load: boot:auto=%s\n" Printf
-
-		if ("boot:nodelay" ArgsCheck ~~)
-			auto cn
-			"/clock" a3xDevTreeWalk cn!
-
-			if (cn@ 0 ~=)
-				"press 'p' in the next 2 seconds to cancel.\n" Printf
-
-				cn@ a3xDeviceSelectNode
-					2000 "wait" a3xDCallMethod drop
-				a3xDeviceExit
-			end
-		end
-
-		auto cl
-		0 cl!
 		auto c
-		Getc c!
+		0 c!
+
+		auto vs
+		0 vs!
 		while (c@ -1 ~=)
-			if (c@ 'p' ==)
-				1 cl!
-				break
-			end
 			Getc c!
+
+			if (c@ 0x02 ==) (* ctrl-B over serial *)
+				1 vs!
+
+				(* don't break, keep eating buffer *)
+			end
 		end
 
-		if (cl@ ~~)
+		if (vs@ ~~)
+			ab@ "boot: %s\n" Printf
+
 			args@ ab@ DoFile
-		end else
-			"automatic load cancelled\n" Printf
 		end
 	end
 

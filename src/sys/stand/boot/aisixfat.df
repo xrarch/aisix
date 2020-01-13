@@ -50,8 +50,6 @@ endtable
 public AFSErrors
 
 procedure AFSInit (* -- *)
-	"aisixboot: mounting filesystem\n" Printf
-
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock
 
 	AFSSuperblockCache AFSSuperblock_Magic + @

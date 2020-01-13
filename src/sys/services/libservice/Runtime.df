@@ -1,0 +1,38 @@
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/aisix/aisix.h"
+
+procedure Gets { s max -- }
+	auto len
+	0 len!
+
+	while (1)
+		auto c
+		ERR c!
+		while (c@ ERR ==)
+			Yield
+			Getc c!
+		end
+
+		if (c@ '\n' ==)
+			'\n' Putc
+			break
+		end
+
+		if (c@ '\b' ==)
+			if (len@ 0 >)
+				1 len -=
+				0 s@ len@ + sb
+				'\b' Putc
+				' ' Putc
+				'\b' Putc
+			end
+		end elseif (len@ max@ <)
+			c@ s@ len@ + sb
+
+			1 len +=
+			c@ Putc
+		end
+	end
+
+	0 s@ len@ + sb
+end

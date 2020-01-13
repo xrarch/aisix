@@ -3,7 +3,19 @@
 
 extern PlatformPanic
 
+externconst CurrentThread
+
 procedure Panic (* ... fstr -- *)
+	auto procn
+
+	if (CurrentThread@ 0 ==)
+		"none yet" procn!
+	end else
+		CurrentThread@ Thread_Process + @ Process_Name + procn!
+	end
+
+	CurrentThread@ procn@ "running process: %s (thread: %x)\n" Printf
+
 	"microkernel panic: " Printf
 	Printf
 

@@ -4,9 +4,13 @@
 
 extern Main
 
+const CompatibleFirmware 30500
+
 const KBase 0x80000
 
 var Kr5 0
+
+var IntTable 0
 
 procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 	auto ksz
@@ -21,6 +25,16 @@ procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 
 	(* initialize the client interface *)
 	a3xInit
+
+	auto vnum
+	"/" a3xDeviceSelect
+		"versionNum" a3xDGetProperty vnum!
+	a3xDeviceExit
+
+	if (vnum@ CompatibleFirmware <)
+		"aisix requires newer firmware!\n" Printf
+		return
+	end
 
 	"/platform" a3xDeviceSelect
 		"model" a3xDGetProperty MachineType!
@@ -54,6 +68,13 @@ procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 	end
 
 	4096 Kr5 +=
+
+	1024 Calloc IntTable!
+
+	if (IntTable@ ERR ==)
+		"no kernel interrupt table :(\n" Printf
+		return
+	end
 
 	"\nmicrokernel log to a3x console\n" Printf
 
@@ -121,7 +142,7 @@ procedure PlatformFaultsInit { -- }
 	while (i@ 10 <)
 		pointerof PlatformFault
 		i@
-		KernelInterruptRegister
+		PlatformInterruptRegister
 
 		1 i +=
 	end
@@ -129,7 +150,7 @@ procedure PlatformFaultsInit { -- }
 	while (i@ 16 <)
 		pointerof PlatformSyscall
 		i@
-		KernelInterruptRegister
+		PlatformInterruptRegister
 
 		1 i +=
 	end
@@ -166,6 +187,10 @@ endtable
 
 extern ThreadFree
 
+extern ThreadPick
+
+extern ProcessExit
+
 const MMUConfigBadAddr 0xB8000010
 
 procedure PlatformFault { fault -- }
@@ -186,20 +211,30 @@ procedure PlatformFault { fault -- }
 	end
 
 	if (ksp@ TrapFrame_rs + @ 1 & 0 ==)
-		"occurred in kernel mode!\n" Panic
+		"occurred in kernel mode!\n" Printf
+
+		"unexpected kernel trap\n" Panic
 	end
 
-	"killed thread\n" Printf
+	auto procn
+
+	if (CurrentThread@ 0 ==)
+		"none yet" procn!
+	end else
+		CurrentThread@ Thread_Process + @ Process_Name + procn!
+	end
+
+	CurrentThread@ procn@ "killed process %s (thread: %x)\n" Printf
 
 	PlatformSegmentDump
 
-	CurrentThread@ ThreadFree
-
-	ThreadPick
+	-1 CurrentThread@ Thread_Process + @ ProcessExit
 end
 
-procedure PlatformInterruptRegister (* handler num -- *)
-	4 * AisixIVT@ + !
+procedure PlatformInterruptRegister { handler num -- }
+	handler@ num@ 4 * IntTable@ + !
+
+	pointerof PlatformKernelEntry num@ 4 * AisixIVT@ + !
 end
 
 procedure PlatformPrepareKStack { pc thread -- }
@@ -215,11 +250,18 @@ procedure PlatformPrepareKStack { pc thread -- }
 
 	pc@ ksp@ TrapFrame_pc + !
 
-	7 ksp@ TrapFrame_rs + !
+	auto proc
+	thread@ Thread_Process + @ proc!
+
+	if (proc@ Process_KernelMode + @)
+		6 ksp@ TrapFrame_rs + !
+	end else
+		7 ksp@ TrapFrame_rs + !
+	end
 
 	STACKMAPADDR thread@ Thread_StackSize + @ + ksp@ TrapFrame_usp + !
 	HEAPMAPADDR ksp@ TrapFrame_r0 + !
-	thread@ Thread_Process + @ Process_HeapSize + @ ksp@ TrapFrame_r1 + !
+	proc@ Process_HeapSize + @ ksp@ TrapFrame_r1 + !
 end
 
 const MMUConfigSEG0REAL 0xB8000014
@@ -238,26 +280,123 @@ const MMUConfigSEG3REAL 0xB8000038
 const MMUConfigSEG3SIZE 0xB800003C
 const MMUConfigSEG3MAP 0xB8000040
 
-procedure PlatformSwitchSegments { thread -- }
-	auto proc
-	thread@ Thread_Process + @ proc!
+externconst NextThread
 
-	proc@ Process_ImagePhysAddr + @ MMUConfigSEG0REAL!
-	proc@ Process_ImageSize + @ MMUConfigSEG0SIZE!
-	IMAGEMAPADDR MMUConfigSEG0MAP!
+externconst ThreadTable
 
-	thread@ Thread_StackPhysAddr + @ MMUConfigSEG1REAL!
-	thread@ Thread_StackSize + @ MMUConfigSEG1SIZE!
-	STACKMAPADDR MMUConfigSEG1MAP!
+externconst IdleProc
 
-	proc@ Process_HeapPhysAddr + @ MMUConfigSEG2REAL!
-	proc@ Process_HeapSize + @ MMUConfigSEG2SIZE!
-	HEAPMAPADDR MMUConfigSEG2MAP!
+asm "
 
-	thread@ Thread_UserSegPhysAddr + @ MMUConfigSEG3REAL!
-	thread@ Thread_UserSegSize + @ MMUConfigSEG3SIZE!
-	USERSEGMAPADDR MMUConfigSEG3MAP!
-end
+ThreadPick:
+.global ThreadPick
+	pusha
+
+	lri.l r0, CurrentThread
+	lri.l r1, ThreadTable
+
+	sub r2, r0, r1
+	addi r2, r2, Thread_SIZEOF
+
+	li r3, 0
+
+	li r4, THREADNUM
+	muli r4, r4, Thread_SIZEOF
+
+.loop:
+	cmpi r3, THREADNUM
+	bge .goidle
+
+	mod r5, r2, r4
+	add r5, r5, r1
+
+	addi r6, r5, Thread_Status
+	lrr.l r6, r6
+	cmpi r6, 0
+	be .found
+
+	addi r3, r3, 1
+	addi r2, r2, Thread_SIZEOF
+	b .loop
+
+.found:
+	sir.l NextThread, r5
+
+	popa
+	ret
+	
+.goidle:
+	lri.l r0, IdleProc
+	addi r0, r0, Process_MainThread
+	lrr.l r0, r0
+	sir.l NextThread, r0
+
+	popa
+	ret
+
+ThreadResume:
+.global ThreadResume
+	lri.l r0, NextThread
+	cmpi r0, 0
+	be .load
+	sir.l CurrentThread, r0
+
+	;new thread, switch segments
+
+	addi r1, r0, Thread_Process
+	lrr.l r2, r1 ;r2 - proc
+
+	addi r1, r2, Process_ImagePhysAddr
+	lrr.l r1, r1
+	sir.l MMUConfigSEG0REAL, r1
+	addi r1, r2, Process_ImageSize
+	lrr.l r1, r1
+	sir.l MMUConfigSEG0SIZE, r1
+	sii.l MMUConfigSEG0MAP, IMAGEMAPADDR
+
+	addi r1, r0, Thread_StackPhysAddr
+	lrr.l r1, r1
+	sir.l MMUConfigSEG1REAL, r1
+	addi r1, r0, Thread_StackSize
+	lrr.l r1, r1
+	sir.l MMUConfigSEG1SIZE, r1
+	sii.l MMUConfigSEG1MAP, STACKMAPADDR
+
+	addi r1, r2, Process_HeapPhysAddr
+	lrr.l r1, r1
+	sir.l MMUConfigSEG2REAL, r1
+	addi r1, r2, Process_HeapSize
+	lrr.l r1, r1
+	sir.l MMUConfigSEG2SIZE, r1
+	sii.l MMUConfigSEG2MAP, HEAPMAPADDR
+
+	addi r1, r0, Thread_UserSegPhysAddr
+	lrr.l r1, r1
+	sir.l MMUConfigSEG3REAL, r1
+	addi r1, r0, Thread_UserSegSize
+	lrr.l r1, r1
+	sir.l MMUConfigSEG3SIZE, r1
+	sii.l MMUConfigSEG3MAP, USERSEGMAPADDR
+
+	b .resume
+
+.load:
+	lri.l r0, CurrentThread ;r0 - thread
+
+.resume:
+	addi r1, r0, Thread_StackFrame
+	lrr.l sp, r1
+
+	popa
+	pop usp
+	iret
+
+IdleThread:
+.global IdleThread
+	hlt
+	b 0
+
+"
 
 procedure PlatformSegmentDump { -- }
 	"SEG\tPHYS\tMAP\tSIZE\n" Printf
@@ -285,16 +424,6 @@ procedure PlatformSegmentDump { -- }
 	end
 end
 
-procedure PlatformThreadResume { thread -- }
-	thread@ Thread_StackFrame + @ asm "
-		popv r5, sp
-
-		popa
-		pop usp
-		iret
-	"
-end
-
 procedure PlatformUnmaskIRQ { irq -- }
 	irq@ asm "
 
@@ -313,34 +442,42 @@ procedure PlatformMaskIRQ { irq -- }
 	"
 end
 
-extern ServiceKernelEntry
-
-extern ThreadResume
-
 asm "
 
 PlatformKernelEntry:
-.global PlatformKernelEntry
 	push usp
 	pusha
 
-	mov k0, r0
-
-	lri.l r0, CurrentThread
-	addi r0, r0, Thread_StackFrame
-	srr.l r0, sp
+	lri.l r1, CurrentThread
+	addi r1, r1, Thread_StackFrame
+	srr.l r1, sp
 
 	lri.l r5, Kr5
 
-	pushv r5, k0
+	pushv r5, r0
 
-	call ServiceKernelEntry
+	lri.l r2, IntTable
+	muli r1, r0, 4
+	add r1, r1, r2
 
-	call ThreadResume
+	lrr.l r1, r1
+	cmpi r1, 0
+	be .panic
 
-.hang:
-	b .hang
+	call .mock
+
+	b ThreadResume
+
+.mock:
+	br r1
+
+.panic:
+	b BadInt
 "
+
+procedure BadInt (* int -- *)
+	"interrupt %x occurred with no registered handler!\n" Panic
+end
 
 const DCitronBase 0xF8000000
 
@@ -398,13 +535,142 @@ end
 const ClockPortCmd 0x20
 const ClockPortA 0x21
 
-extern KernelInterruptRegister
+extern ClockTick
 
-extern ThreadPick
-
-procedure PlatformStartClock { -- }
-	pointerof ThreadPick 0x22 KernelInterruptRegister
-
-	50 ClockPortA DCitronOutl
+procedure PlatformPauseClock (* -- *)
+	0 ClockPortA DCitronOutl
 	0x1 ClockPortCmd DCitronCommand
+end
+
+procedure PlatformStartClock (* -- *)
+	CLOCKINTERVALMS ClockPortA DCitronOutl
+	0x1 ClockPortCmd DCitronCommand
+end
+
+procedure PlatformInitClock (* -- *)
+	pointerof ClockTick 0x22 PlatformInterruptRegister
+end
+
+procedure PlatformTranslateVAddr { vaddr size -- physaddr }
+	ERR physaddr!
+
+	auto mmurb
+	MMUConfigSEG0REAL mmurb!
+
+	auto seg
+	0 seg!
+
+	while (seg@ 4 <)
+		auto segsize
+		mmurb@ 4 + @ segsize!
+
+		if (segsize@ 0 >)
+			auto mapaddr
+			mmurb@ 8 + @ mapaddr!
+
+			auto segtop
+			mapaddr@ segsize@ + 1 - segtop!
+
+			auto valtop
+			vaddr@ size@ + 1 - valtop!
+
+			if (vaddr@ mapaddr@ >= valtop@ segtop@ <= &&)
+				auto realaddr
+				mmurb@ @ realaddr!
+
+				vaddr@ mapaddr@ - realaddr@ + physaddr!
+				break
+			end
+		end
+
+		12 mmurb +=
+		1 seg +=
+	end
+end
+
+(* copy 40-byte message body efficiently *)
+procedure PlatformCopyMessageBody { from to -- }
+	from@ to@ asm "
+
+	popv r5, r0 ;r0 - to
+	popv r5, r1 ;r1 - from
+
+	; ===== LONG 0, bytes 0-3 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 1, bytes 4-7 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 2, bytes 8-11 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 3, bytes 12-15 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 4, bytes 16-19 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 5, bytes 20-23 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 6, bytes 24-27 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 7, bytes 28-31 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 8, bytes 32-35 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	addi r0, r0, 4 ;increment to
+	addi r1, r1, 4 ;increment from
+
+	; ===== LONG 9, bytes 36-39 =====
+
+	lrr.l r2, r1 ;load from
+	srr.l r0, r2 ;save to
+
+	"
 end

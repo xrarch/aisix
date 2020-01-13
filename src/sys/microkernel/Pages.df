@@ -92,6 +92,10 @@ procedure PMMFree { pages addr -- }
 		"PMMFree\n" Panic
 	end
 
+	if (pages@ 0 ==)
+		return
+	end
+
 	0
 	pages@
 	addr@ MachineRAMBase@ - 4096 /
@@ -99,6 +103,10 @@ procedure PMMFree { pages addr -- }
 end
 
 procedure PMMAlloc { pages -- addr }
+	if (pages@ 0 ==)
+		return
+	end
+
 	auto pmb
 	PMMBitmap@ pmb!
 

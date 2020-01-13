@@ -1,0 +1,22 @@
+#include "<df>/dragonfruit.h"
+#include "<df>/platform/aisix/aisix.h"
+#include "../../libservice/libservice.h"
+
+procedure Main (* -- *)
+	auto pid
+	GetPID pid!
+
+	auto ret
+	"init" AddService ret!
+
+	if (ret@ 0 ~=)
+		ret@ pid@ "pid%d: couldn't register as init: %d\n" Abort
+	end
+
+	while (1)
+		auto child
+		0 Wait ret! child!
+
+		ret@ child@ "init: %d finished (%i)\n" Printf
+	end
+end

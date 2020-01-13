@@ -3,16 +3,16 @@
 
 struct Service
 	64 Name
-	4 PID
+	4 Process
 endstruct
 
 var ServiceList 0
 
 var ServiceIRQMap 0
 
-var ServiceIRQTypeMap 0
-
 extern PlatformFaultsInit
+
+extern ProcessByPID
 
 procedure ServiceInit (* -- *)
 	ListCreate ServiceList!
@@ -23,17 +23,14 @@ procedure ServiceInit (* -- *)
 		"couldn't allocate service IRQ map\n" Panic
 	end
 
-	1 PMMAlloc ServiceIRQTypeMap!
-
-	if (ServiceIRQTypeMap@ -1 ==)
-		"couldn't allocate service IRQ type map\n" Panic
-	end
-
 	ServiceIRQMap@ 4096 0 memset
-	ServiceIRQTypeMap@ 4096 0 memset
 
 	PlatformFaultsInit
 end
+
+externconst InitProc (* var *)
+
+extern ReparentOrphans
 
 procedure ServiceAdd { name pid -- ok }
 	if (ServiceList@ 0 ==)
@@ -52,8 +49,31 @@ procedure ServiceAdd { name pid -- ok }
 		"ServiceAdd: couldn't allocate service\n" Panic
 	end
 
+	auto proc
+	pid@ ProcessByPID proc!
+
+	if (proc@ -1 ==)
+		"ServiceAdd: phony pid\n" Panic
+	end
+
+	if (InitProc@ 0 ==)
+		if (name@ "init" strcmp)
+			pid@ "init is (pid = %d)\n" Printf
+
+			proc@ InitProc!
+
+			if (InitProc@ -1 ==)
+				"ServiceAdd: init isnt init!\n" Panic
+			end
+
+			ReparentOrphans
+		end
+	end
+
 	service@ Service_Name + name@ 63 strncpy
-	pid@ service@ Service_PID + !
+	proc@ service@ Service_Process + !
+
+	service@ proc@ Process_Service + !
 
 	service@ ServiceList@ ListInsert
 
@@ -66,7 +86,7 @@ procedure ServiceByName { name -- pid }
 	end
 
 	auto n
-	ServiceList@ List_Head + @ n!
+	ServiceList@ ListHead n!
 
 	while (n@ 0 ~=)
 		auto pnode
@@ -74,7 +94,7 @@ procedure ServiceByName { name -- pid }
 		pnode!
 
 		if (pnode@ Service_Name + name@ strcmp)
-			pnode@ Service_PID + @ pid!
+			pnode@ Service_Process + @ Process_ProcessID + @ pid!
 			return
 		end
 
@@ -84,43 +104,25 @@ procedure ServiceByName { name -- pid }
 	-1 pid!
 end
 
-extern PlatformKernelEntry
-
 extern PlatformInterruptRegister
 
 extern PlatformMaskIRQ
 
-procedure KernelInterruptRegister { func irq -- }
-	pointerof PlatformKernelEntry irq@ PlatformInterruptRegister
+procedure ServiceInterruptRegister { proc irq -- }
+	pointerof ServiceKernelEntry irq@ PlatformInterruptRegister
 
-	func@ irq@ 4 * ServiceIRQMap@ + !
-	1 irq@ 4 * ServiceIRQTypeMap@ + !
-end
-
-procedure ServiceInterruptRegister { pid irq -- }
-	pointerof PlatformKernelEntry irq@ PlatformInterruptRegister
-
-	pid@ irq@ 4 * ServiceIRQMap@ + !
-	0 irq@ 4 * ServiceIRQTypeMap@ + !
+	proc@ irq@ 4 * ServiceIRQMap@ + !
 end
 
 procedure ServiceKernelEntry { irq -- }
-	auto type
-	irq@ 4 * ServiceIRQTypeMap@ + @ type!
+	auto proc
+	irq@ 4 * ServiceIRQMap@ + @ proc!
 
-	auto service
-	irq@ 4 * ServiceIRQMap@ + @ service!
-
-	if (service@ 0 ==)
+	if (proc@ 0 ==)
 		irq@ "ServiceKernelEntry: no service for IRQ %x!\n" Panic
 	end
 
-	if (type@ 0 ==)
-		irq@ PlatformMaskIRQ
+	irq@ PlatformMaskIRQ
 
-		(* MESSAGE SERVICE *)
-		"implement service messaging\n" Panic
-	end else
-		irq@ service@ Call
-	end
+	"implement service messaging\n" Panic
 end

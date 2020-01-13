@@ -13,13 +13,24 @@ public CurrentThread
 var NextThread 0
 public NextThread
 
+var IdleProc 0
+public IdleProc
+
+var InitProc 0
+public InitProc
+
+extern IdleThread
+
+extern ThreadPick
+
 procedure ThreadInit (* -- *)
 	THREADNUM Thread_SIZEOF * 4096 / 1 + PMMAlloc ThreadTable!
-	PROCNUM Process_SIZEOF * 4096 / 1 + PMMAlloc ProcessTable!
 
 	if (ThreadTable@ ERR ==)
 		"couldn't allocate thread table\n" Panic
 	end
+
+	PROCNUM Process_SIZEOF * 4096 / 1 + PMMAlloc ProcessTable!
 
 	if (ProcessTable@ ERR ==)
 		"couldn't allocate process table\n" Panic
@@ -36,7 +47,7 @@ procedure ThreadInit (* -- *)
 
 		thp@ Thread_SIZEOF 0 memset
 
-		SLOT_FREE thp@ Thread_Flags + !
+		SLOT_FREE thp@ Thread_Status + !
 
 		1 i +=
 	end
@@ -48,10 +59,22 @@ procedure ThreadInit (* -- *)
 
 		thp@ Process_SIZEOF 0 memset
 
-		1 thp@ Process_FreeSlot + !
+		PFREE thp@ Process_Status + !
 
 		1 i +=
 	end
+
+	1
+	0
+	1
+	"idle"
+	pointerof IdleThread
+	16
+	0
+	0
+	ProcessNew IdleProc!
+
+	NOSCHED IdleProc@ Process_MainThread + @ Thread_Status + !
 end
 
 procedure private ThreadAllocateTID { -- tid }
@@ -62,8 +85,8 @@ procedure private ThreadAllocateTID { -- tid }
 		auto thp
 		i@ Thread_SIZEOF * ThreadTable@ + thp!
 
-		if (thp@ Thread_Flags + @ SLOT_FREE & SLOT_FREE ==)
-			0 thp@ Thread_Flags + !
+		if (thp@ Thread_Status + @ SLOT_FREE ==)
+			0 thp@ Thread_Status + !
 
 			thp@ tid!
 			return
@@ -76,7 +99,7 @@ procedure private ThreadAllocateTID { -- tid }
 end
 
 procedure private ThreadFreeTID { tid -- }
-	SLOT_FREE tid@ Thread_Flags + !
+	SLOT_FREE tid@ Thread_Status + !
 end
 
 extern PlatformPrepareKStack
@@ -98,9 +121,6 @@ procedure ThreadNew { stacksize proc pc -- tid }
 	stack@ tid@ Thread_StackPhysAddr + !
 	stacksize@ tid@ Thread_StackSize + !
 
-	0 tid@ Thread_UserSegPhysAddr + !
-	0 tid@ Thread_UserSegSize + !
-
 	auto kstack
 	1 PMMAlloc kstack!
 
@@ -109,6 +129,9 @@ procedure ThreadNew { stacksize proc pc -- tid }
 		-1 tid!
 		return
 	end
+
+	0 tid@ Thread_UserSegPhysAddr + !
+	0 tid@ Thread_UserSegSize + !
 
 	kstack@ tid@ Thread_KernelStackAddr + !
 
@@ -128,57 +151,29 @@ procedure ThreadFree { tid -- }
 
 	1 proc@ Process_ThreadCount + -=
 
-	if (proc@ Process_ThreadCount@ 0 ==)
-		proc@ ProcessFree
-	end
-
 	tid@ ThreadFreeTID
 end
 
+procedure ThreadExit { tid -- }
+	tid@ ThreadFree
+
+	auto proc
+	tid@ Thread_Process + @ proc!
+
+	if (proc@ Process_ThreadCount + @ 0 ==)
+		0 proc@ ProcessExit
+	end
+end
+
+(* implemented in asm elsewhere for speed
 extern PlatformSwitchSegments
 
 extern PlatformThreadResume
 
 procedure ThreadResume { -- }
-	if (NextThread@ 0 ~=)
-		NextThread@ CurrentThread!
-
-		0 NextThread!
-	end
-
-	auto tid
-
-	CurrentThread@ tid!
-
-	tid@ PlatformSwitchSegments
-
-	tid@ PlatformThreadResume
-end
 
 procedure ThreadPick { -- }
-	auto q
-	CurrentThread@ ThreadTable@ - Thread_SIZEOF / q!
-
-	1 q +=
-
-	auto i
-	0 i!
-
-	while (i@ THREADNUM <)
-		auto tid
-		q@ THREADNUM % Thread_SIZEOF * ThreadTable@ + tid!
-
-		if (tid@ Thread_Flags + @ 0 ==)
-			tid@ NextThread!
-			return
-		end
-
-		1 q +=
-		1 i +=
-	end
-
-	"no threads to run!\n" Panic
-end
+*)
 
 (* =========== process management =========== *)
 
@@ -192,8 +187,8 @@ procedure private ProcessAllocateSlot { -- ptr }
 		auto thp
 		i@ Process_SIZEOF * ProcessTable@ + thp!
 
-		if (thp@ Process_FreeSlot + @)
-			0 thp@ Process_FreeSlot + !
+		if (thp@ Process_Status + @ PFREE ==)
+			0 thp@ Process_Status + !
 
 			if (NextPID@ 0xFFFFFFFF ==)
 				"ProcessAllocateSlot: whoa ran out of our 4 billion PIDs somehow\n" Panic
@@ -212,21 +207,40 @@ procedure private ProcessAllocateSlot { -- ptr }
 	"ProcessAllocateSlot: no procs left\n" Panic
 end
 
-procedure private ProcessFreeSlot { ptr -- }
-	1 ptr@ Process_FreeSlot + !
+procedure ProcessFreeSlot { ptr -- }
+	PFREE ptr@ Process_Status + !
 end
 
-procedure ProcessNew { entry system wired name img imgsz heapsz stacksz -- proc }
+procedure ProcessNew { kmode entry wired name img imgsz heapsz stacksz -- proc }
 	ProcessAllocateSlot proc!
 
 	proc@ Process_Name + name@ PROCNAMESIZE 1 - strncpy
 
-	0 proc@ Process_UserID + !
+	0 proc@ Process_Service + !
+
+	0 proc@ Process_WaitedBy + !
 
 	img@ proc@ Process_ImagePhysAddr + !
 	imgsz@ proc@ Process_ImageSize + !
 
 	wired@ proc@ Process_Wired + !
+
+	kmode@ proc@ Process_KernelMode + !
+
+	if (CurrentThread@ 0 ==)
+		0 proc@ Process_Parent + !
+		0 proc@ Process_UserID + !
+		0 proc@ Process_EUserID + !
+	end else
+		auto parent
+		CurrentThread@ Thread_Process + @ parent!
+
+		parent@ proc@ Process_Parent + !
+
+		parent@ Process_UserID + @ dup
+		proc@ Process_UserID + !
+		proc@ Process_EUserID + !
+	end
 
 	auto heap
 	heapsz@ 4096 / 1 + PMMAlloc heap!
@@ -240,14 +254,132 @@ procedure ProcessNew { entry system wired name img imgsz heapsz stacksz -- proc 
 	heap@ proc@ Process_HeapPhysAddr + !
 	heapsz@ proc@ Process_HeapSize + !
 
-	system@ proc@ Process_System + !
+	DEFAULTTIMESLICEMS proc@ Process_Timeslice + !
 
-	stacksz@ proc@ entry@ ThreadNew proc@ Process_MainThread + !
+	auto mthread
+	stacksz@ proc@ entry@ ThreadNew mthread!
+
+	mthread@ proc@ Process_MainThread + !
+
+	if (mthread@ -1 ==)
+		proc@ ProcessFreeResources
+		proc@ ProcessFreeSlot
+		-1 proc!
+		return
+	end
 end
 
-procedure ProcessFree { proc -- }
+procedure ProcessExit { ret proc -- }
+	if (proc@ InitProc@ ==)
+		"init exited!\n" Panic
+	end
+
+	ret@ proc@ Process_Return + !
+
+	PZOMBIE proc@ Process_Status + !
+
+	proc@ ProcessMurder
+
+	proc@ ProcessFreeResources
+
+	auto i
+
+	auto parent
+
+	proc@ Process_Parent + @ parent!
+
+	if (parent@ 0 ==)
+		ThreadPick
+
+		return
+	end
+
+	(* do wait stuff *)
+
+	auto wthread
+	proc@ Process_WaitedBy + @ wthread!
+
+	if (wthread@ 0 ==)
+		(* no thread was specifically waiting for us but there might be a WAITINGANY parent thread *)
+		0 i!
+
+		while (i@ THREADNUM <)
+			auto tid
+			i@ Thread_SIZEOF * ThreadTable@ + tid!
+
+			if (tid@ Thread_Status + @ WAITINGANY ==)
+				if (tid@ Thread_Process + @ parent@ ==)
+					(* bingo! *)
+
+					tid@ wthread!
+
+					break
+				end
+			end
+
+			1 i +=
+		end
+
+		(* nobody was waiting for it, but might later, so just hop down and return *)
+	end
+
+	if (wthread@ 0 ~=)
+		(* wake up waiting thread *)
+
+		0 wthread@ Thread_Status + !
+
+		proc@ Process_ProcessID + @ wthread@ Thread_StackFrame + @ TrapFrame_r1 + !
+
+		ret@ wthread@ Thread_StackFrame + @ TrapFrame_r0 + !
+
+		proc@ ProcessFreeSlot
+	end
+
+	(* no matter what, we're still exiting *)
+
+	0 i!
+
+	while (i@ PROCNUM <) (* reparent children *)
+		auto ch
+		i@ Process_SIZEOF * ProcessTable@ + ch!
+
+		if (ch@ Process_Status + @ PFREE ~=)
+			if (ch@ Process_Parent + @ proc@ ==)
+				InitProc@ ch@ Process_Parent + !
+			end
+		end
+
+		1 i +=
+	end
+
+	ThreadPick
+end
+
+procedure ProcessMurder { proc -- }
+	auto i
+	0 i!
+
+	while (i@ THREADNUM <)
+		auto tid
+		i@ Thread_SIZEOF * ThreadTable@ + tid!
+
+		if (tid@ Thread_Status + @ SLOT_FREE ~=)
+			if (tid@ Thread_Process + @ proc@ ==)
+				tid@ ThreadFree
+			end
+		end
+
+		1 i +=
+	end
+
+	if (proc@ Process_ThreadCount + @ 0 >) (* logically, this can't happen... *)
+		"ProcessMurder: process wasn't murdered hard enough\n" Panic
+	end
+end
+
+procedure ProcessFreeResources { proc -- }
 	if (proc@ Process_ThreadCount + @ 0 >)
-		"ProcessFree: can't free process with extant threads\n" Panic
+		"ProcessFreeResources: can't free process with extant threads\n" Panic
 	end
 
 	if (proc@ Process_Wired + @ ~~)
@@ -258,7 +390,7 @@ procedure ProcessFree { proc -- }
 	proc@ Process_HeapSize + @ 4096 / 1 +
 	proc@ Process_HeapPhysAddr + @ PMMFree
 
-	proc@ ProcessFreeSlot
+	(* proc@ ProcessFreeSlot *)
 end
 
 procedure ProcessInfo { proc -- }
@@ -278,9 +410,7 @@ procedure ProcessInfo { proc -- }
 
 	proc@ Process_Wired + @ "proc wired: %d\n" Printf
 
-	proc@ Process_System + @ "process system: %d\n" Printf
-
-	proc@ Process_FreeSlot + @ "process free slot: %d\n" Printf
+	proc@ Process_Status + @ "process status: %d\n" Printf
 
 	auto tid
 	proc@ Process_MainThread + @ tid!
@@ -294,6 +424,52 @@ end
 
 procedure ProcessSetUserID { uid -- }
 	uid@ CurrentThread@ Thread_Process + @ Process_UserID + !
+end
+
+procedure ProcessByPID { pid -- process }
+	-1 process!
+
+	auto i
+	0 i!
+
+	while (i@ PROCNUM <)
+		auto thp
+		i@ Process_SIZEOF * ProcessTable@ + thp!
+
+		if (thp@ Process_Status + @ PFREE ~=)
+			if (thp@ Process_ProcessID + @ pid@ ==)
+				thp@ process!
+				return
+			end
+		end
+
+		1 i +=
+	end
+end
+
+(* we don't start off knowing who init is, so this is
+called when the "init" service is first registered.
+since init didn't exist, all the boot servers were orphans. this fixes that *)
+procedure ReparentOrphans { -- }
+	if (InitProc@ 0 ==)
+		"ReparentOrphans\n" Panic
+	end
+
+	auto i
+	0 i!
+
+	while (i@ PROCNUM <)
+		auto thp
+		i@ Process_SIZEOF * ProcessTable@ + thp!
+
+		if (thp@ Process_Status + @ PFREE ~=)
+			if (thp@ Process_Parent + @ 0 ==)
+				InitProc@ thp@ Process_Parent + !
+			end
+		end
+
+		1 i +=
+	end
 end
 
 

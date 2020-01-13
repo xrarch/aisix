@@ -6,17 +6,13 @@ AS      = ../../../../../../sdk/asm.sh
 OBJTOOL = ../../../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: TestService
+all: ../init.i6s
 
-TestService: $(OBJ)
-	$(LD) TestService $(OBJ) L/generic/lib.o
-
-	#-gtar -f ../bootimage.tar --delete $@
-	#gtar --format=ustar --blocking-factor=1 -rf ../bootimage.tar $@
+../init.i6s: $(OBJ) ../../libservice/libservice.o
+	$(LD) ../init.i6s $(OBJ) L/generic/lib.o L/aisix/lib.o ../../libservice/libservice.o
 
 %.o: %.df
 	$(DC) $< $@
 
 cleanup:
-	rm TestService
 	rm *.o

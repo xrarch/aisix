@@ -1,0 +1,162 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/mk.h"
+
+var TimeTicks 0
+
+var TimeoutList 0
+
+var NextTimeout -1
+
+var NextTimeoutNode -1
+
+var Timeslice -1
+var TimesliceProgress 0
+
+extern PlatformStartClock
+
+extern ThreadPick
+
+extern PlatformPauseClock (* -- *)
+
+extern PlatformStartClock (* -- *)
+
+extern PlatformInitClock (* -- *)
+
+externconst NextThread
+
+externconst CurrentThread
+
+procedure ClockInit (* -- *)
+	PlatformInitClock
+
+	ListCreate TimeoutList!
+
+	if (TimeoutList@ ERR ==)
+		"couldn't allocate timeout list\n" Panic
+	end
+
+	PlatformStartClock
+end
+
+procedure TimeoutAdd { watchdog ms -- }
+	if (TimeoutList@ 0 ==)
+		"TimeoutAdd\n" Panic
+	end
+
+	auto ticks
+	ms@ CLOCKINTERVALMS / ticks!
+	if (ticks@ 0 ==) 1 ticks! end
+
+	TimeTicks@ ticks +=
+
+	auto tout
+	Timeout_SIZEOF Malloc tout!
+
+	if (tout@ ERR ==)
+		ms@ watchdog@ "TimeoutAdd: couldn't allocate timeout (0x%x, %dms)\n" Panic
+	end
+
+	watchdog@ tout@ Timeout_Watchdog + !
+	ticks@ tout@ Timeout_Expiry + !
+
+	auto node
+
+	tout@ TimeoutList@ ListInsert1 node!
+
+	if (NextTimeout@ -1 ==)
+		tout@ NextTimeout!
+		node@ NextTimeoutNode!
+	end else
+		auto cexp
+		NextTimeout@ Timeout_Expiry + @ cexp!
+
+		if (ticks@ cexp@ <)
+			tout@ NextTimeout!
+			node@ NextTimeoutNode!
+		end
+	end
+end
+
+procedure private GetNextTimeout { -- }
+	if (NextTimeout@ -1 ~=)
+		NextTimeout@ Free
+
+		NextTimeoutNode@ TimeoutList@ ListDelete
+
+		NextTimeoutNode@ Free
+	end
+	
+	auto least
+	-1 least!
+
+	auto leastnode
+	-1 leastnode!
+
+	auto n
+	TimeoutList@ ListHead n!
+
+	while (n@ 0 ~=)
+		auto pnode
+		n@ ListNodeValue
+		pnode!
+
+		if (least@ -1 ==)
+			n@ leastnode!
+			pnode@ Timeout_Expiry + @ least!
+		end else
+			auto tex
+			pnode@ Timeout_Expiry + @ tex!
+
+			if (tex@ least@ <)
+				n@ leastnode!
+				tex@ least!
+			end
+		end
+
+		n@ ListNodeNext n!
+	end
+
+	if (leastnode@ -1 ~=)
+		leastnode@ ListNodeValue NextTimeout!
+		leastnode@ NextTimeoutNode!
+	end else
+		-1 NextTimeoutNode!
+		-1 NextTimeout!
+	end
+end
+
+procedure ClockTick { irq -- }
+	if (TimeTicks@ -1 ==)
+		"clock overflow\n" Panic
+	end
+
+	1 TimeTicks +=
+
+	CLOCKINTERVALMS TimesliceProgress +=
+
+	auto ts
+	Timeslice@ ts!
+
+	if (ts@ -1 ==) (* first go *)
+		if (CurrentThread@ 0 ~=)
+			CurrentThread@ Thread_Process + @ Process_Timeslice + @ dup ts! Timeslice!
+		end
+	end
+	
+	if (TimesliceProgress@ ts@ >=)
+		ThreadPick
+
+		NextThread@ Thread_Process + @ Process_Timeslice + @ Timeslice!
+		0 TimesliceProgress!
+	end
+
+	if (NextTimeout@ -1 ==) return end
+
+	while (NextTimeout@ Timeout_Expiry + @ TimeTicks@ <=)
+		NextTimeout@ Timeout_Watchdog + @ Call
+
+		GetNextTimeout
+
+		if (NextTimeout@ -1 ==) return end
+	end
+end

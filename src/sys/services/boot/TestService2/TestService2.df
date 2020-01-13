@@ -1,37 +1,61 @@
 #include "<df>/dragonfruit.h"
 #include "<df>/platform/aisix/aisix.h"
+#include "../../libservice/libservice.h"
 
-extern HeapDump
+procedure p { x y c -- }
+	c@ y@ 1280 *
+	x@ +
+	0xC0100000 +
+	sb
+end
 
 procedure Main (* -- *)
-	"service!\n" Printf
+	pointerof Sierpinski NewThread drop
+
+	auto pid
+	GetPID pid!
 
 	auto buf
 	256 Malloc buf!
 
 	buf@ 255 Gets
 
-	buf@ "I got: %s\n" Printf
-	
-	"done.\n" Printf
+	buf@ pid@ "%d done: %s\n" Printf
 end
 
-procedure Getc { -- c }
+procedure Sierpinski
 	asm "
 
-	li r0, 3
-	sys 0
-	pushv r5, r0
-
-	" c!
-end
-
-procedure Putc { c -- }
-	c@ asm "
-
-	popv r5, r1
-	li r0, 0
+	li r0, 8
+	li r1, 0xC0000000
+	li r2, -1
 	sys 0
 
 	"
+	
+	auto r
+	0 r!
+
+	while (1)
+		auto i
+		0 i!
+
+		auto z
+		126 z!
+		
+		while(i@ 15876 <=)
+			auto x
+			i@ z@ / x!
+
+			auto y
+			i@ z@ % y!
+		
+			if(x@y@& 0 ==)
+				x@y@2 / ~ - z@y@- y@r@ & p
+			end
+		
+			1 i +=
+			1 r +=
+		end
+	end
 end

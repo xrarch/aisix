@@ -2,6 +2,7 @@
 #include "<inc>/minfo.h"
 #include "<inc>/proc.h"
 #include "<inc>/aixo.h"
+#include "<inc>/clock.h"
 
 #include "<inc>/limnstation/limn.h"
 
@@ -18,3 +19,5 @@ extern PMMAlloc (* pages -- addr *)
 extern ServiceAdd (* name pid -- ok *)
 
 extern ServiceByName (* name -- pid *)
+
+extern Getc (* -- c *)

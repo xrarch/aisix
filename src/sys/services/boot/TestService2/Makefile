@@ -6,20 +6,13 @@ AS      = ../../../../../../sdk/asm.sh
 OBJTOOL = ../../../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: TestService2
+all: ../Test.i6s
 
-TestService2: $(OBJ)
-	$(LD) TestService2 $(OBJ) L/generic/lib.o L/aisix/lib.o
-
-	-gtar -f ../bootimage.tar --delete $@
-	gtar --format=ustar --blocking-factor=1 -rf ../bootimage.tar $@
-
-	cp TestService2 TestService
-	gtar --format=ustar --blocking-factor=1 -rf ../bootimage.tar TestService
+../Test.i6s: $(OBJ) ../../libservice/libservice.o
+	$(LD) ../Test.i6s $(OBJ) L/generic/lib.o L/aisix/lib.o ../../libservice/libservice.o
 
 %.o: %.df
 	$(DC) $< $@
 
 cleanup:
 	rm *.o
-	rm *.boot

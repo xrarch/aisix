@@ -9,6 +9,7 @@ extern MachineInfo
 extern PMMInit
 extern ThreadInit
 extern ServiceInit
+extern ClockInit
 
 extern PlatformStartClock
 
@@ -36,7 +37,7 @@ procedure Main { ksz args -- }
 
 	"userspace time!\n" Printf
 
-	PlatformStartClock
+	ClockInit
 
 	ThreadPick
 
