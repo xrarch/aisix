@@ -8,7 +8,7 @@ LD      =  $(OBJTOOL) link
 all: diag.a3x
 
 diag.a3x: $(OBJ)
-	$(LD) diag.a3x L/a3x/_start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
+	$(LD) diag.a3x L/libsa/_i6l_start.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o
 	$(OBJTOOL) flatten diag.a3x 0x80000
 
 %.o: %.df

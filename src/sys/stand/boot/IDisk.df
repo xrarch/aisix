@@ -2,12 +2,21 @@
 
 var IDiskBD 0
 
+extern Panic
+extern Printf
+
 procedure IDiskInit (* bootdev -- *)
 	IDiskBD!
 end
 
 procedure IReadBlock { block buf -- }
+	auto ok
+
 	IDiskBD@ a3xDeviceSelectNode
-		buf@ block@ "readBlock" a3xDCallMethod drop drop
+		buf@ block@ "readBlock" a3xDCallMethod drop ok!
 	a3xDeviceExit
+
+	if (ok@ 1 ~=)
+		buf@ block@ "I/O error reading block %d into buffer 0x%x\n" Panic
+	end
 end

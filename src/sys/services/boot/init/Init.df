@@ -10,8 +10,10 @@ procedure Main (* -- *)
 	"init" AddService ret!
 
 	if (ret@ 0 ~=)
-		ret@ pid@ "pid%d: couldn't register as init: %d\n" Abort
+		ret@ pid@ "pid%d: couldn't register as init (code %i)\n" Abort
 	end
+
+	pid@ "init: I am PID %d and I am up and running!\n" Printf
 
 	while (1)
 		auto child

@@ -58,8 +58,6 @@ procedure ServiceAdd { name pid -- ok }
 
 	if (InitProc@ 0 ==)
 		if (name@ "init" strcmp)
-			pid@ "init is (pid = %d)\n" Printf
-
 			proc@ InitProc!
 
 			if (InitProc@ -1 ==)

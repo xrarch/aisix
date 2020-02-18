@@ -1,10 +1,10 @@
 #!/bin/bash
 
 diagpath=$(dirname $0)/src/sys/stand/diag
-dskfapath=$(dirname $0)/src/sys/stand/dskfa
+limnvolpath=$(dirname $0)/src/sys/stand/limnvol
 
 make --directory=${diagpath}
-make --directory=${dskfapath}
+make --directory=${limnvolpath}
 
 ./sdk/fsutil.sh $1 w /stand/diag ${diagpath}/diag.a3x
-./sdk/fsutil.sh $1 w /stand/dskfa ${dskfapath}/dskfa.a3x
+./sdk/fsutil.sh $1 w /stand/limnvol ${limnvolpath}/limnvol.a3x

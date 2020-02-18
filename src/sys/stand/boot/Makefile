@@ -12,7 +12,7 @@ BootSector.bin: BootSector.s
 	$(AS) -flat BootSector.s BootSector.bin
 
 loader.bin: $(OBJ)
-	$(LD) loader.bin L/a3x/_boot.o $(OBJ) L/generic/lib.o L/a3x/lib.o
+	$(LD) loader.bin L/liba3x/_boot.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o
 	$(OBJTOOL) flatten loader.bin 0x40000
 
 %.o: %.df

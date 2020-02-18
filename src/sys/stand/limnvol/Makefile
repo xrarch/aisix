@@ -5,11 +5,11 @@ DC      =  ../../../../../sdk/dragonc.sh
 OBJTOOL = ../../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: dskfa.a3x
+all: limnvol.a3x
 
-dskfa.a3x: $(OBJ)
-	$(LD) dskfa.a3x L/a3x/_start.o $(OBJ) L/generic/lib.o L/a3x/lib.o
-	$(OBJTOOL) flatten dskfa.a3x 0x80000
+limnvol.a3x: $(OBJ)
+	$(LD) limnvol.a3x L/libsa/_i6l_start.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o
+	$(OBJTOOL) flatten limnvol.a3x 0x80000
 
 %.o: %.df
 	$(DC) $< $@

@@ -36,3 +36,10 @@ procedure Gets { s max -- }
 
 	0 s@ len@ + sb
 end
+
+procedure Puts { s -- }
+	while (s@ gb 0 ~=)
+		s@ gb Putc
+		1 s +=
+	end
+end

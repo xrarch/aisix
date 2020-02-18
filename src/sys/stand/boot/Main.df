@@ -43,29 +43,43 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	BootDevice@ IDiskInit
 	AFSInit
 
-	auto ab
-	"boot:auto" ArgsValue ab!
+	if ("-p" ArgsCheck ~~)
+		"/nvram" a3xDeviceSelect
+			auto ab
+			"aisix,bootfile" "getVar" a3xDCallMethod drop ab!
 
-	if (ab@ 0 ~=)
-		auto c
-		0 c!
+			if (ab@ 0 ==)
+				"/aisix" "aisix,bootfile" "setVar" a3xDCallMethod drop
 
-		auto vs
-		0 vs!
-		while (c@ -1 ~=)
-			Getc c!
-
-			if (c@ 0x02 ==) (* ctrl-B over serial *)
-				1 vs!
-
-				(* don't break, keep eating buffer *)
+				"/aisix" ab!
 			end
-		end
+		a3xDeviceExit
 
-		if (vs@ ~~)
-			ab@ "boot: %s\n" Printf
+		if (ab@ 0 ~=)
+			auto c
+			0 c!
 
-			args@ ab@ DoFile
+			auto vs
+			0 vs!
+			while (c@ -1 ~=)
+				Getc c!
+
+				if (c@ 0x02 ==) (* ctrl-B over serial *)
+					1 vs!
+
+					(* don't break, keep eating buffer *)
+				end
+			end
+
+			if (vs@ ~~)
+				ab@ "aisix,bootfile = %s\n" Printf
+
+				args@ ab@ DoFile
+			end
+		end else
+			"aisix,bootfile not specified
+Please use the command 'setenv aisix,bootfile /aisix' and try again.
+Alternatively, use the '-p' argument to enter the bootloader prompt.\n" Panic
 		end
 	end
 
@@ -140,7 +154,9 @@ procedure Prompt (* -- *)
 end
 
 procedure Panic (* errorstr -- *)
-	"panic: %s\n" Printf
+	"panic: " Printf
+
+	Printf
 
 	-1 a3xReturn
 end

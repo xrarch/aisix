@@ -6,6 +6,18 @@ Attempt to build a unix-like OS for the LIMNstation fantasy computer.
 
 A long-term goal is a windowed GUI, short term goals are to finish the standalone disk utilities, and to get a decent kernel.
 
+## Testing
+
+With the LIMNstation emulator (`./vm/`) in your current directory, run this command:
+
+`./vm/vm.sh -dks ./aisix/dist/hd0.img`
+
+At the firmware prompt, type this command:
+
+`boot /disks/0`
+
+AISIX should boot! (as far as it can at the moment)
+
 ## Building
 
 Run the following command to create a blank disk image.

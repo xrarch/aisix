@@ -12,7 +12,7 @@ aisix.image: aisix.bin ../services/boot/bootimage.tar
 	cat aisix.bin ../services/boot/bootimage.tar > aisix.image
 
 aisix.bin: $(OBJ) start.o end.o
-	$(LD) aisix.bin start.o $(OBJ) L/generic/lib.o L/a3x/lib.o end.o
+	$(LD) aisix.bin start.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o end.o
 	$(OBJTOOL) flatten aisix.bin 0x80000
 
 start.o: start.s

@@ -75,7 +75,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 		dpbd@ BootDevice!
 	end
 
-	"\n\t=== dskfa ===\nStandalone disk utility.\n" Printf
+	"\n\t=== limnvol ===\nStandalone disk utility.\n" Printf
 
 	auto dn
 	args@ CheckInvalid dn!
@@ -83,7 +83,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 	if (dn@ 0 ==)
 		"no disk path provided, or invalid.\n" Printf
 
-		"\nusage:\n\tdskfa.a3x [diskpath]\n\n" Printf
+		"\nusage:\n\tlimnvol.a3x [diskpath]\n\n" Printf
 
 		return
 	end
