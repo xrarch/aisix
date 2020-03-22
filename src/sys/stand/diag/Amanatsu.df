@@ -94,5 +94,5 @@ procedure AmanatsuDump (* -- *)
 		1 i +=
 	end
 
-	CR
+	'\n' Putc
 end

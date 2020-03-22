@@ -1,20 +1,11 @@
 #include "<df>/dragonfruit.h"
-#include "<df>/platform/a3x/a3x.h"
-
-var args 0
-var BootDevice 0
+#include "<ll>/rta3x/a3x.h"
 
 extern PromptYN
 extern Prompt
 
-procedure Main (* fwctx ciptr bootdev args -- *)
-	args!
-
-	(* remember the boot device *)
-	BootDevice!
-
-	(* initialize the client interface *)
-	a3xInit
+procedure Main { sz args -- ret }
+	0 ret!
 
 	"\n\t=== diag ===\nStandalone diagnostics utility for LIMNstation,1.\n" Printf
 

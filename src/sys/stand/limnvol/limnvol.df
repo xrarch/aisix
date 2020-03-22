@@ -1,12 +1,9 @@
 #include "<df>/dragonfruit.h"
-#include "<df>/platform/a3x/a3x.h"
+#include "<ll>/rta3x/a3x.h"
 
 extern IDiskInit
 extern Prompt
 extern PromptYN
-
-var args 0
-var BootDevice 0
 
 (* 1: disk. 2: logical. *)
 var DeviceType 0
@@ -57,22 +54,16 @@ procedure CheckInvalid { arg -- dn }
 	end
 end
 
-procedure Main (* fwctx ciptr bootdev args -- *)
-	args!
-
-	(* remember the boot device *)
-	BootDevice!
-
-	(* initialize the client interface *)
-	a3xInit
+procedure Main { sz args -- ret }
+	0 ret!
 
 	auto dpbd
-	BootDevice@ a3xDeviceSelectNode
+	a3xMyDevice@ a3xDeviceSelectNode
 		"bootAlias" a3xDGetProperty dpbd!
 	a3xDeviceExit
 
 	if (dpbd@ 0 ~=)
-		dpbd@ BootDevice!
+		dpbd@ a3xMyDevice!
 	end
 
 	"\n\t=== limnvol ===\nStandalone disk utility.\n" Printf
@@ -90,7 +81,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 
 	dn@ "a3x devnode: %x\n" Printf
 
-	if (dn@ BootDevice@ ==)
+	if (dn@ a3xMyDevice@ ==)
 		if ("\nwarning, you're attempting to work on the same device that this utility was\nloaded from. are you sure that this is what you want" PromptYN ~~)
 			return
 		end

@@ -126,7 +126,7 @@ procedure PTInfo (* -- *)
 		1 i +=
 	end
 
-	CR
+	'\n' Putc
 end
 
 procedure PartitionDisk (* -- *)

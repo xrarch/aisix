@@ -208,7 +208,7 @@ procedure AFSPrintList { path -- }
 		1 i +=
 	end
 
-	CR
+	'\n' Putc
 end
 
 procedure AFSFileByName { path -- dirent }

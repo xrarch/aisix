@@ -22,7 +22,7 @@ procedure PromptYN (* prompt -- *)
 end
 
 procedure PromptON (* ... numopt prompt -- num *)
-	CR
+	'\n' Putc
 
 	Printf
 
@@ -36,7 +36,7 @@ procedure PromptON (* ... numopt prompt -- num *)
 		i@ 1 + i!
 	end
 
-	CR
+	'\n' Putc
 
 	auto r
 	12 Calloc r!

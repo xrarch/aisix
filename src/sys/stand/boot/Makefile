@@ -6,14 +6,14 @@ AS      = ../../../../../sdk/asm.sh
 OBJTOOL = ../../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: loader.bin BootSector.bin
+all: loader.a3x BootSector.bin
 
 BootSector.bin: BootSector.s
 	$(AS) -flat BootSector.s BootSector.bin
 
-loader.bin: $(OBJ)
-	$(LD) loader.bin L/liba3x/_boot.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o
-	$(OBJTOOL) flatten loader.bin 0x40000
+loader.a3x: $(OBJ)
+	$(LD) loader.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
+	$(OBJTOOL) flatten loader.a3x 0x40000
 
 %.o: %.df
 	$(DC) $< $@

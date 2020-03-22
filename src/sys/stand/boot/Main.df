@@ -1,5 +1,5 @@
 #include "<df>/dragonfruit.h"
-#include "<df>/platform/a3x/a3x.h"
+#include "<ll>/rta3x/a3x.h"
 
 externconst AFSErrors
 extern ArgsInit
@@ -10,26 +10,21 @@ extern ArgsCheck
 extern AFSLoadFile
 extern AFSPrintList
 
-var args 0
-var BootDevice 0
-
 var TotalRAM 0
 public TotalRAM
 
+var bootargs 0
+
 const LoadBase 0x80000
 
-procedure Main (* fwctx ciptr bootdev args -- *)
-	args!
+procedure Main { args -- ret }
+	0 ret!
 
-	(* remember the boot device *)
-	BootDevice!
-
-	(* initialize the client interface *)
-	a3xInit
+	args@ bootargs!
 
 	args@ ArgsInit
 
-	CR
+	'\n' Putc
 
 	"/memory" a3xDeviceSelect
 		"totalRAM" a3xDGetProperty TotalRAM!
@@ -40,7 +35,7 @@ procedure Main (* fwctx ciptr bootdev args -- *)
 		-1 a3xReturn
 	end
 
-	BootDevice@ IDiskInit
+	a3xMyDevice@ IDiskInit
 	AFSInit
 
 	if ("-p" ArgsCheck ~~)
@@ -86,7 +81,7 @@ Alternatively, use the '-p' argument to enter the bootloader prompt.\n" Panic
 	Prompt
 end
 
-procedure DoFile { arg buf -- }
+procedure DoFile { arg buf -- ret }
 	auto sz
 
 	auto r
@@ -94,17 +89,17 @@ procedure DoFile { arg buf -- }
 
 	if (r@ 1 ~=)
 		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
-	end elseif (LoadBase@ 0x58494E56 ~=)
+	end elseif (LoadBase@ 0x45544E41 ~=)
 		buf@ "%s is not a standalone program\n" Printf
 	end else
-		a3xCIPtr@ BootDevice@ arg@ sz@ a3xFwctx@ asm "
-			popv r5, r4
-			popv r5, r3
-			popv r5, r2
-			popv r5, r1
-			popv r5, r0
-			call 0x80004 ;dependent on LoadBase
-		"
+		(* this bootloader uses the same protocol as a3x but just with file size added *)
+		(* also the base is 0x80000 instead of 0x40000 *)
+
+		asm "pusha"
+
+		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ Call "DoFile (%d)\n" Printf
+
+		asm "popa"
 	end
 end
 
@@ -145,7 +140,7 @@ procedure Prompt (* -- *)
 				nw@ word@ DoFile
 			end
 		end else
-			args@ "aisix" DoFile
+			bootargs@ "aisix" DoFile
 		end
 	end
 
