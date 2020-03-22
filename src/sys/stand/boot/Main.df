@@ -39,8 +39,9 @@ procedure Main { args -- ret }
 	AFSInit
 
 	if ("-p" ArgsCheck ~~)
+		auto ab
+
 		"/nvram" a3xDeviceSelect
-			auto ab
 			"aisix,bootfile" "getVar" a3xDCallMethod drop ab!
 
 			if (ab@ 0 ==)
@@ -50,31 +51,25 @@ procedure Main { args -- ret }
 			end
 		a3xDeviceExit
 
-		if (ab@ 0 ~=)
-			auto c
-			0 c!
+		auto c
+		0 c!
 
-			auto vs
-			0 vs!
-			while (c@ -1 ~=)
-				Getc c!
+		auto vs
+		0 vs!
+		while (c@ -1 ~=)
+			Getc c!
 
-				if (c@ 0x02 ==) (* ctrl-B over serial *)
-					1 vs!
+			if (c@ 0x02 ==) (* ctrl-B over serial *)
+				1 vs!
 
-					(* don't break, keep eating buffer *)
-				end
+				(* don't break, keep eating buffer *)
 			end
+		end
 
-			if (vs@ ~~)
-				ab@ "aisix,bootfile = %s\n" Printf
+		if (vs@ ~~)
+			ab@ "aisix,bootfile = %s\n" Printf
 
-				args@ ab@ DoFile
-			end
-		end else
-			"aisix,bootfile not specified
-Please use the command 'setenv aisix,bootfile /aisix' and try again.
-Alternatively, use the '-p' argument to enter the bootloader prompt.\n" Panic
+			args@ ab@ DoFile
 		end
 	end
 
@@ -97,7 +92,15 @@ procedure DoFile { arg buf -- ret }
 
 		asm "pusha"
 
-		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ Call "DoFile (%d)\n" Printf
+		auto ret
+
+		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ Call ret!
+
+		ret@ "DoFile (%i)\n" Printf
+
+		if (ret@ 0 ~=)
+			ret@ a3xReturn
+		end
 
 		asm "popa"
 	end

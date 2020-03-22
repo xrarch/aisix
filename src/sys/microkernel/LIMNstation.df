@@ -1,8 +1,8 @@
 #include "<df>/dragonfruit.h"
-#include "<df>/platform/a3x/a3x.h"
+#include "<ll>/rta3x/a3x.h"
 #include "<inc>/mk.h"
 
-extern Main
+extern AISIX
 
 const CompatibleFirmware 30500
 
@@ -12,19 +12,8 @@ var Kr5 0
 
 var IntTable 0
 
-procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
-	auto ksz
-	ksz!
-
-	auto args
-	args!
-
-	(* remember the boot device *)
-	auto bootdev
-	bootdev!
-
-	(* initialize the client interface *)
-	a3xInit
+procedure Main { ksz args -- ret }
+	0 ret!
 
 	auto vnum
 	"/" a3xDeviceSelect
@@ -35,6 +24,9 @@ procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 		"aisix requires newer firmware!\n" Printf
 		return
 	end
+
+	ResetBus
+	asm "cli"
 
 	"/platform" a3xDeviceSelect
 		"model" a3xDGetProperty MachineType!
@@ -78,7 +70,7 @@ procedure LIMNstation (* fwctx ciptr bootdev args ksz -- *)
 
 	"\nmicrokernel log to a3x console\n" Printf
 
-	ksz@ args@ Main
+	ksz@ args@ AISIX
 end
 
 procedure ResetBus (* -- *)

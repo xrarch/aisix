@@ -11,12 +11,9 @@ all: aisix.image
 aisix.image: aisix.bin ../services/boot/bootimage.tar
 	cat aisix.bin ../services/boot/bootimage.tar > aisix.image
 
-aisix.bin: $(OBJ) start.o end.o
-	$(LD) aisix.bin start.o $(OBJ) L/libsa/lib.o L/liba3x/lib.o end.o
+aisix.bin: $(OBJ) end.o
+	$(LD) aisix.bin L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o end.o
 	$(OBJTOOL) flatten aisix.bin 0x80000
-
-start.o: start.s
-	$(AS) start.s start.o
 
 end.o: end.s
 	$(AS) end.s end.o
@@ -25,4 +22,4 @@ end.o: end.s
 	$(DC) incdir=./include/ $< $@
 
 cleanup:
-	rm ${OBJ} aisix.bin aisix.image
+	rm ${OBJ} aisix.bin aisix.image end.o

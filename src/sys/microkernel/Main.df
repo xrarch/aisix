@@ -17,7 +17,7 @@ extern ThreadPick
 
 extern ThreadResume
 
-procedure Main { ksz args -- }
+procedure AISIX { ksz args -- }
 	args@ ArgsInit
 
 	"aisix microkernel coming up\n" Printf

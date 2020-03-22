@@ -15,7 +15,7 @@ procedure BootImage (* -- *)
 
 		fsize@ ptr@ ptr@ 512 + BootServerStart
 
-		CR
+		'\n' Putc
 
 		fsize@ 511 + 512 / 1 + 512 * ptr +=
 	end
