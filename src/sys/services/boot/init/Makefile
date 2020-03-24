@@ -9,7 +9,7 @@ LD      =  $(OBJTOOL) link
 all: ../init.i6s
 
 ../init.i6s: $(OBJ) ../../libservice/libservice.o
-	$(LD) ../init.i6s $(OBJ) L/libsa/lib.o L/libaisix/lib.o ../../libservice/libservice.o #FIXME
+	$(LD) ../init.i6s $(OBJ) L/rtaisix/rtaisix.o ../../libservice/libservice.o #FIXME
 
 %.o: %.df
 	$(DC) $< $@

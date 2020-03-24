@@ -9,7 +9,7 @@ LD      =  $(OBJTOOL) link
 all: libservice.o
 
 libservice.o: $(OBJ)
-	$(LD) libservice.o $(OBJ)
+	$(LD) -f libservice.o $(OBJ)
 
 %.o: %.df
 	$(DC) $< $@

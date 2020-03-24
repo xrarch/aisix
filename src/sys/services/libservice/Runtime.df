@@ -1,5 +1,5 @@
 #include "<df>/dragonfruit.h"
-#include "<df>/platform/aisix/aisix.h"
+#include "<ll>/rtaisix/aisix.h"
 
 procedure Gets { s max -- }
 	auto len
