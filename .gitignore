@@ -4,3 +4,4 @@ tmp/*
 *.bin
 *.a3x
 *.image
+*.LOFF

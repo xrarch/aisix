@@ -13,7 +13,9 @@ BootSector.bin: BootSector.s
 
 loader.a3x: $(OBJ)
 	$(LD) loader.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
-	$(OBJTOOL) flatten loader.a3x 0x40000
+	$(OBJTOOL) move loader.a3x text=0x40000,data=text+text_size,bss=data+data_size
+	cp loader.a3x loader.LOFF
+	$(OBJTOOL) binary loader.a3x
 
 %.o: %.df
 	$(DC) $< $@

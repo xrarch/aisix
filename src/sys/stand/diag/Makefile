@@ -9,7 +9,7 @@ all: diag.a3x
 
 diag.a3x: $(OBJ)
 	$(LD) diag.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
-	$(OBJTOOL) flatten diag.a3x 0x80000
+	$(OBJTOOL) binary diag.a3x 0x80000
 
 %.o: %.df
 	$(DC) $< $@
