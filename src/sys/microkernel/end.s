@@ -1,2 +1,0 @@
-TARImage:
-.global TARImage

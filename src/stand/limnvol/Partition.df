@@ -9,8 +9,7 @@ endstruct
 struct PTE
 	8 Label
 	4 Blocks
-	1 Status
-	3 Unused
+	4 Status
 endstruct
 
 extern PromptYN
@@ -80,7 +79,7 @@ procedure PTEGet { ent -- label blocks status }
 
 	ent@ PTE_Label + label!
 	ent@ PTE_Blocks + @ blocks!
-	ent@ PTE_Status + gb status!
+	ent@ PTE_Status + @ status!
 end
 
 procedure PTESet { label blocks status ent -- }
@@ -90,7 +89,7 @@ procedure PTESet { label blocks status ent -- }
 
 	ptb@ PTE_Label + label@ strcpy
 	blocks@ ptb@ PTE_Blocks + !
-	status@ ptb@ PTE_Status + sb
+	status@ ptb@ PTE_Status + !
 end
 
 table PTStatus

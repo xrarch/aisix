@@ -1,8 +1,0 @@
-#include "<df>/dragonfruit.h"
-#include "<inc>/aisix.h"
-
-procedure Spinlock { lock -- }
-	while (lock@ AtomicLock ~~)
-		Yield
-	end
-end

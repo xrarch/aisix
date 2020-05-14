@@ -1,7 +1,7 @@
 #!/bin/bash
 
-diagpath=$(dirname $0)/src/sys/stand/diag
-limnvolpath=$(dirname $0)/src/sys/stand/limnvol
+diagpath=$(dirname $0)/src/stand/diag
+limnvolpath=$(dirname $0)/src/stand/limnvol
 
 make --directory=${diagpath}
 make --directory=${limnvolpath}

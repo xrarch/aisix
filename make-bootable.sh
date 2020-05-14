@@ -1,6 +1,6 @@
 #!/bin/bash
 
-path=$(dirname $0)/src/sys/stand/boot
+path=$(dirname $0)/src/stand/boot
 
 make --directory=${path}
 

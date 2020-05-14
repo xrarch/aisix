@@ -90,7 +90,12 @@ procedure DoFile { arg buf -- ret }
 		(* this bootloader uses the same protocol as a3x but just with file size added *)
 		(* also the base is 0x80000 instead of 0x40000 *)
 
-		asm "pusha"
+		asm "
+
+		subi.i sp, 112
+		sgpr sp
+
+		"
 
 		auto ret
 
@@ -102,7 +107,12 @@ procedure DoFile { arg buf -- ret }
 			ret@ a3xReturn
 		end
 
-		asm "popa"
+		asm "
+
+		lgpr sp
+		addi.i sp, 112
+
+		"
 	end
 end
 

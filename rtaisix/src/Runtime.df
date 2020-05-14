@@ -1,8 +1,0 @@
-#include "<df>/dragonfruit.h"
-#include "<inc>/aisix.h"
-
-procedure Abort (* ... fstr -- *)
-	Printf
-
-	-1 Exit
-end

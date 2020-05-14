@@ -1,9 +1,9 @@
 DFILES := $(shell find . -type f -name '*.df')
 OBJ    := $(DFILES:.df=.o)
 
-DC      =  ../../../../../sdk/dragonc.sh
-AS      = ../../../../../sdk/asm.sh
-OBJTOOL = ../../../../../sdk/link.sh
+DC      =  ../../../../sdk/dragonc.sh
+AS      = ../../../../sdk/asm.sh
+OBJTOOL = ../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
 all: loader.a3x BootSector.bin
@@ -21,4 +21,4 @@ loader.a3x: $(OBJ)
 	$(DC) $< $@
 
 cleanup:
-	rm *.o *.bin
+	rm *.o *.bin *.LOFF

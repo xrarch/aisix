@@ -1,8 +1,8 @@
 DFILES := $(shell find . -type f -name '*.df')
 OBJ    := $(DFILES:.df=.o)
 
-DC      =  ../../../../../sdk/dragonc.sh
-OBJTOOL = ../../../../../sdk/link.sh
+DC      =  ../../../../sdk/dragonc.sh
+OBJTOOL = ../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
 all: limnvol.a3x

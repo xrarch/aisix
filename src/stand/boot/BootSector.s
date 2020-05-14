@@ -1,5 +1,4 @@
 .ds ANTE
-ret
 
 .ds aisix
 .bytes 11 0

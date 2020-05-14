@@ -14,11 +14,11 @@ const AFSSuperblockMagic 0xAFBBAFBB
 const AFSSuperblockVersion 0x4
 
 struct AFSSuperblock
-	1 Version
+	4 Version
 	4 Magic
 	4 VolSize
 	4 NumFiles
-	1 Dirty
+	4 Dirty
 	4 BlocksUsed
 	4 NumDirs
 	4 NumReservedBlocks
@@ -29,16 +29,15 @@ struct AFSSuperblock
 endstruct
 
 struct AFSDirEnt
-	1 type
-	1 permissions
+	4 type
+	4 permissions
 	4 uid
 	4 reserved
 	4 timestamp
 	4 startblock
 	4 size
 	4 bytesize
-	37 name
-	1 nullterm
+	32 name
 endstruct
 
 table AFSErrors
@@ -57,7 +56,7 @@ procedure AFSInit (* -- *)
 		"aisixboot: invalid superblock\n" Panic
 	end
 
-	AFSSuperblockCache AFSSuperblock_Version + gb
+	AFSSuperblockCache AFSSuperblock_Version + @
 	if (AFSSuperblockVersion ~=)
 		"aisixboot: bad version on superblock\n" Panic
 	end
@@ -157,7 +156,7 @@ procedure AFSPathSeek { path -- dirent }
 			return
 		end
 
-		dirent@ AFSDirEnt_type + gb last!
+		dirent@ AFSDirEnt_type + @ last!
 	end
 
 	pcomp@ Free
@@ -176,7 +175,7 @@ procedure AFSPrintList { path -- }
 			return
 		end
 
-		if (dirent@ AFSDirEnt_type + gb 2 ~=)
+		if (dirent@ AFSDirEnt_type + @ 2 ~=)
 			path@ "%s isn't a directory\n" Printf
 			return
 		end
@@ -193,10 +192,10 @@ procedure AFSPrintList { path -- }
 		auto off
 		i@ 64 * AFSRootCache + off!
 
-		if (off@ AFSDirEnt_type + gb 0 ~=)
+		if (off@ AFSDirEnt_type + @ 0 ~=)
 			off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + 
 
-			if (off@ AFSDirEnt_type + gb 1 ==)
+			if (off@ AFSDirEnt_type + @ 1 ==)
 				"\t%s\t%d\n"
 			end else
 				"\t%s/\t%d\n"
@@ -218,7 +217,7 @@ procedure AFSFileByName { path -- dirent }
 		return
 	end
 
-	if (dirent@ AFSDirEnt_type + gb 1 ~=)
+	if (dirent@ AFSDirEnt_type + @ 1 ~=)
 		0 dirent!
 		return
 	end

@@ -1,1 +1,0 @@
-extern AddService (* name -- *)
