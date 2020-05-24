@@ -5,7 +5,7 @@ DISTIMGSZ  := 256
 FSUTIL     := ../sdk/fsutil.sh
 
 ifeq ($(FLATIMAGE),no)
-	DISKLABEL  := ./dist/disklabel.bin
+	DISKLABEL  := ./dist/preset.disklabel
 	OFFSET     := 2
 else
 	OFFSET     := 0
