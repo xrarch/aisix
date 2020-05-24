@@ -1,0 +1,287 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+
+externconst AFSErrors
+extern ArgsInit
+extern AFSMount
+extern IDiskSelect
+extern ArgsValue
+extern ArgsCheck
+extern AFSLoadFile
+extern AFSPrintList
+
+var Mounted 0
+
+var TotalRAM 0
+public TotalRAM
+
+var bootargs 0
+
+var BootFile 0
+
+var BootPath 0
+
+const LoadBase 0x80000
+
+procedure GetBootFile (* -- *)
+	auto ab
+
+	"/nvram" a3xDeviceSelect
+		"load-file" "getVar" a3xDCallMethod drop ab!
+
+		if (ab@ 0 ==)
+			"/kernel" "load-file" "setVar" a3xDCallMethod drop
+
+			"/kernel" ab!
+		end
+	a3xDeviceExit
+
+	ab@ dup BootFile! BootPath!
+end
+
+var BFAlloc 0
+
+procedure GetBootDrive { -- }
+	GetBootFile
+
+	if (BootFile@ gb '(' ~=)
+		a3xMyDevice@ IDiskSelect
+
+		AFSMount Mounted!
+
+		return
+	end
+
+	1 BootFile +=
+
+	auto word
+	256 Calloc word!
+
+	auto nw
+	BootFile@ word@ ')' 255 strntok nw!
+
+	if (word@ Select ~~)
+		"/kernel" BootFile!
+
+		word@ Free
+		return
+	end
+
+	if (nw@ 0 ==)
+		"/kernel" BootFile!
+	end else
+		nw@ 1 + BootFile!
+		word@ BFAlloc!
+	end
+end
+
+procedure Main { args -- ret }
+	0 ret!
+
+	args@ bootargs!
+
+	args@ ArgsInit
+
+	'\n' Putc
+
+	"/memory" a3xDeviceSelect
+		"totalRAM" a3xDGetProperty TotalRAM!
+	a3xDeviceExit
+
+	if (TotalRAM@ LoadBase <)
+		LoadBase 1024 / "fileloader: I refuse to run with less than %dKB of RAM.\n" Printf
+		-1 a3xReturn
+	end
+
+	GetBootDrive
+
+	if (Mounted@)
+		if ("-p" ArgsCheck ~~)
+			auto c
+			0 c!
+
+			auto vs
+			0 vs!
+			while (c@ -1 ~=)
+				Getc c!
+
+				if (c@ 0x02 ==) (* ctrl-B over serial *)
+					1 vs!
+
+					(* don't break, keep eating buffer *)
+				end
+			end
+
+			if (vs@ ~~)
+				BootPath@ "load-file = %s\n" Printf
+
+				args@ BootFile@ DoFile ret!
+			end
+		end
+	end else
+		"couldn't mount bootdev filesystem, use 'cd' to select another\n" Printf
+	end
+
+	if (ret@ 0 ~=)
+		return
+	end
+
+	a3xConsoleUserOut
+
+	Prompt ret!
+
+	if (BFAlloc@ 0 ~=)
+		BFAlloc@ Free
+	end
+end
+
+procedure Select { devpath -- success }
+	0 success!
+
+	auto dn
+	devpath@ a3xDevTreeWalk dn!
+
+	if (dn@ 0 ==)
+		devpath@ "%s is an invalid device path.\n" Printf
+		return
+	end
+
+	auto wbm
+
+	dn@ a3xDeviceSelectNode
+		"readBlock" a3xDGetMethod wbm!
+	a3xDeviceExit
+
+	if (wbm@ 0 ==)
+		devpath@ "%s isn't a readable block device.\n" Printf
+		return
+	end
+
+	dn@ IDiskSelect
+
+	AFSMount Mounted!
+
+	if (Mounted@ ~~)
+		devpath@ "filesystem on %s failed to mount.\n" Printf
+	end
+
+	1 success!
+end
+
+var RetValue 0
+
+procedure DoFile { arg buf -- ret }
+	0 ret!
+
+	if (Mounted@ ~~)
+		"no mounted filesystem\n" Printf
+		return
+	end
+
+	auto sz
+
+	auto r
+	-1 buf@ LoadBase AFSLoadFile r! sz!
+
+	if (r@ 1 ~=)
+		[r@]AFSErrors@ buf@ "failed to load %s: %s\n" Printf
+	end elseif (LoadBase@ 0x45544E41 ~=)
+		buf@ "%s is not a standalone program\n" Printf
+	end else
+		(* this bootloader uses the same protocol as a3x but just with file size added *)
+		(* also the base is 0x80000 instead of 0x40000 *)
+
+		asm "
+
+		subi.i sp, 112
+		sgpr sp
+
+		"
+
+		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ Call RetValue!
+
+		asm "
+
+		lgpr sp
+		addi.i sp, 112
+
+		"
+
+		RetValue@ dup "DoFile (%i)\n" Printf ret!
+	end
+end
+
+procedure Prompt { -- ret }
+	0 ret!
+
+	auto Go
+	1 Go!
+
+	auto buf
+	256 Calloc buf!
+
+	auto word
+	256 Calloc word!
+
+	if (Mounted@)
+		"/" AFSPrintList
+	end
+
+	"Type name of standalone program, 'exit' to return, or 'ls' to list files.\n" Printf
+	"Type 'go' to load the boot file with normal args.\n" Printf
+
+	while (Go@)
+		"\t>> " Printf
+		buf@ 255 Gets
+
+		auto nw
+		buf@ word@ ' ' 255 strntok nw!
+
+		if (word@ strlen 0 >)
+			if (word@ "exit" strcmp)
+				0 Go!
+			end elseif (word@ "ls" strcmp)
+				if (Mounted@)
+					if (nw@ 0 ~=)
+						1 nw +=
+					end
+					nw@ AFSPrintList
+				end else
+					"no mounted filesystem\n" Printf
+				end
+			end elseif (word@ "cd" strcmp)
+				if (nw@ 0 ~=)
+					1 nw +=
+				end
+				nw@ Select drop
+			end elseif (word@ "go" strcmp)
+				if (BootFile@ 0 ==)
+					GetBootFile
+				end
+
+				bootargs@ BootFile@ DoFile ret!
+
+				if (ret@ 0 ~=)
+					break
+				end
+			end else
+				if (nw@ 0 ~=)
+					1 nw +=
+				end
+
+				nw@ word@ DoFile drop
+			end
+		end
+	end
+
+	word@ Free
+	buf@ Free
+end
+
+procedure Panic (* errorstr -- *)
+	"panic: " Printf
+
+	Printf
+
+	-1 a3xReturn
+end

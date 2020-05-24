@@ -57,9 +57,12 @@ end
 procedure Main { sz args -- ret }
 	0 ret!
 
+	auto pnt
+
 	auto dpbd
 	a3xMyDevice@ a3xDeviceSelectNode
 		"bootAlias" a3xDGetProperty dpbd!
+		"parentDisk" a3xDGetProperty pnt!
 	a3xDeviceExit
 
 	if (dpbd@ 0 ~=)
@@ -81,7 +84,7 @@ procedure Main { sz args -- ret }
 
 	dn@ "a3x devnode: %x\n" Printf
 
-	if (dn@ a3xMyDevice@ ==)
+	if (dn@ a3xMyDevice@ == dn@ pnt@ == ||)
 		if ("\nwarning, you're attempting to work on the same device that this utility was\nloaded from. are you sure that this is what you want" PromptYN ~~)
 			return
 		end
@@ -110,7 +113,9 @@ procedure Main { sz args -- ret }
 		return
 	end
 
-	Prompt
+	while (1)
+		Prompt
+	end
 end
 
 

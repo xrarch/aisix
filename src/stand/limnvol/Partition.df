@@ -1,4 +1,5 @@
 #include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
 
 struct VDB
 	16 Label
@@ -18,6 +19,22 @@ extern IReadBlock
 
 var VDB 0
 
+var Fixed 0
+
+const MaxParts 8
+
+externconst DiskNode
+
+procedure LoadVDBSafe { -- ok }
+	1 ok!
+
+	LoadVDB
+
+	if (VDBValid ~~)
+		VDBFix dup Fixed! ok!
+	end
+end
+
 procedure LoadVDB (* -- *)
 	4096 Malloc VDB!
 
@@ -28,22 +45,22 @@ procedure FreeVDB (* -- *)
 	VDB@ Free
 end
 
-procedure VDBValid (* -- valid? *)
-	VDB@ VDB_Magic + @ 0x4E4D494C ==
+procedure VDBValid { -- valid }
+	VDB@ VDB_Magic + @ 0x4E4D494C == valid!
 end
 
-procedure VDBLabel (* -- label *)
-	VDB@ VDB_Label +
+procedure VDBLabel { -- label }
+	VDB@ VDB_Label + label!
 end
 
-procedure VDBFix (* -- ok? *)
-	if (VDBValid) 1 return end
+procedure VDBFix { -- ok }
+	if (VDBValid) 1 ok! return end
 
 	auto ynr
 
 	"this disk's volume descriptor block is corrupt or empty.\nwrite new one" PromptYN ynr!
 
-	if (ynr@ ~~) 0 return end
+	if (ynr@ ~~) 0 ok! return end
 
 	auto nbuf
 	16 Calloc nbuf!
@@ -59,7 +76,7 @@ procedure VDBFix (* -- ok? *)
 
 	buf@ VDB_Label + nbuf@ strcpy
 
-	"writing new vdb...\n" Printf
+	"writing new disklabel...\n" Printf
 
 	0 buf@ IWriteBlock
 
@@ -69,9 +86,9 @@ procedure VDBFix (* -- ok? *)
 	FreeVDB
 	LoadVDB
 
-	"fixed vdb successfully.\n\n" Printf
+	"fixed disklabel successfully.\n\n" Printf
 
-	1 return
+	1 ok! return
 end
 
 procedure PTEGet { ent -- label blocks status }
@@ -100,8 +117,6 @@ table PTStatus
 endtable
 
 procedure PTInfo (* -- *)
-	"\ncurrent partition info:\n" Printf
-
 	auto i
 	0 i!
 
@@ -124,26 +139,89 @@ procedure PTInfo (* -- *)
 
 		1 i +=
 	end
-
-	'\n' Putc
 end
 
 procedure PartitionDisk (* -- *)
-	LoadVDB
+	if (LoadVDBSafe ~~)
+		"disklabel invalid. cannot continue.\n" Printf
+		return
+	end
 
-	auto v
-	VDBValid v!
-
-	if (v@)
+	if (Fixed@ ~~)
 		if ("dump current partition info" PromptYN)
+			"\ncurrent partition info:\n" Printf
 			PTInfo
-		end
-	end else
-		if (VDBFix ~~)
-			"vdb invalid. cannot continue.\n" Printf
-			return
+			'\n' Putc
 		end
 	end
+
+	auto blocksleft
+
+	DiskNode@ a3xDeviceSelectNode
+		"blocks" a3xDGetProperty 2 - blocksleft!
+	a3xDeviceExit
+
+	auto ptr
+	VDB@ VDB_PartitionTable + ptr!
+
+	ptr@ 128 0 memset
+
+	auto buf
+	256 Calloc buf!
+
+	"number of partitions: " Printf
+
+	buf@ 255 Gets
+
+	auto partnum
+	buf@ atoi 8 min partnum!
+
+	auto i
+	0 i!
+
+	while (i@ partnum@ <)
+		if (blocksleft@ 0 ==)
+			"no more space on disk\n" Printf
+			break
+		end
+
+		partnum@ 1 - i@ "partition %d of %d\n" Printf
+
+		blocksleft@ 4096 * "  [%d bytes left] size: " Printf
+		buf@ 255 Gets
+
+		auto sz
+		buf@ atoi sz!
+
+		if (sz@ 0xFFF & 0 ~=)
+			sz@ 0xFFFFF000 & 0x1000 + 4096 / sz!
+		end else
+			4096 sz /=
+		end
+
+		if (sz@ blocksleft@ >)
+			"not enough space!\n" Printf
+		end else
+			sz@ blocksleft -=
+
+			sz@ ptr@ PTE_Blocks + !
+
+			"  label: " Printf
+			buf@ 7 Gets
+
+			ptr@ PTE_Label + buf@ strcpy
+
+			2 ptr@ PTE_Status + !
+
+			PTE_SIZEOF ptr +=
+
+			1 i +=
+		end
+	end
+
+	buf@ Free
+
+	0 VDB@ IWriteBlock
 
 	FreeVDB
 end

@@ -4,63 +4,22 @@ Extreme work-in-progress.
 
 Attempt to build a unix-like OS for the LIMNstation fantasy computer.
 
-A long-term goal is a windowed GUI, short term goals are to finish the standalone disk utilities, and to get a decent kernel.
-
-## Testing
-
-With the LIMNstation emulator (`./vm/`) in your current directory, run this command:
-
-`./vm/vm.sh -dks ./aisix/dist/hd0.img`
-
-At the firmware prompt, type this command:
-
-`boot /disks/0`
-
-AISIX should boot! (as far as it can at the moment)
+A long-term goal is a tiled GUI, short(er) term goals are to finish the standalone disk utilities, and to get a decent kernel.
 
 ## Building
 
-Run the following command to create a blank disk image.
+As with all of our LIMNstation projects, the [sdk](http://github.com/limnarch/sdk) should be in a directory `../sdk` relative to this repository as your current directory.
 
-Replace `disk.img` with the desired name of your disk image.
+Running `make` will then place an AISIX distribution image at `dist/dist.img`.
 
-`dd if=/dev/zero of=disk.img bs=4096 count=1024`
+## Testing
 
-Then, run the following commands, with the LIMN sdk folder in your current directory:
+With the LIMNstation emulator (`./vm/`) and aisix repository (`./aisix/`) in your current directory, run this command:
 
-Again, replace `disk.img` with the name of your disk image.
+`./vm/vm.sh -dks ./aisix/dist/dist.img`
 
-`./sdk/fsutil.sh ./disk.img f`
+If it doesn't boot automatically, type this command at the firmware prompt:
 
-`./aisix/make-bootable.sh ./disk.img`
+`boot /disks/0/a`
 
-`./aisix/build-stand.sh ./disk.img`
-
-## Booting
-
-Run one of the following commands, with the LIMNstation emulator (`./vm/`) in your current directory.
-
-Again, replace `disk.img` with the name of your aisix disk image.
-
-Graphical boot (recommended, cooler):
-`./vm/vm.sh -dks ./disk.img`
-
-Headless (serial port) boot:
-`./vm/headless.sh -dks ./disk.img`
-
-At the a3x firmware prompt, the following command should work to boot the image:
-
-`boot /disks/0`
-
-If you want to avoid these long-winded commands, it's possible to make the firmware do it automatically.
-
-At the firmware prompt, type the following sequence of commmands:
-
-```
-setenv boot-dev /disks/0
-setenv auto-boot? true
-```
-
-This sets the NVRAM variable boot-dev to point towards the devicetree path of our boot disk.
-
-It sets the variable auto-boot? to true, to tell the firmware to automatically try to boot from boot-dev.
+AISIX should boot! (as far as it can at the moment)

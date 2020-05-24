@@ -5,7 +5,7 @@ var IDiskBD 0
 extern Panic
 extern Printf
 
-procedure IDiskInit (* bootdev -- *)
+procedure IDiskSelect (* bootdev -- *)
 	IDiskBD!
 end
 

@@ -48,21 +48,27 @@ table AFSErrors
 endtable
 public AFSErrors
 
-procedure AFSInit (* -- *)
+procedure AFSMount { -- success }
+	0 success!
+
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock
 
 	AFSSuperblockCache AFSSuperblock_Magic + @
 	if (AFSSuperblockMagic ~=)
-		"aisixboot: invalid superblock\n" Panic
+		"fileloader: invalid superblock\n" Printf
+		return
 	end
 
 	AFSSuperblockCache AFSSuperblock_Version + @
 	if (AFSSuperblockVersion ~=)
-		"aisixboot: bad version on superblock\n" Panic
+		"fileloader: bad version on superblock\n" Printf
+		return
 	end
+
+	1 success!
 end
 
-procedure AFSLoadFile { name destptr } (* -- size ok? *)
+procedure AFSLoadFile { count name destptr } (* -- size ok? *)
 	auto entryptr
 	name@ AFSFileByName entryptr!
 	if (entryptr@ 0 ==)
@@ -75,6 +81,16 @@ procedure AFSLoadFile { name destptr } (* -- size ok? *)
 	entryptr@ AFSDirEnt_startblock + @ cblock!
 	entryptr@ AFSDirEnt_size + @ size!
 
+	if (count@ -1 ==)
+		size@ count!
+	end else
+		if (count@ 0xFFF & 0 ~=)
+			count@ 0xFFFFF000 & 0x1000 + count!
+		end
+
+		4096 count /=
+	end
+
 	auto nmem
 	destptr@ size@ 4096 * + nmem!
 
@@ -84,7 +100,7 @@ procedure AFSLoadFile { name destptr } (* -- size ok? *)
 
 	auto i
 	0 i!
-	while (i@ size@ <)
+	while (i@ count@ <)
 		cblock@ destptr@ IReadBlock
 
 		cblock@ AFSBlockStatus cblock!
@@ -93,7 +109,7 @@ procedure AFSLoadFile { name destptr } (* -- size ok? *)
 		1 i +=
 	end
 
-	size@ 4096 * 1
+	count@ 4096 * 1
 end
 
 procedure AFSDirentByName { name -- dirent }
@@ -210,10 +226,19 @@ procedure AFSPrintList { path -- }
 	'\n' Putc
 end
 
+procedure AFSFileSize { path -- size }
+	auto dirent
+	path@ AFSFileByName dirent!
+	if (dirent@ 0 ==)
+		return
+	end
+
+	dirent@ AFSDirEnt_bytesize + @ size!
+end
+
 procedure AFSFileByName { path -- dirent }
 	path@ AFSPathSeek dirent!
 	if (dirent@ 0 ==)
-		0 dirent!
 		return
 	end
 

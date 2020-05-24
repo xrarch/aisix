@@ -1,7 +1,22 @@
 #include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
 
 externconst DeviceType
 extern PartitionDisk
+
+extern LoadVDB
+extern FreeVDB
+extern VDBValid
+extern PTInfo
+extern VDBLabel
+
+externconst DiskNode
+
+table DiskTypes
+	0
+	"raw disk"
+	"partition"
+endtable
 
 procedure PromptYN (* prompt -- *)
 	auto r
@@ -50,8 +65,18 @@ procedure PromptON (* ... numopt prompt -- num *)
 	r@ Free
 end
 
-procedure FormatDisk (* -- *)
+procedure PromptAnyKey (* -- *)
+	"\[[7mpress any key\[[0m" Printf
 
+	while (Getc -1 ==) end
+
+	"\[[2K\r" Puts
+end
+
+procedure FormatDisk (* -- *)
+	"NOT YET IMPLEMENTED!!!\n" Printf
+
+	PromptAnyKey
 end
 
 procedure Prompt (* -- *)
@@ -59,42 +84,72 @@ procedure Prompt (* -- *)
 
 	0 r!
 
-	while (r@ 3 > r@ 0 == ||)
+	while (r@ 4 > r@ 0 == ||)
+		"view volume info"
 		"partition the disk"
-		"format the disk with a new filesystem"
+		"format the volume with a new filesystem"
 		"exit (preserve data)"
-		3
-		"which would you like to do? keep in mind that either are very likely to destroy\nany data currently existing on the volume.\n"
+		4
+		"which would you like to do?\n"
 		PromptON r!
 	end
 
 	if (r@ 1 ==)
-		return
+		0 a3xReturn
 	end
 
-	if (r@ 3 ==)
+	if (r@ 4 ==)
+		'\n' Putc
+
+		[DeviceType@]DiskTypes@ "\[[33mtype:\[[0m \[[94m%s\[[0m\n" Printf
+
+		DiskNode@ a3xDeviceSelectNode
+			"blocks" a3xDGetProperty 4096 * 1024 / "\[[33msize:\[[0m \[[94m%dkb\[[0m\n" Printf
+			"offset" a3xDGetProperty 4096 * "\[[33mlogical offset:\[[0m \[[94m%d bytes\[[0m\n" Printf
+
+			auto osl
+			"osLabel" a3xDGetProperty osl!
+
+			if (osl@ 0 ~=)
+				osl@ "\[[33minstalled OS:\[[0m \[[94m%s\[[0m\n" Printf
+			end
+		a3xDeviceExit
+
+		if (DeviceType@ 1 ==)
+			LoadVDB
+
+			if (VDBValid)
+				VDBLabel "\[[33mdisk label:\[[0m \[[94m%s\[[0m\n" Printf
+
+				PTInfo
+				FreeVDB
+			end else
+				"no valid disklabel\n" Printf
+			end
+		end
+
+		PromptAnyKey
+	end elseif (r@ 3 ==)
 		if (DeviceType@ 1 ~=)
 			"\ncan only partition a raw disk. run this utility again, but supply the raw disk\npath. you are attempting to partition a partition.\n" Printf
 			return
 		end
 
 		PartitionDisk
-	end else
-		if (r@ 2 ==)
-			auto dfo
-			1 dfo!
+	end elseif (r@ 2 ==)
+		auto dfo
+		1 dfo!
 
-			if (DeviceType@ 1 ==)
-				"\nyou are trying to put a filesystem on a raw disk. this will destroy\nany existing partition table. you probably want to put this filesystem\non a partition instead.\n" Printf
+		if (DeviceType@ 1 ==)
+			"\nyou are trying to put a filesystem on a raw disk. this will destroy\nany existing partition table. you probably want to put this filesystem\non a partition instead.\n" Printf
 
-				if ("\nare you sure that this is what you want" PromptYN ~~)
-					0 dfo!
-				end 
-			end
+			if ("\nare you sure that this is what you want" PromptYN ~~)
+				0 dfo!
+			end 
+		end
 
-			if (dfo@)
-				FormatDisk
-			end
+		if (dfo@)
+			FormatDisk
 		end
 	end
 end

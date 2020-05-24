@@ -1,19 +1,20 @@
 #include "<ll>/rta3x/a3x.h"
 
-var IDiskBD 0
+var DiskNode 0
+public DiskNode
 
 procedure IDiskInit (* bootdev -- *)
-	IDiskBD!
+	DiskNode!
 end
 
 procedure IReadBlock { block buf -- }
-	IDiskBD@ a3xDeviceSelectNode
+	DiskNode@ a3xDeviceSelectNode
 		buf@ block@ "readBlock" a3xDCallMethod drop drop
 	a3xDeviceExit
 end
 
 procedure IWriteBlock { block buf -- }
-	IDiskBD@ a3xDeviceSelectNode
+	DiskNode@ a3xDeviceSelectNode
 		buf@ block@ "writeBlock" a3xDCallMethod drop drop
 	a3xDeviceExit
 end
