@@ -51,9 +51,12 @@ const KERNELSTACKPAGES 1
 const VALUESTACKPAGES 1
 
 const TS_READY 1
+const TS_RUNNING 2
 
 extern JumpIntoScheduler (* -- *)
 
 extern KernelThreadNew (* funcptr -- *)
 
 extern ThreadReady (* thread -- *)
+
+extern Yield (* -- *)

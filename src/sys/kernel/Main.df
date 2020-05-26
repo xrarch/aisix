@@ -34,8 +34,7 @@ procedure AISIX { ksz args -- ret }
 
 	Scheduler
 
-	(* should be literally impossible for that to return, so just drop back into
-	platform init code here *)
+	(* the scheduler loop shouldn't return, but if it does, drop back out here *)
 end
 
 procedure AISIXInitialThread { -- }

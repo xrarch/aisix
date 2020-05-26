@@ -126,7 +126,7 @@ procedure DumpContext { con -- }
 		end
 
 		r@ 4 * con@ + @ dup
-		r@ 4 * ContextNames + @ "\[[33m%s\[[0m\t\t\[[94m0x%x / %d\[[0m\n" Printf
+		[r@]ContextNames@ "\[[33m%s\[[0m\t\t\[[94m0x%x / %d\[[0m\n" Printf
 
 		1 r +=
 	end

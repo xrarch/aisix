@@ -166,6 +166,8 @@ var SchedulerContext 0
 
 (* scheduler *)
 procedure Scheduler { -- }
+	"entering scheduler loop\n" Printf
+
 	while (1)
 		auto nthread
 		ThreadPick nthread!
@@ -174,6 +176,8 @@ procedure Scheduler { -- }
 			CPUIdle
 		end else
 			nthread@ CurrentThread!
+
+			TS_RUNNING nthread@ Thread_Status + !
 
 			SchedulerContext nthread@ Thread_Context + @ cswtch
 		end
@@ -211,6 +215,12 @@ procedure ThreadPick { -- thread }
 	end
 
 	ERR thread!
+end
+
+procedure Yield { -- }
+	TS_READY CurrentThread@ Thread_Status + !
+
+	JumpIntoScheduler
 end
 
 (* =========== process management =========== *)
