@@ -1,0 +1,101 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var KLogWrite 0
+var KLogRead 0
+
+procedure KLogAttach { read write -- }
+	read@ KLogRead!
+	write@ KLogWrite!
+end
+
+procedure Putc { c -- }
+	if (KLogWrite@)
+		c@ KLogWrite@ Call
+	end
+end
+
+procedure Getc { -- c }
+	-1 c!
+
+	if (KLogRead@)
+		KLogRead@ Call c!
+	end
+end
+
+procedure Gets { s max -- }
+	auto len
+	0 len!
+
+	while (1)
+		auto c
+		ERR c!
+		while (c@ ERR ==)
+			Getc c!
+		end
+
+		if (c@ '\n' ==)
+			'\n' Putc
+			break
+		end
+
+		if (c@ '\b' ==)
+			if (len@ 0 >)
+				1 len -=
+				0 s@ len@ + sb
+				'\b' Putc
+				' ' Putc
+				'\b' Putc
+			end
+		end elseif (len@ max@ <)
+			c@ s@ len@ + sb
+
+			1 len +=
+			c@ Putc
+		end
+	end
+
+	0 s@ len@ + sb
+end
+
+procedure Puts { s -- }
+	while (s@ gb 0 ~=)
+		s@ gb Putc
+		1 s +=
+	end
+end
+
+extern PlatformAlertUser
+
+procedure AskUser { question anslen -- answer }
+	PlatformAlertUser
+
+	question@ Printf
+
+	anslen@ 1 + Calloc answer!
+
+	answer@ anslen@ Gets
+end
+
+extern PlatformPanic
+
+procedure Panic (* ... fstr -- *)
+	InterruptDisable drop
+
+	auto procn
+
+	if (CurrentThread@ 0 ==)
+		"none yet" procn!
+	end else
+		CurrentThread@ Thread_Process + @ Process_Name + procn!
+	end
+
+	CurrentThread@ procn@ "running process: %s (thread: %x)\n" Printf
+
+	PlatformAlertUser
+
+	"panic: " Printf
+	Printf
+
+	PlatformPanic
+end

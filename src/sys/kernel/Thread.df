@@ -1,0 +1,391 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+#include "<inc>/context.h"
+
+table Threads[THREADMAX]
+public Threads
+
+table Processes[PROCMAX]
+public Processes
+
+var CurrentThread 0
+public CurrentThread
+
+var KernelProcess 0
+public KernelProcess
+
+var InitProcess 0
+
+const KERNELPID 1
+
+extern AISIXInitialThread
+
+procedure ThreadInit { -- }
+	PROCMAX THREADMAX "max %d threads, %d processes\n" Printf
+
+	auto process
+	pointerof AISIXInitialThread "kernel" ProcessNew process!
+
+	if (process@ ERR == KernelProcess@ process@ ~= ||)
+		"couldn't set up kernel process\n" Panic
+	end
+
+	process@ Process_MainThread + @ ThreadReady
+end
+
+procedure private ThreadAllocate { -- thread }
+	auto tid
+	0 tid!
+
+	ERR thread!
+
+	auto rs
+
+	while (tid@ THREADMAX <)
+		InterruptDisable rs!
+
+		if ([tid@]Threads@ 0 ==)
+			auto ts
+			Thread_SIZEOF Calloc ts!
+
+			if (ts@ 0 ==)
+				ERR thread!
+				return
+			end
+
+			tid@ ts@ Thread_TID + !
+
+			ts@ [tid@]Threads!
+
+			rs@ InterruptRestore
+
+			ts@ thread! return
+		end
+
+		rs@ InterruptRestore
+
+		1 tid +=
+	end
+end
+
+procedure private ThreadFreeSlot { thread -- }
+	auto tid
+	thread@ Thread_TID + @ tid!
+
+	[tid@]Threads@ Free
+
+	0 [tid@]Threads!
+end
+
+procedure ThreadFree { thread -- }
+	KERNELSTACKPAGES thread@ Thread_KernelStack + @ PMMFree
+	VALUESTACKPAGES thread@ Thread_ValueStack + @ PMMFree
+
+	auto process
+	thread@ Thread_Process + @ process!
+
+	1 process@ Process_Threads + -=
+
+	thread@ ThreadFreeSlot
+end
+
+procedure ThreadExit { -- }
+	auto thread
+	CurrentThread@ thread!
+
+	thread@ ThreadFree
+
+	auto process
+	thread@ Thread_Process + @ process!
+
+	if (process@ KernelProcess@ ==)
+		"a kernel thread exited\n" Panic
+	end
+
+	if (process@ Process_Threads + @ 0 ==)
+		0 ProcessExit
+	end
+end
+
+procedure ThreadNew { process entry -- thread }
+	ThreadAllocate thread!
+
+	if (thread@ ERR ==)
+		return
+	end
+
+	process@ thread@ Thread_Process + !
+
+	auto stack
+	KERNELSTACKPAGES PMMCalloc stack!
+
+	if (stack@ ERR ==)
+		thread@ ThreadFreeSlot
+		ERR thread!
+		return
+	end
+
+	auto vs
+	VALUESTACKPAGES PMMCalloc vs!
+
+	if (vs@ ERR ==)
+		KERNELSTACKPAGES stack@ PMMFree
+		thread@ ThreadFreeSlot
+		ERR thread!
+		return
+	end
+
+	stack@ thread@ Thread_KernelStack + !
+	vs@ thread@ Thread_ValueStack + !
+
+	auto uc
+
+	auto vst
+
+	KERNELSTACKPAGES 4096 * stack@ + dup thread@ Thread_KernelStackTop + ! uc!
+	VALUESTACKPAGES 4096 * vs@ + dup thread@ Thread_ValueStackTop + ! vst!
+
+	vst@ entry@ uc@ CPUContextPrepare thread@ Thread_Context + !
+
+	1 process@ Process_Threads + +=
+end
+
+procedure ThreadReady { thread -- }
+	TS_READY thread@ Thread_Status + !
+end
+
+procedure KernelThreadNew { entry -- thread }
+	KernelProcess@ entry@ ThreadNew thread!
+end
+
+extern cswtch
+
+extern CPUIdle
+
+var SchedulerContext 0
+
+(* scheduler *)
+procedure Scheduler { -- }
+	while (1)
+		auto nthread
+		ThreadPick nthread!
+
+		if (nthread@ -1 ==)
+			CPUIdle
+		end else
+			nthread@ CurrentThread!
+
+			SchedulerContext nthread@ Thread_Context + @ cswtch
+		end
+	end
+end
+
+procedure JumpIntoScheduler { -- }
+	CurrentThread@ Thread_Context + SchedulerContext@ cswtch
+end
+
+procedure ThreadPick { -- thread }
+	CurrentThread@ thread!
+
+	auto index
+	0 index!
+
+	if (thread@)
+		thread@ Thread_TID + @ 1 + index!
+	end
+
+	auto i
+	0 i!
+
+	while (i@ THREADMAX <)
+		[index@ THREADMAX %]Threads@ thread!
+
+		if (thread@ 0 ~=)
+			if (thread@ Thread_Status + @ TS_READY ==)
+				return
+			end
+		end
+
+		1 i +=
+		1 index +=
+	end
+
+	ERR thread!
+end
+
+(* =========== process management =========== *)
+
+var NextPID 1
+
+procedure private ProcessAllocate { -- process }
+	auto i
+	0 i!
+
+	if (NextPID@ 0xFFFFFFFF ==)
+		"ProcessAllocate: ran out of PIDs, somebody redo this algorithm\n" Panic
+	end
+
+	ERR process!
+
+	auto rs
+
+	while (i@ PROCMAX <)
+		InterruptDisable rs!
+
+		if ([i@]Processes@ 0 ==)
+			auto ps
+			Process_SIZEOF Calloc ps!
+
+			if (ps@ 0 ==)
+				ERR process!
+				return
+			end
+
+			i@ ps@ Process_Index + !
+
+			NextPID@ ps@ Process_PID + !
+
+			1 NextPID +=
+
+			ps@ [i@]Processes!
+
+			rs@ InterruptRestore
+
+			ps@ process! return
+		end
+
+		rs@ InterruptRestore
+
+		1 i +=
+	end
+end
+
+procedure private ProcessFreeSlot { process -- }
+	auto index
+	process@ Process_Index + @ index!
+
+	[index@]Processes@ Free
+
+	0 [index@]Processes!
+end
+
+procedure ProcessNew { entry name -- process }
+	ProcessAllocate process!
+
+	if (process@ ERR ==)
+		return
+	end
+
+	process@ Process_Name + name@ PROCNAMELEN 1 - strncpy
+
+	auto kernel
+	0 kernel!
+
+	if (process@ Process_PID + @ KERNELPID ==)
+		1 kernel!
+	end
+
+	if (CurrentThread@)
+		auto parent
+		CurrentThread@ Thread_Process + @ parent!
+
+		parent@ process@ Process_Parent + !
+
+		parent@ Process_UserID + @ dup
+		process@ Process_UserID + !
+		process@ Process_EUserID + !
+	end
+
+	auto mthread
+
+	process@ entry@ ThreadNew mthread!
+
+	mthread@ process@ Process_MainThread + !
+
+	if (mthread@ ERR ==)
+		process@ ProcessFreeSlot
+		ERR process!
+		return
+	end
+
+	if (kernel@)
+		process@ KernelProcess!
+		1 kernel!
+	end
+end
+
+procedure ProcessDestroyThreads { process -- }
+	auto i
+	0 i!
+
+	while (i@ THREADMAX <)
+		auto thread
+		[i@]Threads@ thread!
+
+		if (thread@)
+			if (thread@ Thread_Process + @ process@ ==)
+				thread@ ThreadFree
+			end
+		end
+
+		1 i +=
+	end
+
+	if (process@ Process_Threads + @ 0 >) (* logically, this can't happen, but if it does I wanna know about it *)
+		"ProcessDestroyThreads: process wasn't murdered hard enough\n" Panic
+	end
+end
+
+procedure ProcessFreeResources { process -- }
+	if (process@ Process_Threads + @ 0 >)
+		"ProcessFreeResources: process still had extant threads\n" Panic
+	end
+
+	if (process@ Process_Mapped + @)
+		process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
+		process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
+		process@ Process_BSSPages + @ process@ Process_BSSPhysical + @ PMMFree
+	end
+
+	(* don't free slot now, will be needed later *)
+end
+
+procedure ProcessExit { ret -- }
+	auto process
+	CurrentThread@ Thread_Process + @ process!
+
+	if (process@ Process_PID + @ KERNELPID ==)
+		"kernel process exited!\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	ret@ process@ Process_ReturnValue + !
+
+	process@ ProcessDestroyThreads
+
+	process@ ProcessFreeResources
+
+	(* do wait syscall stuff here *)
+
+	auto i
+	0 i!
+
+	while (i@ PROCMAX <)
+		auto child
+		[i@]Processes@ child!
+
+		if (child@ 0 ~=)
+			if (child@ Process_Parent + @ process@ ==)
+				InitProcess@ child@ Process_Parent + !
+
+				(* additional bookkeeping is probably required *)
+			end
+		end
+
+		1 i +=
+	end
+
+	rs@ InterruptRestore
+end

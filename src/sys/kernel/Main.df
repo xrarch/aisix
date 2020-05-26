@@ -1,0 +1,45 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+extern ArgsInit
+extern MachineInfo
+extern PMMInit
+extern HeapInit
+extern PlatformInit
+extern ThreadInit
+
+extern CPURestoreContext
+
+extern HeapDump
+
+extern Scheduler
+
+procedure AISIX { ksz args -- ret }
+	0 ret!
+
+	args@ ArgsInit
+
+	"aisix coming up\n" Printf
+	ksz@ "kernel image ~%d bytes\n" Printf
+
+	MachineInfo
+
+	PMMInit
+
+	HeapInit
+
+	PlatformInit
+
+	ThreadInit
+
+	Scheduler
+
+	(* should be literally impossible for that to return, so just drop back into
+	platform init code here *)
+end
+
+procedure AISIXInitialThread { -- }
+	while (1)
+		asm "hlt"
+	end
+end

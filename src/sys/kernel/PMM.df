@@ -1,0 +1,162 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var Pages 0
+public Pages
+
+buffer PMMBitmap 8192
+
+procedure PMMInit (* -- *)
+	auto pages
+	MachineRAMSize@ 4096 / pages!
+
+	if (pages@ 65536 >=)
+		"can only manage up to 65536 pages\n" Panic
+	end
+
+	pages@ dup Pages! "managing %d pages\n" Printf
+end
+
+procedure private CheckRow { pages start -- real }
+	auto pmb
+	PMMBitmap pmb!
+
+	auto rb
+	pmb@ start@ 8 / + @ rb!
+
+	auto boff
+	0 boff!
+
+	while (rb@ boff@ bitget)
+		if (boff@ 32 >=)
+			"CheckRow\n" Panic
+		end
+
+		1 start +=
+		1 boff +=
+	end
+
+	auto max
+	start@ pages@ + max!
+
+	start@ real!
+
+	if (max@ Pages@ >=)
+		"CheckRow\n" Panic
+	end
+
+	while (start@ max@ <)
+		if (boff@ 32 ==)
+			pmb@ start@ 8 / + @ rb!
+			0 boff!
+		end
+
+		if (rb@ boff@ bitget)
+			-1 real! return
+		end
+
+		1 start +=
+		1 boff +=
+	end
+end
+
+procedure private PMMSetString { with pages start -- }
+	auto max
+	pages@ start@ + max!
+
+	if (max@ Pages@ >=)
+		"PMMSetString\n" Panic
+	end
+
+	auto pmb
+	PMMBitmap pmb!
+
+	while (start@ max@ <)
+		auto rbp
+		start@ 8 / pmb@ + rbp!
+
+		auto bef
+		rbp@ gb bef!
+
+		rbp@ gb start@ 8 %
+		if (with@ 1 ==)
+			bitset
+		end else
+			bitclear
+		end
+
+		rbp@ sb
+
+		1 start +=
+	end
+end
+
+procedure PMMFree { pages addr -- }
+	if (addr@ 0xFFF & 0 ~=)
+		"PMMFree\n" Panic
+	end
+
+	if (pages@ 0 ==)
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	0
+	pages@
+	addr@ MachineRAMBase@ - 4096 /
+	PMMSetString
+
+	rs@ InterruptRestore
+end
+
+procedure PMMCalloc { pages -- addr }
+	pages@ PMMAlloc addr!
+
+	addr@ pages@ 4096 * 0 memset
+end
+
+procedure PMMAlloc { pages -- addr }
+	if (pages@ 0 ==)
+		"allocating zero pages\n" Panic
+	end
+
+	auto pmb
+	PMMBitmap pmb!
+
+	auto pc
+	Pages@ pc!
+
+	auto i
+	0 i!
+
+	ERR addr!
+
+	auto rs
+	InterruptDisable rs!
+
+	while (i@ pages@ + pc@ <)
+		auto rb
+		pmb@ i@ 8 / + @ rb!
+
+		if (rb@ 0xFFFFFFFF ~=)
+			auto start
+			pages@ i@ CheckRow start!
+
+			if (start@ -1 ~=)
+				1 pages@ start@ PMMSetString
+
+				rs@ InterruptRestore
+
+				start@ 4096 * MachineRAMBase@ + addr!
+
+				return
+			end
+		end
+
+		32 i +=
+	end
+
+	rs@ InterruptRestore
+end

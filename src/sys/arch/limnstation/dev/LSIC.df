@@ -1,0 +1,27 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+
+const LSICClaimComplete 0x10
+
+var LSICBase 0
+
+externconst InterruptGet
+externconst InterruptAck
+
+procedure DrvLSICFoundNode { node -- }
+	"address" a3xDGetProperty LSICBase!
+
+	pointerof LSICInterruptGet InterruptGet!
+	pointerof LSICInterruptAck InterruptAck!
+
+	LSICBase@ "  lsic @ 0x%x\n" Printf
+end
+
+procedure private LSICInterruptGet (* -- intn *)
+	LSICBase@ LSICClaimComplete + @
+end
+
+procedure private LSICInterruptAck (* intn -- *)
+	LSICBase@ LSICClaimComplete + !
+end

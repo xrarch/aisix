@@ -119,9 +119,9 @@ procedure Main { args -- ret }
 			end
 		end
 	end else
-		"couldn't mount bootdev filesystem, use 'cd' to select another\n" Printf
+		"couldn't mount specified filesystem, use 'cd' to select another one.\n" Printf
 	end
-
+	
 	if (ret@ 0 ~=)
 		return
 	end

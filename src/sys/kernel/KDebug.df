@@ -1,0 +1,325 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+#include "<inc>/context.h"
+
+var MonitorCommandList 0
+var MonitorRunning 0
+var MonitorLine 0
+var MonitorLinePoint 0
+
+struct MonitorCommand
+	4 Name
+	4 Callback
+	4 HelpText
+endstruct
+
+procedure KDebug (* -- *)
+	if (MonitorCommandList@ 0 ==)
+		MonitorCommandsInit
+	end
+
+	1 MonitorRunning!
+
+	256 Calloc MonitorLine!
+
+	while (MonitorRunning@)
+		MonitorPrompt
+		MonitorDoLine
+	end
+end
+
+const ConsoleAssumedHeight 22
+
+var UsedLines 0
+var AllLines 0
+
+procedure ResetLines (* -- *)
+	0 UsedLines!
+	0 AllLines!
+end
+
+procedure WaitNext { -- result }
+	1 result!
+
+	if (AllLines@)
+		return
+	end
+
+	if (UsedLines@ ConsoleAssumedHeight >)
+		"\[[7m(any) for more, (a) for all, (p) for a page, (q) to quit\[[0m" Printf
+		auto c
+		-1 c!
+
+		while (c@ -1 ==)
+			Getc c!
+		end
+
+		if (c@ 'q' ==)
+			0 result!
+		end elseif (c@ 'p' ==)
+			0 UsedLines!
+		end elseif (c@ 'a' ==)
+			1 AllLines!
+		end
+
+		"\[[2K\r" Puts
+	end
+
+	1 UsedLines +=
+end
+
+extern HeapDump
+
+procedure MonitorCommandsInit (* -- *)
+	ListCreate MonitorCommandList!
+
+	"Dump heap."
+	pointerof HeapDump
+	"dumpheap"
+	MonitorAddCommand
+
+	"Display help."
+	pointerof MonitorCommandHelp
+	"help"
+	MonitorAddCommand
+
+	"Exit monitor."
+	pointerof MonitorCommandExit
+	"exit"
+	MonitorAddCommand
+
+	"List processes."
+	pointerof ListProcesses
+	"proc"
+	MonitorAddCommand
+
+	"List threads."
+	pointerof ListThreads
+	"threads"
+	MonitorAddCommand
+
+	"[tid] Dump the trapframe (real state) of a thread."
+	pointerof DumpTF
+	"tf"
+	MonitorAddCommand
+
+	"[tid] Dump the context (kernel state) of a thread."
+	pointerof DumpCTX
+	"ctx"
+	MonitorAddCommand
+end
+
+procedure DumpContext { con -- }
+	if (con@ 0 ==)
+		"no context\n" Printf
+		return
+	end
+
+	auto r
+	0 r!
+
+	ResetLines
+
+	while (r@ CONTEXTELEM <)
+		if (WaitNext ~~)
+			return
+		end
+
+		r@ 4 * con@ + @ dup
+		r@ 4 * ContextNames + @ "\[[33m%s\[[0m\t\t\[[94m0x%x / %d\[[0m\n" Printf
+
+		1 r +=
+	end
+end
+
+procedure DumpTF (* -- *)
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ THREADMAX >=)
+		return
+	end
+
+	auto thread
+	[tid@]Threads@ thread!
+
+	if (thread@ 0 ==)
+		return
+	end
+
+	thread@ Thread_TrapFrame + @ DumpContext
+end
+
+procedure DumpCTX (* -- *)
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ THREADMAX >=)
+		return
+	end
+
+	auto thread
+	[tid@]Threads@ thread!
+
+	if (thread@ 0 ==)
+		return
+	end
+
+	thread@ Thread_Context + @ DumpContext
+end
+
+procedure MonitorCommandExit (* -- *)
+	0 MonitorRunning!
+end
+
+procedure MonitorCommandHelp (* -- *)
+	auto plist
+	MonitorCommandList@ plist!
+
+	auto n
+	plist@ List_Head + @ n!
+
+	ResetLines
+
+	while (n@ 0 ~=)
+		auto pnode
+		n@ ListNodeValue
+		pnode!
+
+		pnode@ MonitorCommand_HelpText + @ dup if (0 ~=)
+			if (WaitNext ~~)
+				0 return
+			end
+		
+			pnode@ MonitorCommand_Name + @ "\[[33m%s\[[0m\t\t%s\n" Printf
+		end else drop end
+
+		n@ ListNodeNext n!
+	end
+end
+
+procedure MonitorPrompt (* -- *)
+	MonitorLine@ MonitorLinePoint!
+	"> " Printf
+	MonitorLine@ 255 Gets
+end
+
+procedure MonitorDoLine (* -- *)
+	auto word
+	MonitorParseWord word!
+
+	if (word@ strlen 0 ~=)
+		if (word@ MonitorDoCommand ~~)
+			word@ "%s is not a recognized command.\n" Printf
+		end else return end
+	end
+
+	word@ Free
+end
+
+procedure MonitorParseWord { -- word }
+	256 Calloc word!
+
+	MonitorLinePoint@ word@ ' ' 255 strntok MonitorLinePoint!
+end
+
+procedure MonitorDoCommand { name -- ok }
+	auto plist
+	MonitorCommandList@ plist!
+
+	auto n
+	plist@ List_Head + @ n!
+
+	while (n@ 0 ~=)
+		auto pnode
+		n@ ListNodeValue
+		pnode!
+
+		if (pnode@ MonitorCommand_Name + @ name@ strcmp)
+			name@ Free
+
+			pnode@ MonitorCommand_Callback + @ Call 1 ok! return
+		end
+
+		n@ ListNodeNext n!
+	end
+
+	0 ok!
+end
+
+procedure MonitorAddCommand { helptext callback name -- }
+	auto command
+	MonitorCommand_SIZEOF Calloc command!
+
+	name@ command@ MonitorCommand_Name + !
+	callback@ command@ MonitorCommand_Callback + !
+	helptext@ command@ MonitorCommand_HelpText + !
+
+	(* command@ MonitorCommand_HelpText + command@ MonitorCommand_Callback + command@ MonitorCommand_Name + "namep 0x%x\ncbp 0x%x\nhtp 0x%x\n" Printf *)
+
+	command@ MonitorCommandList@ ListInsert
+end
+
+externconst Processes
+externconst Threads
+
+procedure ListProcesses (* -- *)
+	auto i
+	0 i!
+
+	ResetLines
+
+	while (i@ PROCMAX <)
+		auto proc
+		[i@]Processes@ proc!
+
+		if (proc@)
+			if (WaitNext ~~)
+				return
+			end
+
+			i@ "[%d]\t" Printf
+			proc@ Process_PID + @ "(%d)\t" Printf
+			proc@ Process_Name + "%s\n" Printf
+		end
+
+		1 i +=
+	end
+end
+
+procedure ListThreads (* -- *)
+	auto i
+	0 i!
+
+	ResetLines
+
+	while (i@ THREADMAX <)
+		auto thread
+		[i@]Threads@ thread!
+
+		if (thread@)
+			if (WaitNext ~~)
+				return
+			end
+
+			i@ "[%d]\t" Printf
+
+			auto parent
+			thread@ Thread_Process + @ parent!
+
+			parent@ Process_Name + "(%s)\n" Printf
+		end
+
+		1 i +=
+	end
+end

@@ -1,0 +1,85 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/context.h"
+
+extern AISIX
+
+const CompatibleFirmware 30502
+
+procedure Main { ksz args -- ret }
+	0 ret!
+
+	(* manually clear BSS section, because fileloader only loads flat files,
+	and while the linker lets us spit out flat binary files with the BSS section
+	trimmed out rather than converted to a massive block of zeroes,
+	it does mean we have to clear it ourselves. *)
+
+	auto ptr
+	pointerof _bss ptr!
+	
+	auto max
+	pointerof _bss_end max!
+
+	while (ptr@ max@ <)
+		0 ptr@ !
+		4 ptr +=
+	end
+
+	pointerof a3xGetc pointerof a3xPutc KLogAttach
+
+	"\ninitial kernel log to a3x console\n" Printf
+
+	auto vnum
+	"/" a3xDeviceSelect
+		"versionNum" a3xDGetProperty vnum!
+	a3xDeviceExit
+
+	if (vnum@ CompatibleFirmware <)
+		"aisix requires newer firmware!\n" Printf
+		return
+	end
+
+	"/platform" a3xDeviceSelect
+		"model" a3xDGetProperty MachineType!
+	a3xDeviceExit
+
+	"/cpu" a3xDeviceSelect
+		"model" a3xDGetProperty MachineCPU!
+	a3xDeviceExit
+
+	"/bus" a3xDeviceSelect
+		"model" a3xDGetProperty MachineBus!
+	a3xDeviceExit
+
+	auto tram
+
+	"/memory" a3xDeviceSelect
+		"totalRAM" a3xDGetProperty tram!
+	a3xDeviceExit
+
+	pointerof _bss_end MachineRAMBase!
+
+	if (MachineRAMBase@ 0xFFF & 0 ~=)
+		MachineRAMBase@ 0xFFFFF000 & 0x1000 + MachineRAMBase!
+	end
+
+	tram@ MachineRAMBase@ - MachineRAMSize!
+
+	ksz@ args@ AISIX ret!
+end
+
+extern DeviceTree
+extern ExceptionInit
+
+procedure PlatformInit (* -- *)
+	ExceptionInit
+
+	DeviceTree
+end
+
+procedure PlatformAlertUser (* -- *)
+	pointerof a3xGetc pointerof a3xPutc KLogAttach
+
+	a3xConsoleUserOut
+end

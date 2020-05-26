@@ -1,0 +1,103 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+
+extern DrvCitronFoundNode
+extern DrvLSICFoundNode
+extern DrvSerialFoundNode
+
+const Devices 3
+
+const ElemPerDevice 5
+
+(*  NAME     TYPE                     MODEL              REV *)
+table DeviceTable
+	"Citron" "bus"                    "AISA,citron"      1
+	pointerof DrvCitronFoundNode
+
+    "LSIC"   "interrupt-controller"   "AISA,lsic"        1
+    pointerof DrvLSICFoundNode
+
+    "Serial" "serial"                 "AISA,serial-port" 1
+    pointerof DrvSerialFoundNode
+endtable
+public DeviceTable
+
+procedure private CheckDevTable { -- }
+	auto i
+	0 i!
+
+	while (i@ Devices <)
+		auto tbase
+		i@ ElemPerDevice * tbase!
+
+		auto dt
+		"deviceType" a3xDGetProperty dt!
+
+		if (dt@ 0 ==)
+			1 i +=
+			continue
+		end
+
+		if (dt@ [tbase@ 1 +]DeviceTable@ strcmp ~~)
+			1 i +=
+			continue
+		end
+
+		auto model
+		"model" a3xDGetProperty model!
+
+		if (model@ 0 ==)
+			1 i +=
+			continue
+		end
+
+		if (model@ [tbase@ 2 +]DeviceTable@ strcmp ~~)
+			1 i +=
+			continue
+		end
+
+		[tbase@]DeviceTable@ a3xDGetName "identified node '%s' with driver '%s'\n" Printf
+
+		auto rev
+		"revision" a3xDGetProperty rev!
+
+		if (rev@ [tbase@ 3 +]DeviceTable@ ~=)
+			auto ans
+			rev@ [tbase@ 3 +]DeviceTable@ "  revision mismatch (have driver for %d, got %d) ignore? [y/n] " 1 AskUser ans!
+
+			if (ans@ gb 'y' ~=)
+				ans@ Free
+
+				1 i +=
+				continue
+			end
+
+			ans@ Free
+		end
+
+		model@ dt@ "  %s: %s\n" Printf
+
+		a3xDGetCurrent [tbase@ 4 +]DeviceTable@ Call
+
+		break
+	end
+end
+
+procedure private IterateNode { iter -- }
+	while (iter@)
+		iter@ a3xDevIterate iter!
+			CheckDevTable
+
+			a3xDevIteratorInit IterateNode
+		a3xDeviceExit
+	end
+end
+
+procedure DeviceTree { -- }
+	"enumerating device tree\n" Printf
+
+	"/platform" a3xDeviceSelect
+		a3xDevIteratorInit IterateNode
+	a3xDeviceExit
+end

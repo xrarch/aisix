@@ -1,0 +1,1 @@
+extern KLogAttach (* read write -- *)

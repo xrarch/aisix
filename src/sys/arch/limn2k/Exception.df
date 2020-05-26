@@ -1,0 +1,235 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+#include "<inc>/context.h"
+
+var InterruptGet 0
+public InterruptGet
+
+var InterruptAck 0
+public InterruptAck
+
+var Nested 0
+
+extern Interrupt
+
+const CYCLESLICE 100000
+
+asm "
+
+exception_vector:
+	mov   k2, sp
+	mov   k3, vs
+
+	la    k0, CurrentThread
+	l.l   k0, k0, zero
+
+	andi  k1, ers, 1
+	beq   k1, zero, .waskernel
+
+	lio.l sp, k0, Thread_KernelStackTop
+	lio.l k3, k0, Thread_ValueStackTop
+
+.waskernel:
+	subi.i sp, Context_SIZEOF
+	sio.l  sp, Context_sp, k2
+	sio.l  sp, 116, ers
+	sio.l  sp, 120, epc
+	sio.l  sp, 124, lr
+	sgpr   sp
+
+	mov    vs, k3
+
+	swd.l  vs, zero, badaddr ; push badaddr to the value stack
+	swd.l  vs, zero, ecause  ; push ecause to the value stack
+	swd.l  vs, zero, sp      ; push trapframe to the value stack
+	jal    Exception         ; call Exception
+
+	li     badaddr, 0
+
+	lgpr  sp            ; restore general purpose registers
+	lio.l ers, sp, 116  ; ers = [sp + 116]
+	lio.l epc, sp, 120  ; epc = [sp + 120]
+	lio.l lr,  sp, 124  ; lr  = [sp + 124]
+	lio.l sp,  sp, 112
+
+	rfe                 ; return from the exception
+
+; don't use r3 in this routine because its used by cpukthreadentry
+; old new -- 
+cswtch:
+.global cswtch
+	lwi.l  r1, vs,   zero
+	lwi.l  r2, vs,   zero
+
+	subi.i sp, Context_SIZEOF
+	sio.l  sp, Context_sp,  sp
+	sio.l  sp, Context_epc, lr
+	sio.l  sp, Context_timer, timer
+	sio.l  sp, Context_lr,  lr
+	sio.l  sp, Context_ers, rs
+	sgpr   sp
+
+	s.l    r2, zero, sp
+	mov    sp, r1
+
+	lgpr   sp
+	lio.l  rs, sp,   Context_ers
+	lio.l  lr, sp,   Context_lr
+	lio.l  timer, sp, Context_timer
+	addi.i sp, Context_SIZEOF
+
+	ret
+
+CPUIdle:
+.global CPUIdle 
+	mov r1, rs
+	bseti rs, rs, 1
+	bseti rs, rs, 3
+	hlt
+	mov rs, r1
+	ret
+
+PlatformSetTimer:
+.global PlatformSetTimer
+	la timer, CYCLESLICE
+	ret
+
+"
+
+extern PlatformSetTimer (* it's actually in this file but this makes the df compiler happy *)
+
+procedure ExceptionInit (* -- *)
+	pointerof exception_vector _flush_all asm "
+
+	lwi.l ev, vs, zero
+
+	"
+end
+
+const EXCINTERRUPT 1
+const EXCSYS 2
+const EXCTIMER 5
+
+procedure Exception { badaddr ecause tf -- }
+	tf@ CurrentThread@ Thread_TrapFrame + !
+	
+	if (ecause@ EXCTIMER ==)
+		PlatformSetTimer
+
+		JumpIntoScheduler
+		return
+	end
+
+	if (ecause@ EXCINTERRUPT ==)
+		if (InterruptGet@ 0 ==)
+			"no interrupt controller\n" Panic
+		end
+
+		auto int
+		while (InterruptGet@ Call dup int!)
+			int@ Interrupt
+			int@ InterruptAck@ Call
+		end
+	end elseif (ecause@ EXCSYS ==)
+		InterruptEnable
+
+		(* handle syscall ... *)
+
+		0 InterruptRestore
+	end else
+		if (tf@ Context_ers + @ 1 & 0 ==)
+			(* kernel mode exception, panic *)
+			ecause@ "ECAUSE: %x\n" Printf
+			tf@ Context_epc + @ "EPC: %x\n" Printf
+			tf@ Context_ers + @ "ERS: %x\n" Printf
+			badaddr@ "BADADDR: %x\n" Printf
+
+			"unexpected kernel mode exception!\n" Panic
+		end
+
+		"todo: terminate process\n" Panic
+	end
+end
+
+asm "
+
+CPUKThreadEntry:
+	bseti rs, rs, 1
+	bseti rs, rs, 3
+
+	mov pc, r3
+
+	la at, .pstring
+	swd.l vs, zero, at
+	jal Panic
+
+.pstring:
+	.ds kernel thread dropped off
+	.db 0xA, 0x0
+
+.align 4
+
+"
+
+procedure CPUContextPrepare { vs entry stack -- ctx }
+	stack@ Context_SIZEOF - ctx!
+
+	vs@ ctx@ Context_vs + !
+	entry@ ctx@ Context_r3 + !
+	pointerof CPUKThreadEntry ctx@ Context_lr + !
+	CYCLESLICE ctx@ Context_timer + !
+end
+
+(* turns on the timer, as well *)
+procedure InterruptEnable (* -- *)
+	asm "
+
+	bseti rs, rs, 1
+	bseti rs, rs, 3
+
+	"
+end
+
+(* turns off the timer, as well *)
+procedure InterruptDisable (* -- rs *)
+	asm "
+
+	swd.l vs, zero, rs
+	bclri rs, rs, 3
+	bclri rs, rs, 1
+
+	"
+end
+
+procedure InterruptRestore (* rs -- *)
+	asm "
+
+	lwi.l rs, vs, zero
+
+	"
+end
+
+table ContextNames
+	"r1"    "r2"
+	"r3"    "r4"
+	"r5"    "r6"
+	"r7"    "r8"
+	"r9"    "r10"
+	"r11"   "r12"
+	"r13"   "r14"
+	"r15"   "r16"
+	"r17"   "r18"
+	"r19"   "r20"
+	"r21"   "r22"
+	"r23"   "r24"
+	"r25"   "tf"
+	"vs"    "at"
+
+	"sp"
+	"ers"
+	"epc"
+	"lr"
+	"timer"
+endtable
+
+public ContextNames

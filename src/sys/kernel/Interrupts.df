@@ -1,0 +1,24 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+#include "<inc>/platform.h"
+
+table InterruptHandlers[INTERRUPTNUM]
+
+procedure Interrupt { intn -- }
+	auto h
+	[intn@]InterruptHandlers@ h!
+
+	if (h@ 0 ==)
+		intn@ "no handler for received interrupt %x\n" Panic
+	end
+
+	h@ Call
+end
+
+procedure InterruptRegister { h n -- }
+	h@ [n@]InterruptHandlers!
+end
+
+procedure InterruptUnregister { n -- }
+	0 [n@]InterruptHandlers!
+end

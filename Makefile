@@ -4,6 +4,9 @@ DISTIMAGE  := ./dist/dist.img
 DISTIMGSZ  := 256
 FSUTIL     := ../sdk/fsutil.sh
 
+PLATFORM   := limnstation
+CPU        := limn2k
+
 ifeq ($(FLATIMAGE),no)
 	DISKLABEL  := ./dist/preset.disklabel
 	OFFSET     := 2
@@ -14,8 +17,13 @@ endif
 FILELOADER_DIR := ./src/stand/fileloader
 DIAG_DIR       := ./src/stand/diag
 LIMNVOL_DIR    := ./src/stand/limnvol
+KERNEL_DIR     := ./src/sys/kernel
 
-dist: $(DISTIMAGE) bootable stand
+dist: $(DISTIMAGE) bootable stand kernel
+
+kernel:
+	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
+	$(FSUTIL) $(DISTIMAGE) offset=$(OFFSET) w /kernel $(KERNEL_DIR)/aisix.a3x
 
 stand: diag limnvol
 

@@ -1,0 +1,7 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+
+procedure PlatformPanic (* ... fstr -- *)
+	-1 a3xReturn
+end

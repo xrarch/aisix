@@ -1,0 +1,90 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/citron.h"
+
+var SerialDataPort 0
+var SerialCmdPort 0
+
+const SerialCmdWrite 1
+const SerialCmdRead 2
+const SerialCmdIntr 3
+const SerialCmdIntrOff 4
+
+procedure DrvSerialFoundNode { node -- }
+	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
+
+	if (SerialCmdPort@ 0 ==)
+		return
+	end
+
+	"serial,dataPort" a3xDGetProperty SerialDataPort!
+
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	intn@ SerialDataPort@ SerialCmdPort@ "  serial @ citron:%x,%x int:%d\n" Printf
+
+	pointerof SerialIntr intn@ InterruptRegister
+
+	SerialIntrEnable
+end
+
+extern KDebug
+
+procedure SerialIntr { -- }
+	SerialIntrDisable
+
+	auto c
+	while (SerialRead dup c! -1 ~=) end
+
+	pointerof SerialRead pointerof SerialWrite KLogAttach
+
+	"serial break!\n" Printf
+
+	KDebug
+
+	SerialIntrEnable
+end
+
+procedure SerialIntrEnable { -- }
+	auto rs
+	InterruptDisable rs!
+
+	SerialCmdIntr SerialCmdPort@ DCitronCommand
+
+	rs@ InterruptRestore
+end
+
+procedure SerialIntrDisable { -- }
+	auto rs
+	InterruptDisable rs!
+
+	SerialCmdIntrOff SerialCmdPort@ DCitronCommand
+
+	rs@ InterruptRestore
+end
+
+procedure SerialWrite { c -- }
+	auto rs
+	InterruptDisable rs!
+
+	c@ SerialDataPort@ DCitronOutb
+	SerialCmdWrite SerialCmdPort@ DCitronCommand
+
+	rs@ InterruptRestore
+end
+
+procedure SerialRead { -- c }
+	auto rs
+	InterruptDisable rs!
+
+	SerialCmdRead SerialCmdPort@ DCitronCommand
+	SerialDataPort@ DCitronIni c!
+
+	rs@ InterruptRestore
+
+	if (c@ 0xFFFF ==)
+		ERR c! return
+	end
+end
