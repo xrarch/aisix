@@ -26,7 +26,7 @@ procedure Main { ksz args -- ret }
 		4 ptr +=
 	end
 
-	pointerof a3xGetc pointerof a3xPutc KLogAttach
+	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	"\ninitial kernel log to a3x console\n" Printf
 
@@ -78,8 +78,26 @@ procedure PlatformInit (* -- *)
 	DeviceTree
 end
 
+procedure PlatformPutc { c -- }
+	auto rs
+	InterruptDisable rs!
+
+	c@ a3xPutc
+
+	rs@ InterruptRestore
+end
+
+procedure PlatformGetc { -- c }
+	auto rs
+	InterruptDisable rs!
+
+	a3xGetc c!
+
+	rs@ InterruptRestore
+end
+
 procedure PlatformAlertUser (* -- *)
-	pointerof a3xGetc pointerof a3xPutc KLogAttach
+	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	a3xConsoleUserOut
 end
