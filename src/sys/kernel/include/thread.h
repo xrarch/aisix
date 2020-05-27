@@ -1,13 +1,21 @@
+const THREADNAMELEN 32
+
 struct Thread
 	4 Context
+	
 	4 KernelStackTop
 	4 ValueStackTop
+	
 	4 KernelStack
 	4 ValueStack
+	
 	4 Process
 	4 TID
 	4 Status
+	
 	4 TrapFrame
+
+	THREADNAMELEN Name
 endstruct
 
 const PROCNAMELEN 32

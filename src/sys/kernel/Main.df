@@ -38,7 +38,17 @@ procedure AISIX { ksz args -- ret }
 end
 
 procedure AISIXInitialThread { -- }
+	pointerof Thread2 "test thread" KernelThreadNew ThreadReady
+
 	while (1)
+		"thread 1\n" Printf
+		asm "hlt"
+	end
+end
+
+procedure Thread2 { -- }
+	while (1)
+		"thread 2\n" Printf
 		asm "hlt"
 	end
 end

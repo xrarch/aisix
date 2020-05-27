@@ -12,7 +12,7 @@ procedure Interrupt { intn -- }
 		intn@ "no handler for received interrupt %x\n" Panic
 	end
 
-	h@ Call
+	intn@ h@ Call
 end
 
 procedure InterruptRegister { h n -- }

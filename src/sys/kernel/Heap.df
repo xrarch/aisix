@@ -3,7 +3,7 @@
 
 externconst Pages
 
-(* ported from AISIX *)
+(* ported from ancient AISIX *)
 
 var KHeapStart 0x22000
 var KHeapSize 0x1DFFF

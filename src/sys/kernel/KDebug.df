@@ -107,6 +107,15 @@ procedure MonitorCommandsInit (* -- *)
 	pointerof DumpCTX
 	"ctx"
 	MonitorAddCommand
+
+	"Cause a kernel panic."
+	pointerof CommandPanic
+	"panic"
+	MonitorAddCommand
+end
+
+procedure CommandPanic { -- }
+	"debug\n" Panic
 end
 
 procedure DumpContext { con -- }
@@ -210,7 +219,7 @@ end
 
 procedure MonitorPrompt (* -- *)
 	MonitorLine@ MonitorLinePoint!
-	"> " Printf
+	"dbg> " Printf
 	MonitorLine@ 255 Gets
 end
 
@@ -317,7 +326,9 @@ procedure ListThreads (* -- *)
 			auto parent
 			thread@ Thread_Process + @ parent!
 
-			parent@ Process_Name + "(%s)\n" Printf
+			parent@ Process_Name + "(%s)\t" Printf
+
+			thread@ Thread_Name + "%s\n" Printf
 		end
 
 		1 i +=

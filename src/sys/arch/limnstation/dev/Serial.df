@@ -11,6 +11,9 @@ const SerialCmdRead 2
 const SerialCmdIntr 3
 const SerialCmdIntrOff 4
 
+externconst InterruptGet
+externconst InterruptAck
+
 procedure DrvSerialFoundNode { node -- }
 	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
 
@@ -32,17 +35,28 @@ end
 
 extern KDebug
 
-procedure SerialIntr { -- }
+externconst KLogWrite
+externconst KLogRead
+
+procedure SerialIntr { intn -- }
 	SerialIntrDisable
+
+	intn@ InterruptAck@ Call
 
 	auto c
 	while (SerialRead dup c! -1 ~=) end
 
+	auto sw
+	KLogWrite@ sw!
+
+	auto sr
+	KLogRead@ sr!
+
 	pointerof SerialRead pointerof SerialWrite KLogAttach
 
-	"serial break!\n" Printf
-
 	KDebug
+
+	sr@ sw@ KLogAttach
 
 	SerialIntrEnable
 end

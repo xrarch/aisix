@@ -107,7 +107,7 @@ procedure ThreadExit { -- }
 	end
 end
 
-procedure ThreadNew { process entry -- thread }
+procedure ThreadNew { process entry name -- thread }
 	ThreadAllocate thread!
 
 	if (thread@ ERR ==)
@@ -147,6 +147,8 @@ procedure ThreadNew { process entry -- thread }
 
 	vst@ entry@ uc@ CPUContextPrepare thread@ Thread_Context + !
 
+	thread@ Thread_Name + name@ THREADNAMELEN 1 - strncpy
+
 	1 process@ Process_Threads + +=
 end
 
@@ -154,8 +156,8 @@ procedure ThreadReady { thread -- }
 	TS_READY thread@ Thread_Status + !
 end
 
-procedure KernelThreadNew { entry -- thread }
-	KernelProcess@ entry@ ThreadNew thread!
+procedure KernelThreadNew { entry name -- thread }
+	KernelProcess@ entry@ name@ ThreadNew thread!
 end
 
 extern cswtch
@@ -308,7 +310,7 @@ procedure ProcessNew { entry name -- process }
 
 	auto mthread
 
-	process@ entry@ ThreadNew mthread!
+	process@ entry@ "main" ThreadNew mthread!
 
 	mthread@ process@ Process_MainThread + !
 

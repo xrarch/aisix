@@ -47,7 +47,7 @@ exception_vector:
 	mov    vs, k3            ; switch value stack
 
 	swd.l  vs, zero, badaddr ; push badaddr to the value stack
-	swd.l  vs, zero, ecause  ; push ecause to the value stack
+	swd.l  vs, zero, ecause  ; push the exception cause to the value stack
 	swd.l  vs, zero, sp      ; push the context we just saved to the value stack
 	jal    Exception         ; call Exception, to handle the exception
 
@@ -136,7 +136,6 @@ procedure Exception { badaddr ecause tf -- }
 		auto int
 		while (InterruptGet@ Call dup int!)
 			int@ Interrupt
-			int@ InterruptAck@ Call
 		end
 	end elseif (ecause@ EXCSYS ==)
 		InterruptEnable
