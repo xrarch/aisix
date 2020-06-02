@@ -114,7 +114,9 @@ end
 procedure PMMCalloc { pages -- addr }
 	pages@ PMMAlloc addr!
 
-	addr@ pages@ 4096 * 0 memset
+	if (addr@ iserr ~~)
+		addr@ pages@ 4096 * 0 memset
+	end
 end
 
 procedure PMMAlloc { pages -- addr }
@@ -131,7 +133,7 @@ procedure PMMAlloc { pages -- addr }
 	auto i
 	0 i!
 
-	ERR addr!
+	-ENOMEM addr!
 
 	auto rs
 	InterruptDisable rs!

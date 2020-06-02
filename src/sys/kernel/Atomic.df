@@ -1,0 +1,43 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var ORS 0
+var Levels 0
+
+procedure SaveLock { -- o l }
+	ORS@ o!
+	Levels@ l!
+end
+
+procedure RestoreLock { o l -- }
+	o@ ORS!
+	l@ Levels!
+end
+
+procedure Lock { -- }
+	if (Levels@ 0 ==)
+		InterruptDisable ORS!
+	end
+
+	1 Levels +=
+end
+
+procedure Unlock { -- }
+	if (Levels@ 0 ==)
+		"Unlock\n" Panic
+	end
+
+	1 Levels -=
+
+	if (Levels@ 0 ==)
+		ORS@ InterruptRestore
+	end
+end
+
+procedure AtomicAdd { v addr -- }
+	Lock
+
+	v@ addr@ +=
+
+	Unlock
+end

@@ -26,7 +26,7 @@ aisix.a3x: $(OBJ)
 %.o: %.s
 	$(AS) $< $@
 
-%.o: %.df
+%.o: %.df include/*.h
 	$(DC) $(DCFLAGS) $< $@
 
 cleanup:

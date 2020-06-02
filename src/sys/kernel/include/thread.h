@@ -15,6 +15,10 @@ struct Thread
 	
 	4 TrapFrame
 
+	4 WaitChan
+
+	4 Killed
+
 	THREADNAMELEN Name
 endstruct
 
@@ -48,11 +52,16 @@ struct Process
 	PROCNAMELEN Name
 endstruct
 
+struct SleepLock
+	4 Locked
+	4 OwnerThread
+endstruct
+
 externconst CurrentThread
 
-const THREADMAX 256
+const THREADMAX 128
 
-const PROCMAX 256
+const PROCMAX 64
 
 const KERNELSTACKPAGES 1
 
@@ -60,6 +69,7 @@ const VALUESTACKPAGES 1
 
 const TS_READY 1
 const TS_RUNNING 2
+const TS_SLEEPING 3
 
 extern JumpIntoScheduler (* -- *)
 
@@ -68,3 +78,11 @@ extern KernelThreadNew (* funcptr -- *)
 extern ThreadReady (* thread -- *)
 
 extern Yield (* -- *)
+
+extern Sleep (* channel -- killed *)
+
+extern Wakeup (* channel -- *)
+
+extern ProcessExit (* ret -- *)
+
+extern ThreadExit (* -- *)

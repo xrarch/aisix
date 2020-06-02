@@ -5,13 +5,16 @@ externconst Pages
 
 (* ported from ancient AISIX *)
 
-var KHeapStart 0x22000
-var KHeapSize 0x1DFFF
-var KHeapLast 0x22000
+var KHeapStart 0
+var KHeapSize 0
+var KHeapLast 0
 
 const MAGIC 0xCAFEBABE
+const BADMAGIC 0xACA7BABE
 
-const FRACTION 8
+const FRACTION 16
+
+const MINSIZE 32
 
 struct KHeapHeader
 	4 magic
@@ -23,13 +26,13 @@ endstruct
 
 procedure HeapInit (* -- *)
 	auto heapsizep
-	Pages@ FRACTION / 32 max heapsizep!
+	Pages@ FRACTION / MINSIZE max heapsizep!
 
 	heapsizep@ PMMAlloc dup KHeapStart! KHeapLast!
 
 	heapsizep@ 4096 * KHeapSize!
 
-	if (KHeapStart@ ERR ==)
+	if (KHeapStart@ iserr)
 		"couldn't allocate heap!\n" Panic
 	end
 
@@ -38,6 +41,7 @@ procedure HeapInit (* -- *)
 	KHeapSize@ KHeapStart@ KHeapHeader_size + !
 	0 KHeapStart@ KHeapHeader_last + !
 	0 KHeapStart@ KHeapHeader_allocated + !
+	0 KHeapStart@ KHeapHeader_next + !
 
 	MAGIC KHeapStart@ KHeapHeader_magic + !
 end
@@ -61,7 +65,7 @@ procedure HeapDump (* -- *)
 	auto stotal
 	0 stotal!
 
-	while (ept@ max@ <)
+	while (ept@)
 		auto size
 		ept@ KHeapHeader_size + @ size!
 
@@ -77,13 +81,17 @@ procedure HeapDump (* -- *)
 		auto magic
 		ept@ KHeapHeader_magic + @ magic!
 
+		auto next
+		ept@ KHeapHeader_next + @ next!
+
 		i@ "block %d:\n" Printf
-		ept@ "	ptr: 0x%x\n" Printf
-		size@ "	size: %d bytes\n" Printf
-		asz@ "	real size: %d bytes\n" Printf
-		last@ "	last: 0x%x\n" Printf
-		alloc@ "	allocated: %d\n" Printf
-		magic@ "	magic: %x\n" Printf
+		ept@ "\tptr: 0x%x\n" Printf
+		size@ "\tsize: %d bytes\n" Printf
+		asz@ "\treal size: %d bytes\n" Printf
+		last@ "\tlast: 0x%x\n" Printf
+		next@ "\tnext: 0x%x\n" Printf
+		alloc@ "\tallocated: %d\n" Printf
+		magic@ "\tmagic: %x\n" Printf
 
 		if (alloc@ 1 ==)
 			talloc@ size@ + talloc!
@@ -96,13 +104,8 @@ procedure HeapDump (* -- *)
 			break
 		end
 
-		if (magic@ MAGIC ~=)
-			magic@ "bad magic %x, very weird, breaking\n" Printf
-			break
-		end
-
 		stotal@ size@ + stotal!
-		ept@ size@ + ept!
+		ept@ KHeapHeader_next + @ ept!
 		1 i +=
 	end
 
@@ -111,206 +114,131 @@ end
 
 (* first-fit *)
 
-procedure private Malloc1 { max last sz } (* -- ptr *)
-	auto rs
-	InterruptDisable rs!
-
+procedure private Malloc1 { endp startp sz -- ptr }
 	if (sz@ 0 ==)
-		ERR rs@ InterruptRestore return
+		"Malloc: sz = 0\n" Panic
 	end
 
-	auto big
-	sz@ KHeapHeader_SIZEOF + 1 - big!
-
-	auto ept
-	if (last@ 0 ~=)
-		last@ ept!
-	end else
-		KHeapStart@ ept!
+	if (endp@ 0 ==)
+		KHeapStart@ KHeapSize@ + endp!
 	end
 
-	if (max@ 0 ==)
-		KHeapStart@ KHeapSize@ + max!
+	if (startp@ 0 ==)
+		KHeapStart@ startp!
 	end
 
-	while (ept@ max@ <)
-		if (ept@ KHeapHeader_magic + @ MAGIC ~=)
-			ept@ "Malloc: bad magic on block %x\n" Panic
+	auto mysize
+	sz@ KHeapHeader_SIZEOF + mysize!
+
+	auto thissize
+
+	startp@ ptr!
+
+	while (ptr@ endp@ <)
+		if (ptr@ 0 ==)
+			-ENOMEM ptr!
+			break
 		end
 
-		auto size
-		ept@ KHeapHeader_size + @ size!
+		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
+			HeapDump
+			ptr@ "Malloc: bad magic on %x\n" Panic
+		end
 
-		if (ept@ KHeapHeader_allocated + @ 0 ==)
-			if (size@ big@ >) (* fit *)
+		if (ptr@ KHeapHeader_allocated + @)
+			ptr@ KHeapHeader_next + @ ptr!
+			continue
+		end
 
-				(*
-				  do we need to split this block?
-				  or is it just the right size?
-				  if we need to split, but there's only enough room
-				  for the header or less, then
-				  don't even bother splitting.
-				*)
+		ptr@ KHeapHeader_size + @ thissize!
 
-				if (big@ 1 + size@ ==) (* just the right size *)
-					1 ept@ KHeapHeader_allocated + !
-					ept@ KHeapHeader_SIZEOF +
+		if (thissize@ mysize@ >=)
+			auto be
+			0 be!
 
-					ept@ KHeapLast!
-
-					rs@ InterruptRestore
-
-					return
-				end
-
-				(*
-				  we gotta split.
-				  is it worth it?
-				*)
-
-				auto nsize
-				size@ sz@ KHeapHeader_SIZEOF + - nsize!
-
-				if (nsize@ KHeapHeader_SIZEOF >) (* worth *)
-					auto nept
-					sz@ KHeapHeader_SIZEOF + ept@ + nept!
-
-					nsize@ nept@ KHeapHeader_size + !
-					ept@ nept@ KHeapHeader_last + !
-					0 nept@ KHeapHeader_allocated + !
-
-					MAGIC nept@ KHeapHeader_magic + !
-
-					sz@ KHeapHeader_SIZEOF + ept@ KHeapHeader_size + !
-				end
-
-				1 ept@ KHeapHeader_allocated + !
-				ept@ KHeapHeader_SIZEOF +
-
-				ept@ KHeapLast!
-
-				rs@ InterruptRestore
-
-				return
+			if (thissize@ mysize@ ==)
+				1 be!
+			end elseif (thissize@ mysize@ - KHeapHeader_SIZEOF <=)
+				1 be!
 			end
+
+			if (be@)
+				break
+			end
+
+			(* split the block *)
+
+			auto newsize
+			thissize@ mysize@ - newsize!
+
+			auto newblockp
+			ptr@ mysize@ + newblockp!
+
+			ptr@ KHeapHeader_next + @ newblockp@ KHeapHeader_next + !
+
+			mysize@ ptr@ KHeapHeader_size + !
+			newblockp@ ptr@ KHeapHeader_next + !
+
+			MAGIC newblockp@ KHeapHeader_magic + !
+			ptr@ newblockp@ KHeapHeader_last + !
+			newsize@ newblockp@ KHeapHeader_size + !
+			0 newblockp@ KHeapHeader_allocated + !
+
+			break
 		end
 
-		size@ ept +=
+		ptr@ KHeapHeader_next + @ ptr!
 	end
 
-	rs@ InterruptRestore
+	if (ptr@ iserr ~~)
+		ptr@ KHeapLast!
 
-	ERR return (* no space big enough *)
+		1 ptr@ KHeapHeader_allocated + !
+
+		KHeapHeader_SIZEOF ptr +=
+	end
 end
 
 procedure Malloc { sz -- ptr }
-	while (sz@ 4 % 0 ~=)
-		1 sz +=
+	if (sz@ 0x3 & 0 ~=)
+		sz@ 0xFFFFFFFC & 4 + sz!
 	end
+
+	Lock
 
 	0 KHeapLast@ sz@ Malloc1 ptr!
 
-	if (ptr@ ERR ~=)
+	if (ptr@ iserr ~~)
+		Unlock
+
 		return
 	end
 
 	KHeapLast@ 0 sz@ Malloc1 ptr!
 
-	if (ptr@ ERR ~=)
+	if (ptr@ iserr ~~)
+		Unlock
+
 		return
 	end
 
-	ERR ptr! return
+	Unlock
+
+	-ENOMEM ptr! return
 end
 
 procedure Calloc { sz -- ptr }
 	sz@ Malloc ptr!
 
-	if (ptr@ ERR ==)
-		ERR ptr!
+	if (ptr@ iserr)
 		return
 	end
 
 	ptr@ sz@ 0 memset
 end
 
-procedure private HeapMerge { ptr msize -- }
-	auto rs
-	InterruptDisable rs!
-
-	auto last
-	auto next
-	auto ns
-	auto lsize
-
-	(* check if there are adjacent free blocks to merge into this one *)
-
-	(* check to the left *)
-
-	ptr@ KHeapHeader_last + @ last!
-
-	if (last@ 0 ~=) (* we're not the first block *)
-		if (last@ KHeapHeader_magic + @ MAGIC ~=)
-			last@ ptr@ "%x: heapmerge left: bad magic on block 0x%x\n" Panic
-		end
-
-		if (last@ KHeapHeader_allocated + @ 0 ==) (* free, merge the boyo *)
-			if (ptr@ KHeapLast@ ==)
-				last@ KHeapLast!
-			end
-
-			last@ KHeapHeader_size + @ lsize!
-
-			lsize@ msize@ + ns!
-
-			ns@ last@ KHeapHeader_size + ! (* easy as 1, 2, 3 *)
-
-			last@ ns@ + next!
-			if (next@ KHeapStart@ KHeapSize@ + <)
-				last@ next@ KHeapHeader_last + ! (* next block points to last *)
-			end
-
-			last@ ptr!
-
-			ns@ msize!
-		end
-	end
-
-	(* check to the right *)
-
-	ptr@ msize@ + next!
-
-	if (next@ KHeapStart@ KHeapSize@ + <) (* we aren't the last block *)
-		if (next@ KHeapHeader_magic + @ MAGIC ~=)
-			next@ ptr@ "%x: heapmerge right: bad magic on block 0x%x\n" Panic
-		end
-
-		if (next@ KHeapHeader_allocated + @ 0 ==) (* free, merge the boyo *)
-			if (next@ KHeapLast@ ==)
-				ptr@ KHeapLast!
-			end
-
-			next@ KHeapHeader_size + @ lsize!
-
-			lsize@ msize@ + ns!
-
-			ptr@ ns@ + next!
-			if (next@ KHeapStart@ KHeapSize@ + <) (* next next points to us *)
-				ptr@ next@ KHeapHeader_last + !
-			end
-
-			ns@ ptr@ KHeapHeader_size + ! (* set OUR size to the combined size *)
-		end
-	end
-
-	rs@ InterruptRestore
-end
-
 procedure Free { ptr -- }
-	auto rs
-	InterruptDisable rs!
-
-	if (ptr@ 0 == ptr@ ERR == ||)
+	if (ptr@ 0 == ptr@ iserr ||)
 		ptr@ "tried to free 0x%x!\n" Panic
 	end
 
@@ -321,12 +249,64 @@ procedure Free { ptr -- }
 		ptr@ "Free: bad magic on block 0x%x\n" Panic
 	end
 
+	Lock
+
 	0 nptr@ KHeapHeader_allocated + !
 
-	auto msize
-	nptr@ KHeapHeader_size + @ msize!
+	auto link
+	nptr@ KHeapHeader_last + @ link!
 
-	nptr@ msize@ HeapMerge
+	auto tlink
 
-	rs@ InterruptRestore
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			link@ KHeapHeader_size + @
+			nptr@ KHeapHeader_size + @
+			+
+			link@ KHeapHeader_size + !
+
+			nptr@ KHeapHeader_next + @ link@ KHeapHeader_next + !
+
+			BADMAGIC nptr@ KHeapHeader_magic + !
+
+			nptr@ KHeapHeader_next + @ tlink!
+
+			if (tlink@)
+				link@ tlink@ KHeapHeader_last + !
+			end
+
+			if (nptr@ KHeapLast@ ==)
+				link@ KHeapLast!
+			end
+
+			link@ nptr!
+		end
+	end
+
+	nptr@ KHeapHeader_next + @ link!
+
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			link@ KHeapHeader_size + @
+			nptr@ KHeapHeader_size + @
+			+
+			nptr@ KHeapHeader_size + !
+
+			link@ KHeapHeader_next + @ nptr@ KHeapHeader_next + !
+
+			BADMAGIC link@ KHeapHeader_magic + !
+
+			if (link@ KHeapLast@ ==)
+				nptr@ KHeapLast!
+			end
+
+			link@ KHeapHeader_next + @ link!
+
+			if (link@)
+				nptr@ link@ KHeapHeader_last + !
+			end
+		end
+	end
+
+	Unlock
 end

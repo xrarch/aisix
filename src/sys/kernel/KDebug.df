@@ -26,6 +26,8 @@ procedure KDebug (* -- *)
 		MonitorPrompt
 		MonitorDoLine
 	end
+
+	MonitorLine@ Free
 end
 
 const ConsoleAssumedHeight 22
@@ -70,6 +72,10 @@ end
 
 extern HeapDump
 
+extern VFSPrintMounts
+
+extern DevFSPrintDevs
+
 procedure MonitorCommandsInit (* -- *)
 	ListCreate MonitorCommandList!
 
@@ -111,6 +117,16 @@ procedure MonitorCommandsInit (* -- *)
 	"Cause a kernel panic."
 	pointerof CommandPanic
 	"panic"
+	MonitorAddCommand
+
+	"Print the list of mountpoints."
+	pointerof VFSPrintMounts
+	"mounts"
+	MonitorAddCommand
+
+	"Print the list of devices."
+	pointerof DevFSPrintDevs
+	"devs"
 	MonitorAddCommand
 end
 
@@ -230,10 +246,10 @@ procedure MonitorDoLine (* -- *)
 	if (word@ strlen 0 ~=)
 		if (word@ MonitorDoCommand ~~)
 			word@ "%s is not a recognized command.\n" Printf
-		end else return end
+		end
+	end else
+		word@ Free
 	end
-
-	word@ Free
 end
 
 procedure MonitorParseWord { -- word }
@@ -262,6 +278,8 @@ procedure MonitorDoCommand { name -- ok }
 
 		n@ ListNodeNext n!
 	end
+
+	name@ Free
 
 	0 ok!
 end
@@ -328,7 +346,9 @@ procedure ListThreads (* -- *)
 
 			parent@ Process_Name + "(%s)\t" Printf
 
-			thread@ Thread_Name + "%s\n" Printf
+			thread@ Thread_Name + "%s\t" Printf
+
+			thread@ Thread_Status + @ "%d\n" Printf
 		end
 
 		1 i +=

@@ -1,0 +1,177 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table VNodeCache[VNCACHESIZE]
+
+var LastIndex 0
+
+procedure VNodeRemove { vnode -- res }
+	if (vnode@ VNode_Refs + @)
+		"tried to remove vnode with hanging references!\n" Panic
+	end
+
+	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_PutNode + @ Call res!
+end
+
+procedure VNodeNew { vnid mount -- vnode }
+	auto i
+	0 i!
+
+	if (LastIndex@ VNCACHESIZE >=)
+		0 LastIndex!
+	end
+
+	auto li
+	LastIndex@ li!
+
+	-ENOMEM vnode!
+
+	auto rs
+
+	auto ln
+
+	auto vn
+	
+	while (i@ VNCACHESIZE <)
+		InterruptDisable rs!
+
+		li@ i@ + VNCACHESIZE % ln!
+
+		[ln@]VNodeCache@ vn!
+
+		if (vn@ 0 ==)
+			ln@ 1 + LastIndex!
+			vn@ vnode!
+			break
+		end
+
+		if (vn@ VNode_Locked + @)
+			rs@ InterruptRestore
+			1 i +=
+			continue
+		end
+
+		if (vn@ VNode_Refs + @ 0 ==)
+			ln@ 1 + LastIndex!
+			vn@ vnode!
+			break
+		end
+
+		rs@ InterruptRestore
+
+		1 i +=
+	end
+
+	(* no free vnode thingies, return error *)
+	if (vnode@ iserr)
+		return
+	end
+
+	if (vnode@ 0 ==)
+		VNode_SIZEOF Calloc vnode!
+
+		if (vnode@ iserr)
+			rs@ InterruptRestore
+			return
+		end
+
+		vnode@ [ln@]VNodeCache!
+	end else
+		1 vnode@ VNode_Locked + !
+
+		rs@ InterruptRestore
+
+		if (vnode@ VNodeRemove iserr)
+			"VNodeNew PutNode\n" Panic
+		end
+
+		InterruptDisable rs!
+
+		vnode@ VNode_SIZEOF 0 memset
+	end
+
+	1 vnode@ VNode_Locked + !
+
+	rs@ InterruptRestore
+
+	vnid@ vnode@ VNode_VNID + !
+
+	mount@ vnode@ VNode_Mount + !
+
+	auto r
+
+	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_GetNode + @ Call r!
+
+	if (r@ iserr)
+		"VNodeNew GetNode\n" Panic
+	end
+
+	1 vnode@ VNode_Refs + !
+
+	0 vnode@ VNode_Locked + !
+end
+
+procedure VNodeRef { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 vnode@ VNode_Refs + +=
+
+	rs@ InterruptRestore
+end
+
+procedure VNodePut { vnode -- }
+	if (vnode@ VNode_Refs + @ 0 ==)
+		vnode@ "VNodePut %x\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	1 vnode@ VNode_Refs + -=
+
+	rs@ InterruptRestore
+end
+
+procedure VNodeGet { vnid mount -- vnode }
+	auto i
+	0 i!
+
+	auto rs
+
+	while (i@ VNCACHESIZE <)
+		InterruptDisable rs!
+
+		[i@]VNodeCache@ vnode!
+
+		if (vnode@)
+			if (vnode@ VNode_VNID + @ vnid@ ==)
+				if (vnode@ VNode_Mount + @ mount@ ==)
+					if (vnode@ VNode_Locked + @)
+						"implement sleeplocks\n" Panic
+					end
+
+					break
+				end
+			end
+		end
+
+		rs@ InterruptRestore
+
+		0 vnode!
+
+		1 i +=
+	end
+
+	if (vnode@ 0 ==)
+		vnid@ mount@ VNodeNew vnode!
+
+		if (vnode@ iserr)
+			return
+		end
+	end else
+		1 vnode@ VNode_Refs + +=
+
+		rs@ InterruptRestore
+	end
+end

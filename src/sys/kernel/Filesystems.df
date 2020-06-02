@@ -1,0 +1,265 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+externconst DevFSTab
+
+table FilesystemTab
+	pointerof DevFSTab
+endtable
+
+var MountListHead 0
+
+var Mounted 0
+
+var DevMount 0
+
+procedure VFSInit { -- }
+	"dev" "devfs" FSByName 0 VFSMount DevMount!
+
+	if (DevMount@ iserr)
+		"couldn't mount devfs\n" Panic
+	end
+end
+
+procedure VFSPath { path -- vnode }
+	auto pcomp
+	256 Calloc pcomp!
+
+	path@ pcomp@ '/' 255 strntok path!
+
+	auto mount
+	pcomp@ VFSMountByName mount!
+
+	if (mount@ 0 ==)
+		pcomp@ Free
+		-ENOENT vnode!
+		return
+	end
+
+	mount@ Mount_Root + @ vnode!
+
+	vnode@ VNodeRef
+
+	auto fs
+	mount@ Mount_Filesystem + @ fs!
+
+	auto rwd
+	fs@ Filesystem_RewindDir + @ rwd!
+
+	auto rd
+	fs@ Filesystem_ReadDir + @ rd!
+
+	auto ok
+
+	auto dirent
+
+	VDirent_SIZEOF Calloc dirent!
+
+	if (dirent@ iserr)
+		pcomp@ Free
+		vnode@ VNodePut
+		dirent@ vnode!
+		return
+	end
+
+	mount@ dirent@ VDirent_Mount + !
+
+	while (path@ 0 ~=)
+		vnode@ dirent@ VDirent_DirVNode + !
+
+		path@ pcomp@ '/' 255 strntok path!
+
+		if (vnode@ VNode_Type + @ VNODE_DIR ~=)
+			vnode@ VNodePut
+			-ENOTDIR vnode!
+			break
+		end
+
+		if (pcomp@ strlen 0 ==)
+			break
+		end
+
+		dirent@ rwd@ Call ok!
+
+		if (ok@ iserr)
+			vnode@ VNodePut
+			ok@ vnode!
+			break
+		end
+
+		auto found
+		0 found!
+
+		while (1)
+			dirent@ rd@ Call ok!
+
+			if (ok@ iserr)
+				vnode@ VNodePut
+				ok@ vnode!
+				break
+			end
+
+			if (dirent@ VDirent_Name + @ pcomp@ strcmp)
+				vnode@ VNodePut
+				dirent@ VDirent_VNID + @ mount@ VNodeGet vnode!
+
+				if (vnode@ iserr)
+					break
+				end
+
+				1 found!
+				break
+			end
+		end
+
+		if (found@ 0 ==)
+			break
+		end
+	end
+
+	dirent@ Free
+	pcomp@ Free
+end
+
+procedure FSByName { name -- fs }
+	auto i
+	while (i@ Filesystems <)
+		[i@]FilesystemTab@ fs!
+
+		if (fs@ Filesystem_Name + @ name@ strcmp)
+			return
+		end
+
+		1 i +=
+	end
+
+	0 fs!
+end
+
+procedure VFSMountByName { name -- mount }
+	MountListHead@ mount!
+
+	while (mount@)
+		if (mount@ Mount_Name + name@ strcmp)
+			return
+		end
+
+		mount@ Mount_Next + @ mount!
+	end
+
+	0 mount!
+end
+
+procedure private MountSanitize { name -- }
+	while (name@ gb 0 ~=)
+		if (name@ gb '/' ==)
+			'_' name@ sb
+		end
+
+		1 name +=
+	end
+end
+
+procedure VFSMount { name fs dev -- mount }
+	if (fs@ 0 ==)
+		"VFSMount: fs = 0\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	if (name@ VFSMountByName)
+		-EEXIST mount!
+		rs@ InterruptRestore
+		return
+	end
+
+	if (dev@ Device_Mount + @ 0 ~=)
+		-EBUSY mount!
+		rs@ InterruptRestore
+		return
+	end
+
+	Mount_SIZEOF Calloc mount!
+
+	if (mount@ iserr)
+		rs@ InterruptRestore
+		return
+	end
+
+	auto fsdata
+	auto root
+
+	fs@ mount@ Mount_Filesystem + !
+
+	dev@ mount@ Mount_Device + !
+
+	mount@ dev@ Device_Mount + !
+
+	rs@ InterruptRestore
+
+	name@ MountSanitize
+
+	mount@ Mount_Name + name@ MOUNTNAMELEN 1 - strncpy
+
+	mount@ fs@ Filesystem_Mount + @ Call fsdata! root!
+
+	if (root@ iserr)
+		mount@ Free
+		root@ mount!
+		return
+	end
+
+	fsdata@ mount@ Mount_FSData + !
+
+	root@ mount@ Mount_Root + ! 
+
+	InterruptDisable rs!
+
+	if (MountListHead@)
+		MountListHead@ mount@ Mount_Next + !
+		mount@ MountListHead@ Mount_Prev + !
+	end
+
+	mount@ MountListHead!
+
+	1 Mounted +=
+
+	rs@ InterruptRestore
+
+	auto devname
+	if (dev@)
+		dev@ Device_Name + devname!
+	end else
+		"(none)" devname!
+	end
+
+	fs@ Filesystem_Name + @ name@ devname@ "mounted %s on /%s as %s\n" Printf
+end
+
+procedure VFSPrintMounts { -- }
+	auto mount
+
+	MountListHead@ mount!
+	while (mount@)
+		auto dev
+		mount@ Mount_Device + @ dev!
+
+		auto name
+		mount@ Mount_Name + name!
+
+		auto fs
+		mount@ Mount_Filesystem + @ fs!
+
+		auto devname
+		if (dev@)
+			dev@ Device_Name + devname!
+		end else
+			"(none)" devname!
+		end
+
+		fs@ Filesystem_Name + @ name@ devname@ "%s on /%s as %s\n" Printf
+
+		mount@ Mount_Next + @ mount!
+	end
+end

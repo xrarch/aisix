@@ -114,9 +114,15 @@ procedure ExceptionInit (* -- *)
 	"
 end
 
+extern KDebug
+
+extern ThreadFree
+extern ThreadFreeSlot
+
 const EXCINTERRUPT 1
 const EXCSYS 2
 const EXCTIMER 5
+const EXCBREAK 6
 
 procedure Exception { badaddr ecause tf -- }
 	tf@ CurrentThread@ Thread_TrapFrame + !
@@ -143,18 +149,26 @@ procedure Exception { badaddr ecause tf -- }
 		(* handle syscall ... *)
 
 		0 InterruptRestore
+
+		if (CurrentThread@ Thread_Killed + @)
+			CurrentThread@ ThreadFree
+		end
+	end elseif (ecause@ EXCBREAK ==)
+		CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
+
+		KDebug
 	end else
+		ecause@ "ECAUSE: %x\n" Printf
+		tf@ Context_epc + @ "EPC: %x\n" Printf
+		tf@ Context_ers + @ "ERS: %x\n" Printf
+		badaddr@ "BADADDR: %x\n" Printf
+
 		if (tf@ Context_ers + @ 1 & 0 ==)
 			(* kernel mode exception, panic *)
-			ecause@ "ECAUSE: %x\n" Printf
-			tf@ Context_epc + @ "EPC: %x\n" Printf
-			tf@ Context_ers + @ "ERS: %x\n" Printf
-			badaddr@ "BADADDR: %x\n" Printf
-
 			"unexpected kernel mode exception!\n" Panic
 		end
 
-		"todo: terminate process\n" Panic
+		-1 ProcessExit
 	end
 end
 

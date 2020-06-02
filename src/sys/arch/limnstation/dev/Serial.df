@@ -14,7 +14,26 @@ const SerialCmdIntrOff 4
 externconst InterruptGet
 externconst InterruptAck
 
+table SerialDriver
+	"serial"
+	DEV_BLOCK
+	pointerof SerialOpen
+	pointerof SerialClose
+	pointerof SerialIoctl
+	pointerof SerialRead
+	pointerof SerialWrite
+	0
+endtable
+
+var SerialFound 0
+
 procedure DrvSerialFoundNode { node -- }
+	if (SerialFound@)
+		return
+	end
+
+	1 SerialFound!
+
 	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
 
 	if (SerialCmdPort@ 0 ==)
@@ -31,6 +50,30 @@ procedure DrvSerialFoundNode { node -- }
 	pointerof SerialIntr intn@ InterruptRegister
 
 	SerialIntrEnable
+
+	"serial0" SerialDriver 0 DeviceRegister drop
+	"serial1" SerialDriver 0 DeviceRegister drop
+	"serial2" SerialDriver 0 DeviceRegister drop
+end
+
+procedure SerialOpen { unit -- ok }
+	0 ok!
+end
+
+procedure SerialClose { unit -- ok }
+	0 ok!
+end
+
+procedure SerialIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+procedure SerialRead { buf len unit seek -- ok }
+	0 ok!
+end
+
+procedure SerialWrite { buf len unit seek -- ok }
+	0 ok!
 end
 
 extern KDebug
@@ -44,7 +87,7 @@ procedure SerialIntr { intn -- }
 	intn@ InterruptAck@ Call
 
 	auto c
-	while (SerialRead dup c! -1 ~=) end
+	while (SerialGetc dup c! -1 ~=) end
 
 	auto sw
 	KLogWrite@ sw!
@@ -52,7 +95,7 @@ procedure SerialIntr { intn -- }
 	auto sr
 	KLogRead@ sr!
 
-	pointerof SerialRead pointerof SerialWrite KLogAttach
+	pointerof SerialGetc pointerof SerialPutc KLogAttach
 
 	KDebug
 
@@ -79,7 +122,7 @@ procedure SerialIntrDisable { -- }
 	rs@ InterruptRestore
 end
 
-procedure SerialWrite { c -- }
+procedure SerialPutc { c -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -89,7 +132,7 @@ procedure SerialWrite { c -- }
 	rs@ InterruptRestore
 end
 
-procedure SerialRead { -- c }
+procedure SerialGetc { -- c }
 	auto rs
 	InterruptDisable rs!
 

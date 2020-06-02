@@ -37,9 +37,30 @@ procedure AISIX { ksz args -- ret }
 	(* the scheduler loop shouldn't return, but if it does, drop back out here *)
 end
 
+extern VFSInit
+
 procedure AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
 
+	VFSInit
+
+	pointerof Thread2 "thread2" KernelThreadNew ThreadReady
+
+	auto s0
+
 	while (1)
+		256 Malloc s0!
+
+		s0@ Free
+	end
+end
+
+procedure Thread2 { -- }
+	auto s0
+
+	while (1)
+		256 Malloc s0!
+
+		s0@ Free
 	end
 end

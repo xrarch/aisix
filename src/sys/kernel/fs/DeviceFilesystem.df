@@ -1,0 +1,194 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table DevFSTab
+	"devfs"
+	pointerof DevFSMount
+	pointerof DevFSGetNode
+	pointerof DevFSPutNode
+	pointerof DevFSSync
+	pointerof DevFSRewindDir
+	pointerof DevFSReadDir
+endtable
+public DevFSTab
+
+var DeviceListHead 0
+
+var Devices 0
+
+procedure DevByName { name -- dev }
+	DeviceListHead@ dev!
+	while (dev@)
+		if (dev@ Device_Name + name@ strcmp)
+			return
+		end
+
+		dev@ Device_Next + @ dev!
+	end
+
+	0 dev!
+end
+
+procedure DevByIndex { index -- dev }
+	auto i
+	0 i!
+
+	DeviceListHead@ dev!
+
+	while (i@ index@ <)
+		if (dev@ 0 ==)
+			break
+		end
+
+		dev@ Device_Next + @ dev!
+
+		1 i +=
+	end
+end
+
+procedure DeviceRegister { name driver unit -- device }
+	auto rs
+	InterruptDisable rs!
+
+	if (name@ DevByName)
+		ERR device!
+		rs@ InterruptRestore
+		return
+	end
+
+	rs@ InterruptRestore
+
+	Device_SIZEOF Calloc device!
+
+	if (device@ ERR ==)
+		return
+	end
+
+	unit@ Device_Unit + !
+
+	driver@ Device_Driver + !
+
+	device@ Device_Name + name@ DEVNAMELEN 1 - strncpy
+
+	InterruptDisable rs!
+
+	if (DeviceListHead@)
+		DeviceListHead@ device@ Device_Next + !
+		device@ DeviceListHead@ Device_Prev + !
+	end
+
+	device@ DeviceListHead!
+
+	1 Devices +=
+
+	rs@ InterruptRestore
+end
+
+procedure DevFSMount { mount -- root fsdata }
+	0 mount@ VNodeNew root!
+
+	0 fsdata!
+end
+
+procedure DevFSGetNode { vnode -- ok }
+	vnode@ "devfs get: %x\n" Printf
+
+	auto vnid
+	vnode@ VNode_VNID + @ vnid!
+
+	if (vnid@ 0 ==)
+		VNODE_DIR vnode@ VNode_Type + !
+
+		return
+	end
+
+	auto dev
+
+	vnid@ 1 - DevByIndex dev!
+
+	if (dev@ 0 ==)
+		ERR ok!
+	end
+
+	dev@ vnode@ VNode_FSData + !
+
+	auto type
+	dev@ Device_Driver + @ Driver_Type + @ type!
+
+	if (type@ DEV_CHAR ==)
+		VNODE_CHAR type!
+	end elseif (type@ DEV_BLOCK ==)
+		VNODE_BLOCK type!
+	end else
+		VNODE_FILE type!
+	end
+
+	type@ vnode@ VNode_Type + !
+
+	0 ok!
+end
+
+procedure DevFSPutNode { vnode -- ok }
+	vnode@ "devfs put: %x\n" Printf
+
+	0 ok!
+end
+
+procedure DevFSRewindDir { dirent -- ok }
+	0 ok!
+
+	1 dirent@ VDirent_Index + !
+end
+
+procedure DevFSReadDir { dirent -- ok }
+	0 ok!
+
+	auto vnode
+	dirent@ VDirent_DirVNode + @ vnode!
+
+	if (vnode@ VNode_VNID + @ 0 ~=)
+		"DevFSReadDir\n" Panic
+	end
+
+	auto index
+	dirent@ VDirent_Index + @ index!
+
+	if (index@ 1 - Devices@ >=)
+		-ENOENT ok!
+		return
+	end
+
+	if (index@ 0 ==)
+		"DevFSReadDir: index = 0\n" Panic
+	end
+
+	auto dev
+
+	index@ 1 - DevByIndex dev!
+
+	if (dev@ 0 ==)
+		-ENOENT ok!
+		return
+	end
+
+	index@ dirent@ VDirent_VNID + !
+
+	dev@ Device_Name + dirent@ VDirent_Name + !
+
+	index@ 1 + dirent@ VDirent_Index + !
+end
+
+procedure DevFSSync { vnode -- ok }
+
+end
+
+procedure DevFSPrintDevs { -- }
+	auto dev
+
+	DeviceListHead@ dev!
+	while (dev@)
+		dev@ Device_Name + "%s\n" Printf
+
+		dev@ Device_Next + @ dev!
+	end
+end

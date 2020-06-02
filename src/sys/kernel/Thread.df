@@ -26,7 +26,7 @@ procedure ThreadInit { -- }
 	auto process
 	pointerof AISIXInitialThread "kernel" ProcessNew process!
 
-	if (process@ ERR == KernelProcess@ process@ ~= ||)
+	if (process@ iserr KernelProcess@ process@ ~= ||)
 		"couldn't set up kernel process\n" Panic
 	end
 
@@ -37,19 +37,18 @@ procedure private ThreadAllocate { -- thread }
 	auto tid
 	0 tid!
 
-	ERR thread!
-
-	auto rs
+	-ENOMEM thread!
 
 	while (tid@ THREADMAX <)
-		InterruptDisable rs!
+		Lock
 
 		if ([tid@]Threads@ 0 ==)
 			auto ts
 			Thread_SIZEOF Calloc ts!
 
-			if (ts@ 0 ==)
-				ERR thread!
+			if (ts@ iserr)
+				Unlock
+				ts@ thread!
 				return
 			end
 
@@ -57,12 +56,12 @@ procedure private ThreadAllocate { -- thread }
 
 			ts@ [tid@]Threads!
 
-			rs@ InterruptRestore
-
-			ts@ thread! return
+			Unlock
+			ts@ thread!
+			return
 		end
 
-		rs@ InterruptRestore
+		Unlock
 
 		1 tid +=
 	end
@@ -72,45 +71,49 @@ procedure private ThreadFreeSlot { thread -- }
 	auto tid
 	thread@ Thread_TID + @ tid!
 
-	[tid@]Threads@ Free
-
 	0 [tid@]Threads!
+
+	thread@ Free
 end
 
 procedure ThreadFree { thread -- }
 	KERNELSTACKPAGES thread@ Thread_KernelStack + @ PMMFree
 	VALUESTACKPAGES thread@ Thread_ValueStack + @ PMMFree
 
-	auto process
-	thread@ Thread_Process + @ process!
-
-	1 process@ Process_Threads + -=
-
 	thread@ ThreadFreeSlot
+end
+
+procedure ThreadKill { thread -- }
+	if (thread@ Thread_Status + @ TS_SLEEPING ~=)
+		thread@ ThreadFree
+	end else
+		1 thread@ Thread_Killed + !
+		TS_READY thread@ Thread_Status + !
+	end
 end
 
 procedure ThreadExit { -- }
 	auto thread
 	CurrentThread@ thread!
 
-	thread@ ThreadFree
-
 	auto process
 	thread@ Thread_Process + @ process!
 
-	if (process@ KernelProcess@ ==)
-		"a kernel thread exited\n" Panic
+	if (process@ Process_Threads + @ 1 ==)
+		0 ProcessExit
+	end else
+		1 process@ Process_Threads + -=
+
+		thread@ ThreadKill
 	end
 
-	if (process@ Process_Threads + @ 0 ==)
-		0 ProcessExit
-	end
+	JumpIntoScheduler
 end
 
 procedure ThreadNew { process entry name -- thread }
 	ThreadAllocate thread!
 
-	if (thread@ ERR ==)
+	if (thread@ iserr)
 		return
 	end
 
@@ -119,19 +122,19 @@ procedure ThreadNew { process entry name -- thread }
 	auto stack
 	KERNELSTACKPAGES PMMCalloc stack!
 
-	if (stack@ ERR ==)
+	if (stack@ iserr)
 		thread@ ThreadFreeSlot
-		ERR thread!
+		stack@ thread!
 		return
 	end
 
 	auto vs
 	VALUESTACKPAGES PMMCalloc vs!
 
-	if (vs@ ERR ==)
+	if (vs@ iserr)
 		KERNELSTACKPAGES stack@ PMMFree
 		thread@ ThreadFreeSlot
-		ERR thread!
+		vs@ thread!
 		return
 	end
 
@@ -174,7 +177,7 @@ procedure Scheduler { -- }
 		auto nthread
 		ThreadPick nthread!
 
-		if (nthread@ -1 ==)
+		if (nthread@ iserr)
 			CPUIdle
 		end else
 			nthread@ CurrentThread!
@@ -187,7 +190,13 @@ procedure Scheduler { -- }
 end
 
 procedure JumpIntoScheduler { -- }
+	auto o
+	auto l
+	SaveLock l! o!
+
 	CurrentThread@ Thread_Context + SchedulerContext@ cswtch
+
+	o@ l@ RestoreLock
 end
 
 procedure ThreadPick { -- thread }
@@ -216,13 +225,52 @@ procedure ThreadPick { -- thread }
 		1 index +=
 	end
 
-	ERR thread!
+	-ESRCH thread!
 end
 
 procedure Yield { -- }
 	TS_READY CurrentThread@ Thread_Status + !
 
 	JumpIntoScheduler
+end
+
+procedure Sleep { channel -- killed }
+	Lock
+
+	channel@ CurrentThread@ Thread_WaitChan + !
+
+	TS_SLEEPING CurrentThread@ Thread_Status + !
+
+	JumpIntoScheduler
+
+	Unlock
+
+	CurrentThread@ Thread_Killed + @ killed!
+end
+
+procedure Wakeup { channel -- }
+	auto i
+	0 i!
+
+	while (i@ THREADMAX <)
+		Lock
+
+		auto thr
+		[i@]Threads@ thr!
+
+		if (thr@)
+			if (thr@ Thread_Status + @ TS_SLEEPING ==)
+				if (thr@ Thread_WaitChan + @ channel@ ==)
+					0 thr@ Thread_WaitChan + !
+					TS_READY thr@ Thread_Status + !
+				end
+			end
+		end
+
+		Unlock
+
+		1 i +=
+	end
 end
 
 (* =========== process management =========== *)
@@ -237,19 +285,18 @@ procedure private ProcessAllocate { -- process }
 		"ProcessAllocate: ran out of PIDs, somebody redo this algorithm\n" Panic
 	end
 
-	ERR process!
-
-	auto rs
+	-ENOMEM process!
 
 	while (i@ PROCMAX <)
-		InterruptDisable rs!
+		Lock
 
 		if ([i@]Processes@ 0 ==)
 			auto ps
 			Process_SIZEOF Calloc ps!
 
-			if (ps@ 0 ==)
-				ERR process!
+			if (ps@ iserr)
+				Unlock
+				ps@ process!
 				return
 			end
 
@@ -261,12 +308,12 @@ procedure private ProcessAllocate { -- process }
 
 			ps@ [i@]Processes!
 
-			rs@ InterruptRestore
-
-			ps@ process! return
+			Unlock
+			ps@ process!
+			return
 		end
 
-		rs@ InterruptRestore
+		Unlock
 
 		1 i +=
 	end
@@ -276,15 +323,15 @@ procedure private ProcessFreeSlot { process -- }
 	auto index
 	process@ Process_Index + @ index!
 
-	[index@]Processes@ Free
-
 	0 [index@]Processes!
+
+	[index@]Processes@ Free
 end
 
 procedure ProcessNew { entry name -- process }
 	ProcessAllocate process!
 
-	if (process@ ERR ==)
+	if (process@ iserr)
 		return
 	end
 
@@ -314,9 +361,9 @@ procedure ProcessNew { entry name -- process }
 
 	mthread@ process@ Process_MainThread + !
 
-	if (mthread@ ERR ==)
+	if (mthread@ iserr)
 		process@ ProcessFreeSlot
-		ERR process!
+		mthread@ process!
 		return
 	end
 
@@ -336,14 +383,16 @@ procedure ProcessDestroyThreads { process -- }
 
 		if (thread@)
 			if (thread@ Thread_Process + @ process@ ==)
-				thread@ ThreadFree
+				thread@ ThreadKill
+
+				1 process@ Process_Threads + -=
 			end
 		end
 
 		1 i +=
 	end
 
-	if (process@ Process_Threads + @ 0 >) (* logically, this can't happen, but if it does I wanna know about it *)
+	if (process@ Process_Threads + @ 0 ~=)
 		"ProcessDestroyThreads: process wasn't murdered hard enough\n" Panic
 	end
 end
@@ -366,12 +415,11 @@ procedure ProcessExit { ret -- }
 	auto process
 	CurrentThread@ Thread_Process + @ process!
 
-	if (process@ Process_PID + @ KERNELPID ==)
+	if (process@ KernelProcess@ ==)
 		"kernel process exited!\n" Panic
 	end
 
-	auto rs
-	InterruptDisable rs!
+	Lock
 
 	ret@ process@ Process_ReturnValue + !
 
@@ -399,5 +447,5 @@ procedure ProcessExit { ret -- }
 		1 i +=
 	end
 
-	rs@ InterruptRestore
+	Unlock
 end
