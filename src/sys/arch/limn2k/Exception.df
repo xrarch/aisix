@@ -81,9 +81,9 @@ cswtch:
 	mov    sp, r1
 
 	lgpr   sp
-	lio.l  rs, sp,   Context_ers
 	lio.l  lr, sp,   Context_lr
 	lio.l  timer, sp, Context_timer
+	lio.l  rs, sp,   Context_ers
 	addi.i sp, Context_SIZEOF
 
 	ret
@@ -127,6 +127,26 @@ const EXCBREAK 6
 procedure Exception { badaddr ecause tf -- }
 	tf@ CurrentThread@ Thread_TrapFrame + !
 
+	if (tf@ Context_ers + @ 1 & 0 ==)
+
+		(* check stack bounds *)
+		if (tf@ Context_sp + @ CurrentThread@ Thread_KernelStack + @ <)
+			"kernel thread had a stack overflow at some point!\n" Panic
+		end
+
+		if (tf@ Context_sp + @ CurrentThread@ Thread_KernelStackTop + @ >)
+			"kernel thread had a stack underflow at some point!\n" Panic
+		end
+
+		if (tf@ Context_vs + @ CurrentThread@ Thread_ValueStack + @ <)
+			"kernel thread had a value stack overflow at some point!\n" Panic
+		end
+
+		if (tf@ Context_vs + @ CurrentThread@ Thread_ValueStackTop + @ >)
+			"kernel thread had a value stack underflow at some point!\n" Panic
+		end
+	end
+
 	if (ecause@ EXCTIMER ==)
 		PlatformSetTimer
 
@@ -149,10 +169,6 @@ procedure Exception { badaddr ecause tf -- }
 		(* handle syscall ... *)
 
 		0 InterruptRestore
-
-		if (CurrentThread@ Thread_Killed + @)
-			CurrentThread@ ThreadFree
-		end
 	end elseif (ecause@ EXCBREAK ==)
 		CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
 
@@ -169,6 +185,10 @@ procedure Exception { badaddr ecause tf -- }
 		end
 
 		-1 ProcessExit
+	end
+
+	if (CurrentThread@ Thread_Killed + @)
+		CurrentThread@ ThreadFree
 	end
 end
 

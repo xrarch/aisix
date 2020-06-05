@@ -13,13 +13,68 @@ var Mounted 0
 
 var DevMount 0
 
+buffer MountListMutex Mutex_SIZEOF
+
+procedure LockMountList { -- killed }
+	auto rs
+	InterruptDisable rs!
+
+	MountListMutex LockMutex killed!
+
+	rs@ InterruptRestore
+end
+
+procedure UnlockMountList { -- }
+	auto rs
+	InterruptDisable rs!
+
+	MountListMutex UnlockMutex
+
+	rs@ InterruptRestore
+end
+
+procedure MountRef { mount -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 mount@ Mount_MRefs + +=
+
+	rs@ InterruptRestore
+end
+
+procedure MountUnref { mount -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (mount@ Mount_MRefs + @ 0 ==)
+		"MountUnref\n" Panic
+	end
+
+	1 mount@ Mount_MRefs + -=
+
+	rs@ InterruptRestore
+end
+
 procedure VFSInit { -- }
 	"dev" "devfs" FSByName 0 VFSMount DevMount!
 
 	if (DevMount@ iserr)
-		"couldn't mount devfs\n" Panic
+		[DevMount@ abs]ErrorNames@ "couldn't mount devfs: %s\n" Panic
 	end
+
+	"mount list" MountListMutex InitMutex
+
+	auto syncw
+	pointerof VFSSyncWorker "sync" KernelThreadNew syncw!
+
+	if (syncw@ iserr)
+		[syncw@ abs]ErrorNames@ "couldn't start sync worker: %s\n" Panic
+	end
+
+	syncw@ ThreadReady
 end
+
+externconst Levels
 
 procedure VFSPath { path -- vnode }
 	auto pcomp
@@ -27,18 +82,50 @@ procedure VFSPath { path -- vnode }
 
 	path@ pcomp@ '/' 255 strntok path!
 
+	if (LockMountList)
+		pcomp@ Free
+		-EINTR vnode!
+		return
+	end
+
 	auto mount
 	pcomp@ VFSMountByName mount!
 
 	if (mount@ 0 ==)
 		pcomp@ Free
 		-ENOENT vnode!
+		UnlockMountList
+		return
+	end
+
+	if (mount@ iserr)
+		pcomp@ Free
+		mount@ vnode!
+		UnlockMountList
+		return
+	end
+
+	if (mount@ Mount_Busy + @)
+		pcomp@ Free
+		mount@ MountUnref
+		-EBUSY vnode!
+		UnlockMountList
 		return
 	end
 
 	mount@ Mount_Root + @ vnode!
 
+	if (vnode@ VNodeLock)
+		pcomp@ Free
+		-EINTR vnode!
+		mount@ MountUnref
+		UnlockMountList
+		return
+	end
+
 	vnode@ VNodeRef
+
+	UnlockMountList
 
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
@@ -59,6 +146,7 @@ procedure VFSPath { path -- vnode }
 		pcomp@ Free
 		vnode@ VNodePut
 		dirent@ vnode!
+		mount@ MountUnref
 		return
 	end
 
@@ -117,6 +205,7 @@ procedure VFSPath { path -- vnode }
 		end
 	end
 
+	mount@ MountUnref
 	dirent@ Free
 	pcomp@ Free
 end
@@ -137,10 +226,16 @@ procedure FSByName { name -- fs }
 end
 
 procedure VFSMountByName { name -- mount }
+	if (MountListMutex Mutex_OwnerThread + @ CurrentThread@ ~=)
+		"VFSMountByName\n" Panic
+	end
+
 	MountListHead@ mount!
 
 	while (mount@)
 		if (mount@ Mount_Name + name@ strcmp)
+			mount@ MountRef
+
 			return
 		end
 
@@ -165,26 +260,43 @@ procedure VFSMount { name fs dev -- mount }
 		"VFSMount: fs = 0\n" Panic
 	end
 
-	auto rs
-	InterruptDisable rs!
-
-	if (name@ VFSMountByName)
-		-EEXIST mount!
-		rs@ InterruptRestore
+	if (LockMountList)
+		-EINTR mount!
 		return
 	end
 
-	if (dev@ Device_Mount + @ 0 ~=)
-		-EBUSY mount!
-		rs@ InterruptRestore
+	name@ VFSMountByName mount!
+
+	if (mount@)
+		UnlockMountList
+		mount@ MountUnref
+		-EEXIST mount!
 		return
 	end
 
 	Mount_SIZEOF Calloc mount!
 
 	if (mount@ iserr)
-		rs@ InterruptRestore
+		UnlockMountList
 		return
+	end
+
+	auto rs
+
+	if (dev@)
+		InterruptDisable rs!
+
+		if (dev@ Device_Mount + @ 0 ~=)
+			rs@ InterruptRestore
+			UnlockMountList
+			mount@ Free
+			-EBUSY mount!
+			return
+		end
+
+		mount@ dev@ Device_Mount + !
+
+		rs@ InterruptRestore
 	end
 
 	auto fsdata
@@ -193,10 +305,6 @@ procedure VFSMount { name fs dev -- mount }
 	fs@ mount@ Mount_Filesystem + !
 
 	dev@ mount@ Mount_Device + !
-
-	mount@ dev@ Device_Mount + !
-
-	rs@ InterruptRestore
 
 	name@ MountSanitize
 
@@ -207,14 +315,16 @@ procedure VFSMount { name fs dev -- mount }
 	if (root@ iserr)
 		mount@ Free
 		root@ mount!
+		0 dev@ Device_Mount + !
+		UnlockMountList
 		return
 	end
 
 	fsdata@ mount@ Mount_FSData + !
 
-	root@ mount@ Mount_Root + ! 
+	root@ mount@ Mount_Root + !
 
-	InterruptDisable rs!
+	root@ VNodeUnlock 
 
 	if (MountListHead@)
 		MountListHead@ mount@ Mount_Next + !
@@ -225,7 +335,7 @@ procedure VFSMount { name fs dev -- mount }
 
 	1 Mounted +=
 
-	rs@ InterruptRestore
+	UnlockMountList
 
 	auto devname
 	if (dev@)
@@ -235,6 +345,112 @@ procedure VFSMount { name fs dev -- mount }
 	end
 
 	fs@ Filesystem_Name + @ name@ devname@ "mounted %s on /%s as %s\n" Printf
+end
+
+procedure VFSUnmount { mount -- res }
+	auto rs
+	InterruptDisable rs!
+
+	if (mount@ Mount_MRefs + @ 0 ~=)
+		-EBUSY res!
+		rs@ InterruptRestore
+		return
+	end
+
+	if (mount@ Mount_VRefs + @ 1 >)
+		-EBUSY res!
+		rs@ InterruptRestore
+		return
+	end
+
+	if (LockMountList)
+		rs@ InterruptRestore
+		-EINTR res!
+		return
+	end
+
+	1 mount@ Mount_Busy + !
+
+	mount@ MountRef
+
+	rs@ InterruptRestore
+
+	auto root
+	mount@ Mount_Root + @ root!
+
+	if (root@ VNode_Refs + @ 1 ~=)
+		(* should have caught this earlier *)
+		root@ VNode_Refs + @ "VFSUnmount: root has %d references\n" Panic
+	end
+
+	root@ VNodeUnref
+
+	mount@ 1 SyncVNodes res!
+
+	if (res@ iserr)
+		[res@ abs]ErrorNames@ "VFSUnmount: couldn't sync: %s\n" Printf
+	end
+	
+	(* for when block cache works: *)
+	(* mount@ Mount_Device + @ SyncBlocks *)
+
+	auto link
+	mount@ Mount_Next + @ link!
+
+	if (mount@ MountListHead@ ==)
+		link@ MountListHead!
+	end
+
+	if (link@)
+		mount@ Mount_Prev + @ link@ Mount_Prev + !
+	end
+
+	mount@ Mount_Prev + @ link!
+
+	if (link@)
+		mount@ Mount_Next + @ link@ Mount_Next + !
+	end
+
+	UnlockMountList
+
+	auto fs
+	mount@ Mount_Filesystem + @ fs!
+
+	mount@ fs@ Filesystem_Unmount + @ Call res!
+
+	mount@ Free
+end
+
+procedure VFSSyncWorker { -- }
+	"vfs sync worker!\n" Printf
+
+	while (1)
+		if (3000 SleepFor)
+			"sync thread killed in its sleep\n" Panic
+		end
+
+		if (LockMountList)
+			"sync thread killed while locking mount list\n" Panic
+		end
+
+		auto mount
+
+		MountListHead@ mount!
+
+		while (mount@)
+			auto r
+
+			mount@ 0 SyncVNodes r!
+
+			if (r@ -EINTR ==)
+				"sync thread killed\n" Panic
+			end
+
+			mount@ Mount_Next + @ mount!
+		end
+
+		UnlockMountList
+	end
 end
 
 procedure VFSPrintMounts { -- }

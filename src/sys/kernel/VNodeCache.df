@@ -3,14 +3,63 @@
 
 table VNodeCache[VNCACHESIZE]
 
+buffer VNodeCacheMutex Mutex_SIZEOF
+
+procedure LockVCache { -- killed }
+	auto rs
+	InterruptDisable rs!
+
+	VNodeCacheMutex LockMutex killed!
+
+	rs@ InterruptRestore
+end
+
+procedure UnlockVCache { -- }
+	auto rs
+	InterruptDisable rs!
+
+	VNodeCacheMutex UnlockMutex
+
+	rs@ InterruptRestore
+end
+
 var LastIndex 0
+
+procedure VNodeRef { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 vnode@ VNode_Refs + +=
+
+	1 vnode@ VNode_Mount + @ Mount_VRefs + +=
+
+	rs@ InterruptRestore
+end
+
+procedure VNodeUnref { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (vnode@ VNode_Refs + @ 0 ==)
+		vnode@ "VNodeUnref %x\n" Panic
+	end
+
+	1 vnode@ VNode_Refs + -=
+
+	1 vnode@ VNode_Mount + @ Mount_VRefs + -=
+
+	rs@ InterruptRestore
+end
 
 procedure VNodeRemove { vnode -- res }
 	if (vnode@ VNode_Refs + @)
 		"tried to remove vnode with hanging references!\n" Panic
 	end
 
-	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_PutNode + @ Call res!
+	auto mount
+	vnode@ VNode_Mount + @ mount!
+
+	vnode@ mount@ Mount_Filesystem + @ Filesystem_PutNode + @ Call res!
 end
 
 procedure VNodeNew { vnid mount -- vnode }
@@ -26,15 +75,18 @@ procedure VNodeNew { vnid mount -- vnode }
 
 	-ENOMEM vnode!
 
-	auto rs
-
 	auto ln
 
 	auto vn
 	
-	while (i@ VNCACHESIZE <)
-		InterruptDisable rs!
+	auto rs
 
+	if (LockVCache)
+		-EINTR vnode!
+		return
+	end
+
+	while (i@ VNCACHESIZE <)
 		li@ i@ + VNCACHESIZE % ln!
 
 		[ln@]VNodeCache@ vn!
@@ -45,25 +97,18 @@ procedure VNodeNew { vnid mount -- vnode }
 			break
 		end
 
-		if (vn@ VNode_Locked + @)
-			rs@ InterruptRestore
-			1 i +=
-			continue
-		end
-
 		if (vn@ VNode_Refs + @ 0 ==)
 			ln@ 1 + LastIndex!
 			vn@ vnode!
 			break
 		end
 
-		rs@ InterruptRestore
-
 		1 i +=
 	end
 
 	(* no free vnode thingies, return error *)
 	if (vnode@ iserr)
+		UnlockVCache
 		return
 	end
 
@@ -71,66 +116,88 @@ procedure VNodeNew { vnid mount -- vnode }
 		VNode_SIZEOF Calloc vnode!
 
 		if (vnode@ iserr)
-			rs@ InterruptRestore
+			UnlockVCache
 			return
 		end
 
 		vnode@ [ln@]VNodeCache!
+
+		ln@ vnode@ VNode_Index + !
+
+		"vnode" vnode@ VNode_Mutex + InitMutex
 	end else
-		1 vnode@ VNode_Locked + !
-
-		rs@ InterruptRestore
-
-		if (vnode@ VNodeRemove iserr)
-			"VNodeNew PutNode\n" Panic
+		(* make sure nobody else is using the vnode before we trash it.
+		   though that shouldn't be possible because the refcount must be
+		   zero, but this way an innocent thread might sleep forever
+		   instead of crashing the entire system, so for stability reasons
+		   here we go *)
+		if (vnode@ VNodeLock)
+			UnlockVCache
+			-EINTR vnode!
+			return
 		end
 
-		InterruptDisable rs!
+		if (vnode@ VNode_Refs + @ 0 ~=)
+			"VNodeNew: Refs\n" Panic
+		end
+
+		if (vnode@ VNodeRemove iserr)
+			"VNodeNew: VNodeRemove\n" Panic
+		end
 
 		vnode@ VNode_SIZEOF 0 memset
+
+		"vnode" vnode@ VNode_Mutex + InitMutex
 	end
-
-	1 vnode@ VNode_Locked + !
-
-	rs@ InterruptRestore
 
 	vnid@ vnode@ VNode_VNID + !
 
 	mount@ vnode@ VNode_Mount + !
+
+	vnode@ VNodeRef
+
+	if (vnode@ VNodeLock)
+		vnode@ Free
+		0 [ln@]VNodeCache!
+
+		UnlockVCache
+		-EINTR vnode!
+		return
+	end
+
+	UnlockVCache
 
 	auto r
 
 	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_GetNode + @ Call r!
 
 	if (r@ iserr)
-		"VNodeNew GetNode\n" Panic
+		"VNodeNew: GetNode\n" Panic
 	end
-
-	1 vnode@ VNode_Refs + !
-
-	0 vnode@ VNode_Locked + !
 end
 
-procedure VNodeRef { vnode -- }
+procedure VNodeLock { vnode -- killed }
 	auto rs
 	InterruptDisable rs!
 
-	1 vnode@ VNode_Refs + +=
+	vnode@ VNode_Mutex + LockMutex killed!
+
+	rs@ InterruptRestore
+end
+
+procedure VNodeUnlock { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	vnode@ VNode_Mutex + UnlockMutex
 
 	rs@ InterruptRestore
 end
 
 procedure VNodePut { vnode -- }
-	if (vnode@ VNode_Refs + @ 0 ==)
-		vnode@ "VNodePut %x\n" Panic
-	end
+	vnode@ VNodeUnref
 
-	auto rs
-	InterruptDisable rs!
-
-	1 vnode@ VNode_Refs + -=
-
-	rs@ InterruptRestore
+	vnode@ VNodeUnlock
 end
 
 procedure VNodeGet { vnid mount -- vnode }
@@ -138,17 +205,35 @@ procedure VNodeGet { vnid mount -- vnode }
 	0 i!
 
 	auto rs
+	InterruptDisable rs!
+
+	if (mount@ Mount_Busy + @)
+		-EBUSY vnode!
+		rs@ InterruptRestore
+		return
+	end
+
+	if (LockVCache)
+		-EINTR vnode!
+		rs@ InterruptRestore
+		return
+	end
+
+	mount@ MountRef
+
+	rs@ InterruptRestore
 
 	while (i@ VNCACHESIZE <)
-		InterruptDisable rs!
-
 		[i@]VNodeCache@ vnode!
 
 		if (vnode@)
 			if (vnode@ VNode_VNID + @ vnid@ ==)
 				if (vnode@ VNode_Mount + @ mount@ ==)
-					if (vnode@ VNode_Locked + @)
-						"implement sleeplocks\n" Panic
+					if (vnode@ VNodeLock)
+						UnlockVCache
+						-EINTR vnode!
+						mount@ MountUnref
+						return
 					end
 
 					break
@@ -156,22 +241,101 @@ procedure VNodeGet { vnid mount -- vnode }
 			end
 		end
 
-		rs@ InterruptRestore
-
 		0 vnode!
 
 		1 i +=
 	end
 
+	UnlockVCache
+
 	if (vnode@ 0 ==)
 		vnid@ mount@ VNodeNew vnode!
 
 		if (vnode@ iserr)
+			mount@ MountUnref
 			return
 		end
 	end else
-		1 vnode@ VNode_Refs + +=
-
-		rs@ InterruptRestore
+		vnode@ VNodeRef
 	end
+
+	mount@ MountUnref
+end
+
+procedure SyncVNodes { mount remove -- res }
+	auto i
+	0 i!
+
+	0 res!
+
+	auto rs
+	InterruptDisable rs!
+
+	if (mount@ Mount_Busy + @)
+		if (remove@ ~~) (* this exception is made because this is also called by VFSUnmount which sets the busy flag *)
+			rs@ InterruptRestore
+			-EBUSY res!
+			return
+		end
+	end
+
+	if (LockVCache)
+		rs@ InterruptRestore
+		-EINTR res!
+		return
+	end
+
+	mount@ MountRef
+
+	rs@ InterruptRestore
+
+	auto fs
+	mount@ Mount_Filesystem + @ fs!
+
+	while (i@ VNCACHESIZE <)
+		auto vnode
+		[i@]VNodeCache@ vnode!
+
+		if (vnode@ 0 ==)
+			1 i +=
+			continue
+		end
+
+		if (vnode@ VNode_Mount + @ mount@ ==)
+			if (vnode@ VNodeLock)
+				-EINTR res!
+				mount@ MountUnref
+				UnlockVCache
+				return
+			end
+
+			if (remove@)
+				if (vnode@ VNodeRemove iserr)
+					"SyncVNodes: VNodeRemove\n" Panic
+				end
+
+				0 [vnode@ VNode_Index + @]VNodeCache!
+				vnode@ Free
+			end else
+				vnode@ fs@ Filesystem_Sync + @ Call res! (* ignore the result, just keep syncing *)
+
+				if (res@ iserr)
+					[res@ abs]ErrorNames@ vnode@ "(%x) sync error: %s\n" Printf
+				end
+
+				vnode@ VNodeUnlock
+			end
+
+			1 i +=
+			continue
+		end
+
+		1 i +=
+	end
+
+	mount@ MountUnref
+
+	UnlockVCache
+
+	0 res!
 end

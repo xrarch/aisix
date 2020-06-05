@@ -39,28 +39,103 @@ end
 
 extern VFSInit
 
+extern ThreadKill
+
+externconst Levels
+
+var Done 0
+
 procedure AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
 
 	VFSInit
 
-	pointerof Thread2 "thread2" KernelThreadNew ThreadReady
+	auto zonk
 
-	auto s0
+	pointerof Thread2 "thread2" KernelThreadNew zonk!
+
+	zonk@ ThreadReady
+
+	pointerof Thread3 "thread3" KernelThreadNew ThreadReady
+
+	while (Getc ERR ==) end
+
+	2 Done!
+
+	while (Done@) end
+
+	"done\n" Printf
+
+	auto buf
+	256 Malloc buf!
 
 	while (1)
-		256 Malloc s0!
+		buf@ 255 Gets
 
-		s0@ Free
+		auto vnode
+
+		buf@ VFSPath vnode!
+
+		if (vnode@ iserr)
+			[vnode@ abs]ErrorNames@ "%s\n" Printf
+		end else
+			auto m
+			vnode@ VNode_Mount + @ m!
+
+			vnode@ VNodePut
+
+			m@ Mount_VRefs + @ "%d\n" Printf
+			m@ Mount_MRefs + @ "%d\n" Printf
+
+			m@ VFSUnmount vnode!
+
+			if (vnode@ iserr)
+				[vnode@ abs]ErrorNames@ "unmount: %s\n" Printf
+			end
+		end 
 	end
 end
 
 procedure Thread2 { -- }
-	auto s0
-
 	while (1)
-		256 Malloc s0!
+		if (Done@)
+			1 Done -=
 
-		s0@ Free
+			ThreadExit
+		end
+
+		auto vn
+
+		"/dev/serial0" VFSPath vn!
+
+		if (vn@ iserr)
+			[vn@ abs]ErrorNames@ "%s\n" Printf
+		end else
+			vn@ VNodePut
+		end
+
+		Yield
+	end
+end
+
+procedure Thread3 { -- }
+	while (1)
+		if (Done@)
+			1 Done -=
+
+			ThreadExit
+		end
+
+		auto vn
+
+		"/dev/serial0" VFSPath vn!
+
+		if (vn@ iserr)
+			[vn@ abs]ErrorNames@ "%s\n" Printf
+		end else
+			vn@ VNodePut
+		end
+
+		Yield
 	end
 end

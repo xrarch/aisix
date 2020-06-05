@@ -1,0 +1,59 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/citron.h"
+
+var ClockFound 0
+
+var ClockCmdPort 0
+var ClockDataPort 0
+
+const CLOCKINTERVAL 100
+
+externconst InterruptGet
+externconst InterruptAck
+
+procedure DrvClockFoundNode { node -- }
+	if (ClockFound@)
+		return
+	end
+
+	1 ClockFound!
+
+	"clock,cmdPort" a3xDGetProperty ClockCmdPort!
+
+	if (ClockCmdPort@ 0 ==)
+		return
+	end
+
+	"clock,dataPort" a3xDGetProperty ClockDataPort!
+
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	intn@ ClockDataPort@ ClockCmdPort@ "  clock @ citron:%x,%x int:%d\n" Printf
+
+	pointerof ClockIntr intn@ InterruptRegister
+
+	ClockSet
+end
+
+procedure ClockSet { -- }
+	auto rs
+	InterruptDisable rs!
+
+	CLOCKINTERVAL ClockDataPort@ DCitronOutl
+	1 ClockCmdPort@ DCitronCommand
+
+	rs@ InterruptRestore
+end
+
+extern TimerTick
+
+procedure ClockIntr { intn -- }
+	ClockSet
+
+	intn@ InterruptAck@ Call
+
+	CLOCKINTERVAL TimerTick
+end

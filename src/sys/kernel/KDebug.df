@@ -128,6 +128,16 @@ procedure MonitorCommandsInit (* -- *)
 	pointerof DevFSPrintDevs
 	"devs"
 	MonitorAddCommand
+
+	"[tid] Probably crash the system."
+	pointerof MonitorCommandKillThread
+	"killthread"
+	MonitorAddCommand
+
+	"[pid] Kill process."
+	pointerof MonitorCommandKill
+	"kill"
+	MonitorAddCommand
 end
 
 procedure CommandPanic { -- }
@@ -205,6 +215,54 @@ end
 
 procedure MonitorCommandExit (* -- *)
 	0 MonitorRunning!
+end
+
+extern ThreadKill
+
+procedure MonitorCommandKillThread (* -- *)
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ THREADMAX >=)
+		return
+	end
+
+	auto thread
+	[tid@]Threads@ thread!
+
+	if (thread@ 0 ==)
+		return
+	end
+
+	thread@ ThreadKill
+end
+
+procedure MonitorCommandKill (* -- *)
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ PROCMAX >=)
+		return
+	end
+
+	auto proc
+	[tid@]Processes@ proc!
+
+	if (proc@ 0 ==)
+		return
+	end
+
+	-1 proc@ ProcessKill
 end
 
 procedure MonitorCommandHelp (* -- *)
@@ -348,7 +406,9 @@ procedure ListThreads (* -- *)
 
 			thread@ Thread_Name + "%s\t" Printf
 
-			thread@ Thread_Status + @ "%d\n" Printf
+			thread@ Thread_Status + @ "%d\t" Printf
+
+			thread@ Thread_WaitChan + @ "%x\n" Printf
 		end
 
 		1 i +=

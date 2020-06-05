@@ -9,6 +9,7 @@ table DevFSTab
 	pointerof DevFSSync
 	pointerof DevFSRewindDir
 	pointerof DevFSReadDir
+	pointerof DevFSUnmount
 endtable
 public DevFSTab
 
@@ -88,6 +89,12 @@ procedure DevFSMount { mount -- root fsdata }
 	0 mount@ VNodeNew root!
 
 	0 fsdata!
+end
+
+procedure DevFSUnmount { mount -- ok }
+	"devfs: unmount\n" Printf
+
+	0 ok!
 end
 
 procedure DevFSGetNode { vnode -- ok }
@@ -179,7 +186,9 @@ procedure DevFSReadDir { dirent -- ok }
 end
 
 procedure DevFSSync { vnode -- ok }
+	vnode@ "devfs: sync %x\n" Printf
 
+	0 ok!
 end
 
 procedure DevFSPrintDevs { -- }

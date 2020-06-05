@@ -1,9 +1,11 @@
-extern AtomicAdd (* v addr -- *)
+extern LockMutex (* mutex -- killed *)
 
-extern Lock (* -- *)
+extern UnlockMutex (* mutex -- *)
 
-extern Unlock (* -- *)
+extern InitMutex (* name mutex -- *)
 
-extern SaveLock (* -- o l *)
-
-extern RestoreLock (* o l -- *)
+struct Mutex
+	4 Locked
+	4 OwnerThread
+	4 Name
+endstruct

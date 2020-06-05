@@ -52,11 +52,6 @@ struct Process
 	PROCNAMELEN Name
 endstruct
 
-struct SleepLock
-	4 Locked
-	4 OwnerThread
-endstruct
-
 externconst CurrentThread
 
 const THREADMAX 128
@@ -67,9 +62,11 @@ const KERNELSTACKPAGES 1
 
 const VALUESTACKPAGES 1
 
+const TS_NOTREADY 0
 const TS_READY 1
 const TS_RUNNING 2
 const TS_SLEEPING 3
+const TS_TIMER 4
 
 extern JumpIntoScheduler (* -- *)
 
@@ -85,4 +82,10 @@ extern Wakeup (* channel -- *)
 
 extern ProcessExit (* ret -- *)
 
+extern ProcessKill (* ret process -- *)
+
 extern ThreadExit (* -- *)
+
+extern SleepFor (* ms -- killed *)
+
+extern WakeupTimer (* uptime -- *)

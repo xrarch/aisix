@@ -1,43 +1,70 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-var ORS 0
-var Levels 0
-
-procedure SaveLock { -- o l }
-	ORS@ o!
-	Levels@ l!
+procedure InitMutex { name mutex -- }
+	0 mutex@ Mutex_Locked + !
+	0 mutex@ Mutex_OwnerThread + !
+	name@ mutex@ Mutex_Name + !
 end
 
-procedure RestoreLock { o l -- }
-	o@ ORS!
-	l@ Levels!
-end
+procedure LockMutex { mutex -- killed }
+	auto rs
+	InterruptDisable rs!
 
-procedure Lock { -- }
-	if (Levels@ 0 ==)
-		InterruptDisable ORS!
+	0 killed!
+
+	while (mutex@ Mutex_Locked + @)
+		if (CurrentThread@ 0 ==)
+			"LockMutex: if we aren't in thread context, we can lock a mutex, but we can't wait on one!\n" Panic
+		end
+
+		if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ==)
+			auto mn
+
+			"none" mn!
+
+			if (mutex@ Mutex_Name + @)
+				mutex@ Mutex_Name + @ mn!
+			end
+
+			mn@ "LockMutex: '%s' already owned\n" Panic
+		end
+
+		mutex@ Sleep killed!
+
+		if (killed@)
+			rs@ InterruptRestore
+
+			return
+		end
 	end
 
-	1 Levels +=
+	1 mutex@ Mutex_Locked + !
+	CurrentThread@ mutex@ Mutex_OwnerThread + !
+
+	rs@ InterruptRestore
 end
 
-procedure Unlock { -- }
-	if (Levels@ 0 ==)
-		"Unlock\n" Panic
+procedure UnlockMutex { mutex -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ~=)
+		auto mn
+
+		"none" mn!
+
+		if (mutex@ Mutex_Name + @)
+			mutex@ Mutex_Name + @ mn!
+		end
+
+		mn@ "UnlockMutex: never owned '%s'\n" Panic
 	end
 
-	1 Levels -=
+	0 mutex@ Mutex_Locked + !
+	0 mutex@ Mutex_OwnerThread + !
 
-	if (Levels@ 0 ==)
-		ORS@ InterruptRestore
-	end
-end
+	mutex@ Wakeup
 
-procedure AtomicAdd { v addr -- }
-	Lock
-
-	v@ addr@ +=
-
-	Unlock
+	rs@ InterruptRestore
 end

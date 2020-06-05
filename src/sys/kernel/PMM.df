@@ -93,7 +93,7 @@ end
 
 procedure PMMFree { pages addr -- }
 	if (addr@ 0xFFF & 0 ~=)
-		"PMMFree\n" Panic
+		"PMMFree: address not aligned to a page\n" Panic
 	end
 
 	if (pages@ 0 ==)
@@ -124,6 +124,9 @@ procedure PMMAlloc { pages -- addr }
 		"allocating zero pages\n" Panic
 	end
 
+	auto rs
+	InterruptDisable rs!
+
 	auto pmb
 	PMMBitmap pmb!
 
@@ -134,9 +137,6 @@ procedure PMMAlloc { pages -- addr }
 	0 i!
 
 	-ENOMEM addr!
-
-	auto rs
-	InterruptDisable rs!
 
 	while (i@ pages@ + pc@ <)
 		auto rb
@@ -149,9 +149,9 @@ procedure PMMAlloc { pages -- addr }
 			if (start@ -1 ~=)
 				1 pages@ start@ PMMSetString
 
-				rs@ InterruptRestore
-
 				start@ 4096 * MachineRAMBase@ + addr!
+
+				rs@ InterruptRestore
 
 				return
 			end

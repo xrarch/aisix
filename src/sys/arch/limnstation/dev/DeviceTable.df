@@ -5,8 +5,9 @@
 extern DrvCitronFoundNode
 extern DrvLSICFoundNode
 extern DrvSerialFoundNode
+extern DrvClockFoundNode
 
-const Devices 3
+const Devices 4
 
 const ElemPerDevice 5
 
@@ -20,6 +21,9 @@ table DeviceTable
 
     "Serial" "serial"                 "AISA,serial-port" 1
     pointerof DrvSerialFoundNode
+
+    "Clock"  "rtc"                    "AISA,clock"       1
+    pointerof DrvClockFoundNode
 endtable
 public DeviceTable
 
@@ -64,7 +68,7 @@ procedure private CheckDevTable { -- }
 
 		if (rev@ [tbase@ 3 +]DeviceTable@ ~=)
 			auto ans
-			rev@ [tbase@ 3 +]DeviceTable@ "  revision mismatch (have driver for %d, got %d) ignore? [y/n] " 1 AskUser ans!
+			rev@ [tbase@ 3 +]DeviceTable@ "  revision mismatch (have driver for %d, got %d) register anyway? [y/n] " 1 AskUser ans!
 
 			if (ans@ gb 'y' ~=)
 				ans@ Free

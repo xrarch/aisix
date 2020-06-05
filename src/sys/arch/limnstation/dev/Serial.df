@@ -27,6 +27,8 @@ endtable
 
 var SerialFound 0
 
+var SerialKDebug 0
+
 procedure DrvSerialFoundNode { node -- }
 	if (SerialFound@)
 		return
@@ -46,6 +48,11 @@ procedure DrvSerialFoundNode { node -- }
 	"interrupt#" a3xDGetProperty intn!
 
 	intn@ SerialDataPort@ SerialCmdPort@ "  serial @ citron:%x,%x int:%d\n" Printf
+
+	if ("-serialdebug" ArgsCheck)
+		1 SerialKDebug!
+		"  -serialdebug present\n" Printf
+	end
 
 	pointerof SerialIntr intn@ InterruptRegister
 
@@ -87,19 +94,26 @@ procedure SerialIntr { intn -- }
 	intn@ InterruptAck@ Call
 
 	auto c
-	while (SerialGetc dup c! -1 ~=) end
 
-	auto sw
-	KLogWrite@ sw!
+	if (SerialKDebug@)
+		while (SerialGetc dup c! -1 ~=) end
 
-	auto sr
-	KLogRead@ sr!
+		auto sw
+		KLogWrite@ sw!
 
-	pointerof SerialGetc pointerof SerialPutc KLogAttach
+		auto sr
+		KLogRead@ sr!
 
-	KDebug
+		pointerof SerialGetc pointerof SerialPutc KLogAttach
 
-	sr@ sw@ KLogAttach
+		KDebug
+
+		sr@ sw@ KLogAttach
+	end else
+		while (SerialGetc dup c! -1 ~=)
+			c@ SerialPutc
+		end
+	end
 
 	SerialIntrEnable
 end

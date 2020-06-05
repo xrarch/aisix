@@ -40,28 +40,31 @@ procedure private ThreadAllocate { -- thread }
 	-ENOMEM thread!
 
 	while (tid@ THREADMAX <)
-		Lock
+		auto rs
+		InterruptDisable rs!
 
 		if ([tid@]Threads@ 0 ==)
 			auto ts
 			Thread_SIZEOF Calloc ts!
 
 			if (ts@ iserr)
-				Unlock
+				rs@ InterruptRestore
 				ts@ thread!
 				return
 			end
+
+			TS_NOTREADY ts@ Thread_Status + !
 
 			tid@ ts@ Thread_TID + !
 
 			ts@ [tid@]Threads!
 
-			Unlock
+			rs@ InterruptRestore
 			ts@ thread!
 			return
 		end
 
-		Unlock
+		rs@ InterruptRestore
 
 		1 tid +=
 	end
@@ -84,15 +87,32 @@ procedure ThreadFree { thread -- }
 end
 
 procedure ThreadKill { thread -- }
-	if (thread@ Thread_Status + @ TS_SLEEPING ~=)
+	auto thst
+	thread@ Thread_Status + @ thst!
+
+	auto asleep
+	0 asleep!
+
+	if (thst@ TS_SLEEPING ==)
+		1 asleep!
+	end elseif (thst@ TS_TIMER ==)
+		1 asleep!
+	end
+
+	if (asleep@ ~~)
 		thread@ ThreadFree
 	end else
+		0 thread@ Thread_WaitChan + !
+
 		1 thread@ Thread_Killed + !
 		TS_READY thread@ Thread_Status + !
 	end
 end
 
 procedure ThreadExit { -- }
+	auto rs
+	InterruptDisable rs!
+
 	auto thread
 	CurrentThread@ thread!
 
@@ -107,7 +127,11 @@ procedure ThreadExit { -- }
 		thread@ ThreadKill
 	end
 
+	0 thread@ Thread_Status + !
+
 	JumpIntoScheduler
+
+	"exit returned\n" Panic
 end
 
 procedure ThreadNew { process entry name -- thread }
@@ -173,69 +197,106 @@ var SchedulerContext 0
 procedure Scheduler { -- }
 	"entering scheduler loop\n" Printf
 
+	auto rs
+	auto thread
+
 	while (1)
-		auto nthread
-		ThreadPick nthread!
+		auto i
+		0 i!
 
-		if (nthread@ iserr)
-			CPUIdle
-		end else
-			nthread@ CurrentThread!
+		InterruptDisable rs!
 
-			TS_RUNNING nthread@ Thread_Status + !
+		while (i@ THREADMAX <)
+			[i@]Threads@ thread!
 
-			SchedulerContext nthread@ Thread_Context + @ cswtch
+			if (thread@ 0 ==)
+				1 i +=
+				continue
+			end
+
+			if (thread@ Thread_Status + @ TS_READY ~=)
+				1 i +=
+				continue
+			end
+
+			thread@ CurrentThread!
+
+			TS_RUNNING thread@ Thread_Status + !
+
+			SchedulerContext thread@ Thread_Context + @ cswtch
+
+			0 CurrentThread!
+
+			1 i +=
 		end
+
+		rs@ InterruptRestore
 	end
 end
 
 procedure JumpIntoScheduler { -- }
-	auto o
-	auto l
-	SaveLock l! o!
-
-	CurrentThread@ Thread_Context + SchedulerContext@ cswtch
-
-	o@ l@ RestoreLock
-end
-
-procedure ThreadPick { -- thread }
-	CurrentThread@ thread!
-
-	auto index
-	0 index!
-
-	if (thread@)
-		thread@ Thread_TID + @ 1 + index!
+	if (CurrentThread@ Thread_Status + @ TS_RUNNING ==)
+		"JumpIntoScheduler: thread is running\n" Panic
 	end
 
+	CurrentThread@ Thread_Context + SchedulerContext@ cswtch
+end
+
+procedure Yield { -- }
+	auto rs
+	InterruptDisable rs!
+
+	TS_READY CurrentThread@ Thread_Status + !
+
+	JumpIntoScheduler
+
+	rs@ InterruptRestore
+end
+
+procedure SleepFor { ms -- killed }
+	auto rs
+	InterruptDisable rs!
+
+	TimerUptime ms@ + CurrentThread@ Thread_WaitChan + !
+
+	TS_TIMER CurrentThread@ Thread_Status + !
+
+	JumpIntoScheduler
+
+	rs@ InterruptRestore
+
+	CurrentThread@ Thread_Killed + @ killed!
+end
+
+procedure WakeupTimer { uptime -- }
 	auto i
 	0 i!
 
 	while (i@ THREADMAX <)
-		[index@ THREADMAX %]Threads@ thread!
+		auto rs
+		InterruptDisable rs!
 
-		if (thread@ 0 ~=)
-			if (thread@ Thread_Status + @ TS_READY ==)
-				return
+		auto thr
+		[i@]Threads@ thr!
+
+		if (thr@)
+			if (thr@ Thread_Status + @ TS_TIMER ==)
+				if (uptime@ thr@ Thread_WaitChan + @ >=)
+					0 thr@ Thread_WaitChan + !
+					TS_READY thr@ Thread_Status + !
+				end
 			end
 		end
 
+		rs@ InterruptRestore
+
 		1 i +=
-		1 index +=
 	end
-
-	-ESRCH thread!
-end
-
-procedure Yield { -- }
-	TS_READY CurrentThread@ Thread_Status + !
-
-	JumpIntoScheduler
 end
 
 procedure Sleep { channel -- killed }
-	Lock
+	auto rs
+	InterruptDisable rs!
 
 	channel@ CurrentThread@ Thread_WaitChan + !
 
@@ -243,7 +304,7 @@ procedure Sleep { channel -- killed }
 
 	JumpIntoScheduler
 
-	Unlock
+	rs@ InterruptRestore
 
 	CurrentThread@ Thread_Killed + @ killed!
 end
@@ -253,7 +314,8 @@ procedure Wakeup { channel -- }
 	0 i!
 
 	while (i@ THREADMAX <)
-		Lock
+		auto rs
+		InterruptDisable rs!
 
 		auto thr
 		[i@]Threads@ thr!
@@ -267,7 +329,7 @@ procedure Wakeup { channel -- }
 			end
 		end
 
-		Unlock
+		rs@ InterruptRestore
 
 		1 i +=
 	end
@@ -288,14 +350,15 @@ procedure private ProcessAllocate { -- process }
 	-ENOMEM process!
 
 	while (i@ PROCMAX <)
-		Lock
+		auto rs
+		InterruptDisable rs!
 
 		if ([i@]Processes@ 0 ==)
 			auto ps
 			Process_SIZEOF Calloc ps!
 
 			if (ps@ iserr)
-				Unlock
+				rs@ InterruptRestore
 				ps@ process!
 				return
 			end
@@ -308,12 +371,12 @@ procedure private ProcessAllocate { -- process }
 
 			ps@ [i@]Processes!
 
-			Unlock
+			rs@ InterruptRestore
 			ps@ process!
 			return
 		end
 
-		Unlock
+		rs@ InterruptRestore
 
 		1 i +=
 	end
@@ -415,11 +478,16 @@ procedure ProcessExit { ret -- }
 	auto process
 	CurrentThread@ Thread_Process + @ process!
 
+	ret@ process@ ProcessKill
+end
+
+procedure ProcessKill { ret process -- }
 	if (process@ KernelProcess@ ==)
-		"kernel process exited!\n" Panic
+		"kernel process killed!\n" Panic
 	end
 
-	Lock
+	auto rs
+	InterruptDisable rs!
 
 	ret@ process@ Process_ReturnValue + !
 
@@ -447,5 +515,5 @@ procedure ProcessExit { ret -- }
 		1 i +=
 	end
 
-	Unlock
+	rs@ InterruptRestore
 end

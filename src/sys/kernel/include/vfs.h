@@ -12,6 +12,7 @@ struct Filesystem
 	4 Sync
 	4 RewindDir
 	4 ReadDir
+	4 Unmount
 endstruct
 
 struct Mount
@@ -23,6 +24,9 @@ struct Mount
 	4 Filesystem
 	4 FSData
 	4 Root
+	4 Busy
+	4 VRefs
+	4 MRefs
 endstruct
 
 struct VNode
@@ -30,7 +34,8 @@ struct VNode
 	4 Refs
 	4 Mount
 	4 FSData
-	4 Locked
+	Mutex_SIZEOF Mutex
+	4 Index
 	4 Type
 endstruct
 
@@ -55,4 +60,20 @@ extern VNodePut (* vnode -- *)
 
 extern VNodeGet (* vnid mount -- vnode *)
 
+extern VNodeLock (* vnode -- killed *)
+
+extern VNodeUnlock (* vnode -- *)
+
 extern VNodeRef (* vnode -- *)
+
+extern VNodeUnref (* vnode -- *)
+
+extern MountRef (* mount -- *)
+
+extern MountUnref (* mount -- *)
+
+extern SyncVNodes (* mount evenifbusy -- res *)
+
+extern VFSMount (* name fs dev -- mount *)
+
+extern VFSUnmount (* mount -- ok *)

@@ -1,3 +1,4 @@
+#include "<inc>/atomic.h"
 #include "<inc>/errno.h"
 #include "<inc>/args.h"
 #include "<inc>/minfo.h"
@@ -6,7 +7,7 @@
 #include "<inc>/klog.h"
 #include "<inc>/vfs.h"
 #include "<inc>/dev.h"
-#include "<inc>/atomic.h"
+#include "<inc>/timer.h"
 
 extern Panic (* ... fstr -- *)
 

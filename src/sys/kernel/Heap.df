@@ -204,12 +204,13 @@ procedure Malloc { sz -- ptr }
 		sz@ 0xFFFFFFFC & 4 + sz!
 	end
 
-	Lock
+	auto rs
+	InterruptDisable rs!
 
 	0 KHeapLast@ sz@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
-		Unlock
+		rs@ InterruptRestore
 
 		return
 	end
@@ -217,12 +218,12 @@ procedure Malloc { sz -- ptr }
 	KHeapLast@ 0 sz@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
-		Unlock
+		rs@ InterruptRestore
 
 		return
 	end
 
-	Unlock
+	rs@ InterruptRestore
 
 	-ENOMEM ptr! return
 end
@@ -249,7 +250,12 @@ procedure Free { ptr -- }
 		ptr@ "Free: bad magic on block 0x%x\n" Panic
 	end
 
-	Lock
+	auto rs
+	InterruptDisable rs!
+
+	if (nptr@ KHeapHeader_allocated + @ 0 ==)
+		ptr@ "tried to free block that was not allocated\n" Panic
+	end
 
 	0 nptr@ KHeapHeader_allocated + !
 
@@ -308,5 +314,5 @@ procedure Free { ptr -- }
 		end
 	end
 
-	Unlock
+	rs@ InterruptRestore
 end
