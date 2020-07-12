@@ -1,7 +1,7 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 
-struct VDB
+struct VDBs
 	16 Label
 	128 PartitionTable
 	4 Magic
@@ -13,9 +13,9 @@ struct PTE
 	4 Status
 endstruct
 
-extern PromptYN
-extern IWriteBlock
-extern IReadBlock
+extern PromptYN { ... fmt -- r }
+extern IWriteBlock { block buf -- }
+extern IReadBlock { block buf -- }
 
 var VDB 0
 
@@ -23,9 +23,77 @@ var Fixed 0
 
 const MaxParts 8
 
-externconst DiskNode
+externptr DiskNode
 
-procedure LoadVDBSafe { -- ok }
+struct BootRecord
+	4 Magic
+	16 OSLabel
+	4 BootBlockStart
+	4 BootBlockCount
+endstruct
+
+fn WriteBoot { -- }
+	auto blockbuf
+	4096 Malloc blockbuf!
+
+	a3xMyDevice@ a3xDeviceSelectNode
+		blockbuf@ 1 "readBlock" a3xDCallMethod drop drop drop drop
+	a3xDeviceExit
+
+	auto bblock
+	auto bbc
+	blockbuf@ BootRecord_BootBlockStart + @ bblock!
+	blockbuf@ BootRecord_BootBlockCount + @ bbc!
+
+	blockbuf@ BootRecord_OSLabel + bblock@ bbc@ + bblock@ "copying: blocks %d-%d (os: %s)\n" Printf
+
+	if ("is this what you want?" PromptYN ~~)
+		blockbuf@ Free
+		return
+	end
+
+	DiskNode@ a3xDeviceSelectNode
+		blockbuf@ 1 "writeBlock" a3xDCallMethod drop drop drop drop
+	a3xDeviceExit
+
+	auto i
+	0 i!
+
+	auto ok
+
+	while (i@ bbc@ <)
+		a3xMyDevice@ a3xDeviceSelectNode
+			blockbuf@ bblock@ "readBlock" a3xDCallMethod drop drop drop ok!
+		a3xDeviceExit
+
+		if (ok@ ERR ==)
+			"I/O error on read\n" Printf
+			blockbuf@ Free
+			return
+		end
+
+		DiskNode@ a3xDeviceSelectNode
+			blockbuf@ bblock@ "writeBlock" a3xDCallMethod drop drop drop ok!
+		a3xDeviceExit
+
+		if (ok@ ERR ==)
+			"I/O error on write\n" Printf
+			blockbuf@ Free
+			return
+		end
+
+		'.' Putc
+
+		1 i +=
+		1 bblock +=
+	end
+
+	blockbuf@ Free
+
+	"successfully wrote boot blocks!\n" Printf
+end
+
+fn LoadVDBSafe { -- ok }
 	1 ok!
 
 	LoadVDB
@@ -35,32 +103,28 @@ procedure LoadVDBSafe { -- ok }
 	end
 end
 
-procedure LoadVDB (* -- *)
+fn LoadVDB { -- }
 	4096 Malloc VDB!
 
 	0 VDB@ IReadBlock
 end
 
-procedure FreeVDB (* -- *)
+fn FreeVDB { -- }
 	VDB@ Free
 end
 
-procedure VDBValid { -- valid }
-	VDB@ VDB_Magic + @ 0x4E4D494C == valid!
+fn VDBValid { -- valid }
+	VDB@ VDBs_Magic + @ 0x4E4D494C == valid!
 end
 
-procedure VDBLabel { -- label }
-	VDB@ VDB_Label + label!
+fn VDBLabel { -- label }
+	VDB@ VDBs_Label + label!
 end
 
-procedure VDBFix { -- ok }
-	if (VDBValid) 1 ok! return end
-
-	auto ynr
-
-	"this disk's volume descriptor block is corrupt or empty.\nwrite new one" PromptYN ynr!
-
-	if (ynr@ ~~) 0 ok! return end
+fn VDBWrite { new -- }
+	if (new@)
+		4096 Malloc VDB!
+	end
 
 	auto nbuf
 	16 Calloc nbuf!
@@ -72,9 +136,9 @@ procedure VDBFix { -- ok }
 	auto buf
 	4096 Calloc buf!
 
-	0x4E4D494C buf@ VDB_Magic + !
+	0x4E4D494C buf@ VDBs_Magic + !
 
-	buf@ VDB_Label + nbuf@ strcpy
+	buf@ VDBs_Label + nbuf@ strcpy
 
 	"writing new disklabel...\n" Printf
 
@@ -86,22 +150,50 @@ procedure VDBFix { -- ok }
 	FreeVDB
 	LoadVDB
 
-	"fixed disklabel successfully.\n\n" Printf
+	"wrote disklabel successfully.\n" Printf
+
+	if (new@)
+		"\nthe system software will not correctly identify this disk until the machine is\nreset.\n" Printf
+
+		if ("would you like to reboot now" PromptYN)
+			"/cpu" a3xDeviceSelect
+				"reset" a3xDCallMethod drop drop drop drop
+			a3xDeviceExit
+
+			"didn't reset!\n" Printf
+
+			while (1) end
+		end
+	end
+end
+
+fn VDBFix { -- ok }
+	if (VDBValid) 1 ok! return end
+
+	auto ynr
+
+	"this disk's volume descriptor block is corrupt or empty.\nwrite new one" PromptYN ynr!
+
+	if (ynr@ ~~) 0 ok! return end
+
+	0 VDBWrite
+
+	'\n' Putc
 
 	1 ok! return
 end
 
-procedure PTEGet { ent -- label blocks status }
-	VDB@ VDB_PartitionTable + ent@ PTE_SIZEOF * + ent!
+fn PTEGet { ent -- label blocks status }
+	VDB@ VDBs_PartitionTable + ent@ PTE_SIZEOF * + ent!
 
 	ent@ PTE_Label + label!
 	ent@ PTE_Blocks + @ blocks!
 	ent@ PTE_Status + @ status!
 end
 
-procedure PTESet { label blocks status ent -- }
+fn PTESet { label blocks status ent -- }
 	auto ptb
-	VDB@ VDB_PartitionTable + ptb!
+	VDB@ VDBs_PartitionTable + ptb!
 	ptb@ ent@ PTE_SIZEOF * + ptb!
 
 	ptb@ PTE_Label + label@ strcpy
@@ -116,7 +208,7 @@ table PTStatus
 	"??? corrupt entry ???"
 endtable
 
-procedure PTInfo (* -- *)
+fn PTInfo { -- }
 	auto i
 	0 i!
 
@@ -141,14 +233,14 @@ procedure PTInfo (* -- *)
 	end
 end
 
-procedure PartitionDisk (* -- *)
+fn PartitionDisk { -- }
 	if (LoadVDBSafe ~~)
 		"disklabel invalid. cannot continue.\n" Printf
 		return
 	end
 
 	if (Fixed@ ~~)
-		if ("dump current partition info" PromptYN)
+		if ("view current partition info" PromptYN)
 			"\ncurrent partition info:\n" Printf
 			PTInfo
 			'\n' Putc
@@ -162,7 +254,7 @@ procedure PartitionDisk (* -- *)
 	a3xDeviceExit
 
 	auto ptr
-	VDB@ VDB_PartitionTable + ptr!
+	VDB@ VDBs_PartitionTable + ptr!
 
 	ptr@ 128 0 memset
 
@@ -224,4 +316,18 @@ procedure PartitionDisk (* -- *)
 	0 VDB@ IWriteBlock
 
 	FreeVDB
+
+	'\n' Putc
+
+	"partitioned successfully!\n\nthe system software will not correctly identify this disk until the machine is\nreset.\n" Printf
+
+	if ("would you like to reboot now" PromptYN)
+		"/cpu" a3xDeviceSelect
+			"reset" a3xDCallMethod drop drop drop drop
+		a3xDeviceExit
+
+		"didn't reset!\n" Printf
+
+		while (1) end
+	end
 end

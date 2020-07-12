@@ -1,8 +1,8 @@
 #include "<df>/dragonfruit.h"
 
-externconst TotalRAM
-extern IReadBlock
-extern Panic
+externptr TotalRAM
+extern IReadBlock { block buf -- }
+extern Panic { ... fmt -- }
 
 (* extremely simple, read-only implementation of aisixfat *)
 
@@ -48,19 +48,17 @@ table AFSErrors
 endtable
 public AFSErrors
 
-procedure AFSMount { -- success }
+fn AFSMount { -- success }
 	0 success!
 
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock
 
-	AFSSuperblockCache AFSSuperblock_Magic + @
-	if (AFSSuperblockMagic ~=)
+	if (AFSSuperblockCache AFSSuperblock_Magic + @ AFSSuperblockMagic ~=)
 		"fileloader: invalid superblock\n" Printf
 		return
 	end
 
-	AFSSuperblockCache AFSSuperblock_Version + @
-	if (AFSSuperblockVersion ~=)
+	if (AFSSuperblockCache AFSSuperblock_Version + @ AFSSuperblockVersion ~=)
 		"fileloader: bad version on superblock\n" Printf
 		return
 	end
@@ -68,15 +66,14 @@ procedure AFSMount { -- success }
 	1 success!
 end
 
-procedure AFSLoadFile { count name destptr } (* -- size ok? *)
+fn AFSLoadFile { count name destptr -- size ok }
 	auto entryptr
 	name@ AFSFileByName entryptr!
 	if (entryptr@ 0 ==)
-		0 0 return
+		0 size! 0 ok! return
 	end
 
 	auto cblock
-	auto size
 
 	entryptr@ AFSDirEnt_startblock + @ cblock!
 	entryptr@ AFSDirEnt_size + @ size!
@@ -95,7 +92,7 @@ procedure AFSLoadFile { count name destptr } (* -- size ok? *)
 	destptr@ size@ 4096 * + nmem!
 
 	if (nmem@ TotalRAM@ >=)
-		size@ 4096 * 2 return (* not enough memory *)
+		size@ 4096 * size! 2 ok! return (* not enough memory *)
 	end
 
 	auto i
@@ -109,10 +106,10 @@ procedure AFSLoadFile { count name destptr } (* -- size ok? *)
 		1 i +=
 	end
 
-	count@ 4096 * 1
+	count@ 4096 * size! 1 ok!
 end
 
-procedure AFSDirentByName { name -- dirent }
+fn AFSDirentByName { name -- dirent }
 	if (name@ strlen 0 ==)
 		0 dirent!
 		return
@@ -135,7 +132,7 @@ procedure AFSDirentByName { name -- dirent }
 	0 dirent!
 end
 
-procedure AFSPathSeek { path -- dirent }
+fn AFSPathSeek { path -- dirent }
 	auto pcomp
 	256 Calloc pcomp!
 
@@ -178,7 +175,7 @@ procedure AFSPathSeek { path -- dirent }
 	pcomp@ Free
 end
 
-procedure AFSPrintList { path -- }
+fn AFSPrintList { path -- }
 	if (path@ strlen 0 ==)
 		AFSReadRoot
 	end elseif (path@ "/" strcmp)
@@ -209,15 +206,11 @@ procedure AFSPrintList { path -- }
 		i@ 64 * AFSRootCache + off!
 
 		if (off@ AFSDirEnt_type + @ 0 ~=)
-			off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + 
-
 			if (off@ AFSDirEnt_type + @ 1 ==)
-				"\t%s\t%d\n"
+				off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + "\t%s\t%d\n" Printf
 			end else
-				"\t%s/\t%d\n"
+				off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + "\t%s/\t%d\n" Printf
 			end
-
-			Printf
 		end
 
 		1 i +=
@@ -226,7 +219,7 @@ procedure AFSPrintList { path -- }
 	'\n' Putc
 end
 
-procedure AFSFileSize { path -- size }
+fn AFSFileSize { path -- size }
 	auto dirent
 	path@ AFSFileByName dirent!
 	if (dirent@ 0 ==)
@@ -236,7 +229,7 @@ procedure AFSFileSize { path -- size }
 	dirent@ AFSDirEnt_bytesize + @ size!
 end
 
-procedure AFSFileByName { path -- dirent }
+fn AFSFileByName { path -- dirent }
 	path@ AFSPathSeek dirent!
 	if (dirent@ 0 ==)
 		return
@@ -248,12 +241,12 @@ procedure AFSFileByName { path -- dirent }
 	end
 end
 
-procedure AFSReadRoot (* -- *)
+fn AFSReadRoot { -- }
 	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
 end
 
 var AFSFatCached -1
-procedure AFSReadFATBlock { fatblock -- }
+fn AFSReadFATBlock { fatblock -- }
 	if (fatblock@ AFSFatCached@ ~=) (* only read in new block if not already in cache *)
 		fatblock@ AFSSuperblockCache AFSSuperblock_FATStart + @ +
 		AFSFATCache IReadBlock
@@ -261,7 +254,7 @@ procedure AFSReadFATBlock { fatblock -- }
 	end
 end
 
-procedure AFSBlockStatus { bnum -- status }
+fn AFSBlockStatus { bnum -- status }
 	auto fatblock
 	auto fatoff
 

@@ -1,10 +1,10 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 
-extern PromptYN
-extern Prompt
+extern PromptYN { ... fmt -- r }
+extern Prompt { -- }
 
-procedure Main { sz args -- ret }
+fn Main { sz args -- ret }
 	0 ret!
 
 	"\n\t=== diag ===\nStandalone diagnostics utility for LIMNstation,1.\n" Printf
@@ -18,9 +18,7 @@ procedure Main { sz args -- ret }
 	if (pf@ 0 ==) "no /platform:model property?\n" Printf return end
 
 	if ("LIMNstation,1" pf@ strcmp ~~)
-		pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway"
-
-		if (PromptYN ~~)
+		if (pf@ "\nwarning, platform mismatch:\n\tthis utility: LIMNstation,1\n\tfirmware reports: %s\n\ncontinue anyway" PromptYN ~~)
 			return
 		end
 	end

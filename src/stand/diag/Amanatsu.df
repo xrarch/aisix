@@ -18,45 +18,45 @@ endtable
 
 (* disabling and restoring interrupts is up to the user of these functions *)
 
-procedure AmanatsuPoll (* num -- mid *)
-	AmanatsuSelectDev AmanatsuReadMID
+fn AmanatsuPoll { num -- mid }
+	num@ AmanatsuSelectDev AmanatsuReadMID mid!
 end
 
-procedure AmanatsuSelectDev (* num -- *)
-	AmaPortDev DCitronOutb
+fn AmanatsuSelectDev { num -- }
+	num@ AmaPortDev DCitronOutb
 end
 
-procedure AmanatsuReadMID (* -- mid *)
-	AmaPortMID DCitronInl
+fn AmanatsuReadMID { -- mid }
+	AmaPortMID DCitronInl mid!
 end
 
-procedure AmanatsuCommand (* cmd -- *)
-	AmaPortCMD DCitronOutl
+fn AmanatsuCommand { cmd -- }
+	cmd@ AmaPortCMD DCitronOutl
 
 	while (AmaPortCMD DCitronInl 0 ~=) end
 end
 
-procedure AmanatsuCommandAsync (* cmd -- *)
-	AmaPortCMD DCitronOutl
+fn AmanatsuCommandAsync { cmd -- }
+	cmd@ AmaPortCMD DCitronOutl
 end
 
-procedure AmanatsuWriteA (* long -- *)
-	AmaPortA DCitronOutl
+fn AmanatsuWriteA { long -- }
+	long@ AmaPortA DCitronOutl
 end
 
-procedure AmanatsuWriteB (* long -- *)
-	AmaPortB DCitronOutl
+fn AmanatsuWriteB { long -- }
+	long@ AmaPortB DCitronOutl
 end
 
-procedure AmanatsuReadA (* -- long *)
-	AmaPortA DCitronInl
+fn AmanatsuReadA { -- long }
+	AmaPortA DCitronInl long!
 end
 
-procedure AmanatsuReadB (* -- long *)
-	AmaPortB DCitronInl
+fn AmanatsuReadB { -- long }
+	AmaPortB DCitronInl long!
 end
 
-procedure AmanatsuIDtoLabel { id -- label }
+fn AmanatsuIDtoLabel { id -- label }
 	auto i
 	0 i!
 
@@ -75,7 +75,7 @@ procedure AmanatsuIDtoLabel { id -- label }
 	"unknown" label!
 end
 
-procedure AmanatsuDump (* -- *)
+fn AmanatsuDump { -- }
 	auto i
 	1 i!
 

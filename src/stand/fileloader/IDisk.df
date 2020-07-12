@@ -2,18 +2,17 @@
 
 var IDiskBD 0
 
-extern Panic
-extern Printf
+extern Panic { ... fmt -- }
 
-procedure IDiskSelect (* bootdev -- *)
-	IDiskBD!
+fn IDiskSelect { bootdev -- }
+	bootdev@ IDiskBD!
 end
 
-procedure IReadBlock { block buf -- }
+fn IReadBlock { block buf -- }
 	auto ok
 
 	IDiskBD@ a3xDeviceSelectNode
-		buf@ block@ "readBlock" a3xDCallMethod drop ok!
+		buf@ block@ "readBlock" a3xDCallMethod drop drop drop ok!
 	a3xDeviceExit
 
 	if (ok@ 1 ~=)

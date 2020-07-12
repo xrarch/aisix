@@ -17,8 +17,6 @@ extern Scheduler
 procedure AISIX { ksz args -- ret }
 	0 ret!
 
-	args@ ArgsInit
-
 	"aisix coming up\n" Printf
 	ksz@ "kernel image ~%d bytes\n" Printf
 
@@ -27,6 +25,8 @@ procedure AISIX { ksz args -- ret }
 	PMMInit
 
 	HeapInit
+
+	args@ ArgsInit
 
 	PlatformInit
 

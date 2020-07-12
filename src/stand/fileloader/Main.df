@@ -1,14 +1,14 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 
-externconst AFSErrors
-extern ArgsInit
-extern AFSMount
-extern IDiskSelect
-extern ArgsValue
-extern ArgsCheck
-extern AFSLoadFile
-extern AFSPrintList
+externptr AFSErrors
+extern ArgsInit { argp -- }
+extern AFSMount { -- success }
+extern IDiskSelect { dev -- } 
+extern ArgsValue { arg -- out }
+extern ArgsCheck { arg -- present }
+extern AFSLoadFile { count name destptr -- size ok }
+extern AFSPrintList { path -- }
 
 var Mounted 0
 
@@ -23,25 +23,33 @@ var BootPath 0
 
 const LoadBase 0x80000
 
-procedure GetBootFile (* -- *)
+var BFAlloc1 0
+
+fn GetBootFile { -- }
 	auto ab
 
-	"/nvram" a3xDeviceSelect
-		"load-file" "getVar" a3xDCallMethod drop ab!
+	"loadfile" ArgsValue ab!
 
-		if (ab@ 0 ==)
-			"/kernel" "load-file" "setVar" a3xDCallMethod drop
+	if (ab@ ~~)
+		"/nvram" a3xDeviceSelect
+			"load-file" "getVar" a3xDCallMethod drop drop drop ab!
 
-			"/kernel" ab!
-		end
-	a3xDeviceExit
+			if (ab@ 0 ==)
+				"/kernel" "load-file" "setVar" a3xDCallMethod drop drop drop drop
+
+				"/kernel" ab!
+			end
+		a3xDeviceExit
+	end else
+		ab@ BFAlloc1!
+	end
 
 	ab@ dup BootFile! BootPath!
 end
 
-var BFAlloc 0
+var BFAlloc2 0
 
-procedure GetBootDrive { -- }
+fn GetBootDrive { -- }
 	GetBootFile
 
 	if (BootFile@ gb '(' ~=)
@@ -71,11 +79,11 @@ procedure GetBootDrive { -- }
 		"/kernel" BootFile!
 	end else
 		nw@ 1 + BootFile!
-		word@ BFAlloc!
+		word@ BFAlloc2!
 	end
 end
 
-procedure Main { args -- ret }
+fn Main { args -- ret }
 	0 ret!
 
 	args@ bootargs!
@@ -130,12 +138,16 @@ procedure Main { args -- ret }
 
 	Prompt ret!
 
-	if (BFAlloc@ 0 ~=)
-		BFAlloc@ Free
+	if (BFAlloc2@)
+		BFAlloc2@ Free
+	end
+
+	if (BFAlloc1@)
+		BFAlloc1@ Free
 	end
 end
 
-procedure Select { devpath -- success }
+fn Select { devpath -- success }
 	0 success!
 
 	auto dn
@@ -168,9 +180,11 @@ procedure Select { devpath -- success }
 	1 success!
 end
 
+fnptr StandaloneEntry { size api bootdev arg -- ret }
+
 var RetValue 0
 
-procedure DoFile { arg buf -- ret }
+fn DoFile { arg buf -- ret }
 	0 ret!
 
 	if (Mounted@ ~~)
@@ -191,27 +205,14 @@ procedure DoFile { arg buf -- ret }
 		(* this bootloader uses the same protocol as a3x but just with file size added *)
 		(* also the base is 0x80000 instead of 0x40000 *)
 
-		asm "
 
-		subi.i sp, 112
-		sgpr sp
+		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ StandaloneEntry ret!
 
-		"
-
-		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ Call RetValue!
-
-		asm "
-
-		lgpr sp
-		addi.i sp, 112
-
-		"
-
-		RetValue@ dup "DoFile (%i)\n" Printf ret!
+		ret@ "DoFile (%i)\n" Printf
 	end
 end
 
-procedure Prompt { -- ret }
+fn Prompt { -- ret }
 	0 ret!
 
 	auto Go
@@ -278,10 +279,10 @@ procedure Prompt { -- ret }
 	buf@ Free
 end
 
-procedure Panic (* errorstr -- *)
+fn Panic { ... fmt -- }
 	"panic: " Printf
 
-	Printf
+	argv argc@ fmt@ VPrintf
 
 	-1 a3xReturn
 end

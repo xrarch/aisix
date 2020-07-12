@@ -8,8 +8,6 @@ public InterruptGet
 var InterruptAck 0
 public InterruptAck
 
-var Nested 0
-
 extern Interrupt
 
 const CYCLESLICE 100000
@@ -29,8 +27,8 @@ exception_vector:
 	l.l   k0, k0, zero      ; k0 = [CurrentThread]
 
 	andi  k1, ers,  RS_USER    ; if the code that just got interrupted was kernel code,
-	beq   k1, zero, .waskernel ; don't switch stacks, continue using the kernel mode stacks..
-	                           ; ..for this thread.
+	beq   k1, zero, .waskernel ; don't switch stacks, continue using the kernel mode stacks
+	                           ; for this thread.
 
 	lio.l sp, k0, Thread_KernelStackTop ; load new sp from the current thread's structure
 	lio.l k3, k0, Thread_ValueStackTop  ; load new dragonfruit value stack pointer
@@ -57,8 +55,8 @@ exception_vector:
 	lio.l ers, sp, Context_ers  ; restore interrupted thread's processor mode
 	lio.l epc, sp, Context_epc  ; restore interrupted thread's program counter
 	lio.l lr,  sp, Context_lr   ; restore interrupted thread's return address register
-	lio.l sp,  sp, Context_sp   ; restore interrupted thread's stack pointer, just in case..
-	                            ; ..it was user code
+	lio.l sp,  sp, Context_sp   ; restore interrupted thread's stack pointer, just in case
+	                            ; it was user code
 
 	rfe ; give control back to the thread
 
@@ -179,7 +177,7 @@ procedure Exception { badaddr ecause tf -- }
 		tf@ Context_ers + @ "ERS: %x\n" Printf
 		badaddr@ "BADADDR: %x\n" Printf
 
-		if (tf@ Context_ers + @ 1 & 0 ==)
+		if (tf@ Context_ers + @ RS_USER & 0 ==)
 			(* kernel mode exception, panic *)
 			"unexpected kernel mode exception!\n" Panic
 		end

@@ -7,7 +7,9 @@ procedure ArgsInit { argp -- }
 		return
 	end
 
-	argp@ ArgsBuffer!
+	argp@ strlen 1 + Calloc ArgsBuffer!
+
+	ArgsBuffer@ argp@ strcpy
 end
 
 procedure ArgsValue { arg -- out }

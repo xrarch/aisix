@@ -2,7 +2,7 @@
 
 var ArgsBuffer 0
 
-procedure ArgsInit { argp -- }
+fn ArgsInit { argp -- }
 	if (argp@ 0 ==)
 		return
 	end
@@ -10,7 +10,7 @@ procedure ArgsInit { argp -- }
 	argp@ ArgsBuffer!
 end
 
-procedure ArgsValue { arg -- out }
+fn ArgsValue { arg -- out }
 	if (ArgsBuffer@ 0 ==)
 		0 out!
 		return
@@ -45,7 +45,7 @@ procedure ArgsValue { arg -- out }
 	namebuf@ Free
 end
 
-procedure ArgsCheck { arg -- present }
+fn ArgsCheck { arg -- present }
 	if (ArgsBuffer@ 0 ==)
 		0 present!
 		return

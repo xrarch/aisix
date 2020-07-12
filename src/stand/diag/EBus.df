@@ -5,7 +5,7 @@ const EBusSlots 7
 const EBusSlotSpace 0x8000000
 const EBusBoardMagic 0x0C007CA1
 
-procedure EBusDump (* -- *)
+fn EBusDump { -- }
 	"== ebus dump ==\n\tSLOT\tADDR\t\tID\t\tNAME\n" Printf
 
 	auto i

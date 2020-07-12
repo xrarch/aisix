@@ -1,16 +1,18 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 
-externconst DeviceType
-extern PartitionDisk
+externptr DeviceType
+extern PartitionDisk { -- }
 
-extern LoadVDB
-extern FreeVDB
-extern VDBValid
-extern PTInfo
-extern VDBLabel
+extern LoadVDB { -- }
+extern FreeVDB { -- }
+extern VDBValid { -- valid }
+extern PTInfo { -- }
+extern VDBLabel { -- label }
+extern VDBWrite { new -- }
+extern WriteBoot { -- }
 
-externconst DiskNode
+externptr DiskNode
 
 table DiskTypes
 	0
@@ -18,36 +20,36 @@ table DiskTypes
 	"partition"
 endtable
 
-procedure PromptYN (* prompt -- *)
-	auto r
-	2 Calloc r!
+fn PromptYN { ... fmt -- r }
+	"\[[7m" Puts
 
-	Printf
+	argv argc@ fmt@ VPrintf
 	" [y/n]? " Printf
 
-	r@ 1 Gets
+	while (Getc dup r! ERR ==) end
 
-	if (r@ gb 'y' ==)
-		r@ Free
-		1 return
-	end
+	"\[[0m\[[2K\r" Puts
 
-	r@ Free
-	0 return
-end
+	r@ Putc
 
-procedure PromptON (* ... numopt prompt -- num *)
 	'\n' Putc
 
-	Printf
+	if (r@ 'y' ==)
+		1 r! return
+	end
 
-	auto no
-	no!
+	0 r! return
+end
+
+fn PromptON { ... prompt -- num }
+	'\n' Putc
+
+	prompt@ Puts
 
 	auto i
 	1 i!
-	while (i@ no@ <=)
-		i@ "\t%d. %s\n" Printf
+	while (i@ argc@ <=)
+		[i@ 1 -]argv@ i@ "\t%d. %s\n" Printf
 		i@ 1 + i!
 	end
 
@@ -60,12 +62,12 @@ procedure PromptON (* ... numopt prompt -- num *)
 
 	r@ 11 Gets
 
-	r@ atoi
+	r@ atoi num!
 
 	r@ Free
 end
 
-procedure PromptAnyKey (* -- *)
+fn PromptAnyKey { -- }
 	"\[[7mpress any key\[[0m" Printf
 
 	while (Getc -1 ==) end
@@ -73,23 +75,25 @@ procedure PromptAnyKey (* -- *)
 	"\[[2K\r" Puts
 end
 
-procedure FormatDisk (* -- *)
+fn FormatDisk { -- }
 	"NOT YET IMPLEMENTED!!!\n" Printf
 
 	PromptAnyKey
 end
 
-procedure Prompt (* -- *)
+fn Prompt { -- }
 	auto r
-
 	0 r!
 
-	while (r@ 4 > r@ 0 == ||)
-		"view volume info"
+	auto dfo
+
+	while (r@ 6 > r@ 0 == ||)
+		"write bootloader"
+		"write new disklabel (erase all partitions)"
 		"partition the disk"
 		"format the volume with a new filesystem"
+		"view volume info"
 		"exit (preserve data)"
-		4
 		"which would you like to do?\n"
 		PromptON r!
 	end
@@ -98,7 +102,7 @@ procedure Prompt (* -- *)
 		0 a3xReturn
 	end
 
-	if (r@ 4 ==)
+	if (r@ 2 ==)
 		'\n' Putc
 
 		[DeviceType@]DiskTypes@ "\[[33mtype:\[[0m \[[94m%s\[[0m\n" Printf
@@ -129,21 +133,36 @@ procedure Prompt (* -- *)
 		end
 
 		PromptAnyKey
-	end elseif (r@ 3 ==)
+	end elseif (r@ 6 ==)
+		1 dfo!
+
+		if (DeviceType@ 1 ==)
+			"\nyou are trying to write boot blocks to a raw disk. this could destroy\nrandom data. you probably want to write them to a partition instead.\n" Printf
+
+			if ("are you sure that this is what you want" PromptYN ~~)
+				0 dfo!
+			end 
+		end
+
+		if (dfo@)
+			WriteBoot
+		end
+	end elseif (r@ 5 ==)
+		1 VDBWrite
+	end elseif (r@ 4 ==)
 		if (DeviceType@ 1 ~=)
 			"\ncan only partition a raw disk. run this utility again, but supply the raw disk\npath. you are attempting to partition a partition.\n" Printf
 			return
 		end
 
 		PartitionDisk
-	end elseif (r@ 2 ==)
-		auto dfo
+	end elseif (r@ 3 ==)
 		1 dfo!
 
 		if (DeviceType@ 1 ==)
 			"\nyou are trying to put a filesystem on a raw disk. this will destroy\nany existing partition table. you probably want to put this filesystem\non a partition instead.\n" Printf
 
-			if ("\nare you sure that this is what you want" PromptYN ~~)
+			if ("are you sure that this is what you want" PromptYN ~~)
 				0 dfo!
 			end 
 		end

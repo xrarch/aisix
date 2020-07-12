@@ -3,18 +3,18 @@
 var DiskNode 0
 public DiskNode
 
-procedure IDiskInit (* bootdev -- *)
-	DiskNode!
+fn IDiskInit { bootdev -- }
+	bootdev@ DiskNode!
 end
 
-procedure IReadBlock { block buf -- }
+fn IReadBlock { block buf -- }
 	DiskNode@ a3xDeviceSelectNode
-		buf@ block@ "readBlock" a3xDCallMethod drop drop
+		buf@ block@ "readBlock" a3xDCallMethod drop drop drop drop
 	a3xDeviceExit
 end
 
-procedure IWriteBlock { block buf -- }
+fn IWriteBlock { block buf -- }
 	DiskNode@ a3xDeviceSelectNode
-		buf@ block@ "writeBlock" a3xDCallMethod drop drop
+		buf@ block@ "writeBlock" a3xDCallMethod drop drop drop drop
 	a3xDeviceExit
 end

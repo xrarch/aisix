@@ -1,15 +1,15 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 
-extern IDiskInit
-extern Prompt
-extern PromptYN
+extern IDiskInit { bootdev -- }
+extern Prompt { -- }
+extern PromptYN { ... fmt -- r }
 
 (* 1: disk. 2: logical. *)
 var DeviceType 0
 public DeviceType
 
-procedure CheckInvalid { arg -- dn }
+fn CheckInvalid { arg -- dn }
 	if (arg@ 0 ==)
 		"no disk name provided.\n" Printf
 		0 dn!
@@ -54,7 +54,7 @@ procedure CheckInvalid { arg -- dn }
 	end
 end
 
-procedure Main { sz args -- ret }
+fn Main { sz args -- ret }
 	0 ret!
 
 	auto pnt
@@ -117,8 +117,3 @@ procedure Main { sz args -- ret }
 		Prompt
 	end
 end
-
-
-
-
-

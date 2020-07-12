@@ -1,27 +1,30 @@
 #include "<df>/dragonfruit.h"
 
-extern EBusDump
-extern AmanatsuDump
+extern EBusDump { -- }
+extern AmanatsuDump { -- }
 
-procedure PromptYN (* -- *)
-	auto r
-	2 Calloc r!
+fn PromptYN { ... fmt -- r }
+	"\[[7m" Puts
 
-	Printf
+	argv argc@ fmt@ VPrintf
 	" [y/n]? " Printf
 
-	r@ 1 Gets
+	while (Getc dup r! ERR ==) end
 
-	if (r@ gb 'y' ==)
-		r@ Free
-		1 return
+	"\[[0m\[[2K\r" Puts
+
+	r@ Putc
+
+	'\n' Putc
+
+	if (r@ 'y' ==)
+		1 r! return
 	end
 
-	r@ Free
-	0 return
+	0 r! return
 end
 
-procedure Prompt (* -- *)
+fn Prompt { -- }
 	if ("dump ebus info" PromptYN)
 		EBusDump
 	end
