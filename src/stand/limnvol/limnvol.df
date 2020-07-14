@@ -85,7 +85,9 @@ fn Main { sz args -- ret }
 	dn@ "a3x devnode: %x\n" Printf
 
 	if (dn@ a3xMyDevice@ == dn@ pnt@ == ||)
-		if ("\nwarning, you're attempting to work on the same device that this utility was\nloaded from. are you sure that this is what you want" PromptYN ~~)
+		"\nwarning, you're attempting to work on the same device that this utility was\nloaded from.\n" Printf
+
+		if ("are you sure that this is what you want" PromptYN ~~)
 			return
 		end
 	end
