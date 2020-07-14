@@ -3,16 +3,16 @@
 #include "<inc>/kernel.h"
 #include "<inc>/context.h"
 
-extern AISIX
+extern AISIX { ksz args -- ret }
 
 const CompatibleFirmware 30502
 
-procedure Main { ksz args -- ret }
+fn Main { ksz args -- ret }
 	0 ret!
 
 	(* manually clear BSS section, because fileloader only loads flat files,
 	and while the linker lets us spit out flat binary files with the BSS section
-	trimmed out rather than converted to a massive block of zeroes,
+	trimmed out rather than converted to a massive block of zeroes on disk,
 	it does mean we have to clear it ourselves. *)
 
 	auto ptr
@@ -69,16 +69,15 @@ procedure Main { ksz args -- ret }
 	ksz@ args@ AISIX ret!
 end
 
-extern DeviceTree
-extern ExceptionInit
-
-procedure PlatformInit (* -- *)
+extern DeviceTree { -- }
+extern ExceptionInit { -- }
+fn PlatformInit { -- }
 	ExceptionInit
 
 	DeviceTree
 end
 
-procedure PlatformPutc { c -- }
+fn PlatformPutc { c -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -87,7 +86,7 @@ procedure PlatformPutc { c -- }
 	rs@ InterruptRestore
 end
 
-procedure PlatformGetc { -- c }
+fn PlatformGetc { -- c }
 	auto rs
 	InterruptDisable rs!
 
@@ -96,7 +95,7 @@ procedure PlatformGetc { -- c }
 	rs@ InterruptRestore
 end
 
-procedure PlatformAlertUser (* -- *)
+fn PlatformAlertUser { -- }
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	a3xConsoleUserOut

@@ -23,8 +23,10 @@ endstruct
 const DEV_CHAR 1
 const DEV_BLOCK 2
 
-extern DevByName (* name -- dev *)
+externptr DevFSTab
 
-extern DevByIndex (* index -- dev *)
+extern DevByName { name -- dev }
 
-extern DeviceRegister (* name driver type unit -- device *)
+extern DevByIndex { index -- dev }
+
+extern DeviceRegister { name driver unit -- device }

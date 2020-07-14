@@ -15,7 +15,7 @@ public MachineRAMBase
 var MachineRAMSize 0
 public MachineRAMSize
 
-procedure MachineInfo (* -- *)
+fn MachineInfo { -- }
 	MachineRAMBase@
 	MachineRAMSize@ 1024 /
 	MachineBus@ 

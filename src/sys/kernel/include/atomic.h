@@ -1,8 +1,8 @@
-extern LockMutex (* mutex -- killed *)
+extern LockMutex { mutex -- killed }
 
-extern UnlockMutex (* mutex -- *)
+extern UnlockMutex { mutex -- }
 
-extern InitMutex (* name mutex -- *)
+extern InitMutex { name mutex -- }
 
 struct Mutex
 	4 Locked

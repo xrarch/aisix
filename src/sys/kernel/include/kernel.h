@@ -9,14 +9,16 @@
 #include "<inc>/dev.h"
 #include "<inc>/timer.h"
 
-extern Panic (* ... fstr -- *)
+extern Panic { ... fmt -- }
 
-extern PMMFree (* pages addr -- *)
+externptr Pages
 
-extern PMMAlloc (* pages -- addr *)
+extern PMMFree { pages addr -- }
 
-extern PMMCalloc (* pages -- addr *)
+extern PMMAlloc { pages -- addr }
 
-extern AskUser (* question anslen -- answer *)
+extern PMMCalloc { pages -- addr }
 
-externconst ErrorNames
+extern AskUser { ... fmt anslen -- answer }
+
+externptr ErrorNames

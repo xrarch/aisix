@@ -15,6 +15,14 @@ struct Filesystem
 	4 Unmount
 endstruct
 
+fnptr FSMount { mount -- root fsdata }
+fnptr FSGetNode { vnode -- ok }
+fnptr FSPutNode { vnode -- ok }
+fnptr FSSync { vnode -- ok }
+fnptr FSRewindDir { dirent -- ok }
+fnptr FSReadDir { dirent -- ok }
+fnptr FSUnmount { mount -- ok }
+
 struct Mount
 	MOUNTNAMELEN Name
 	4 Next
@@ -52,28 +60,28 @@ struct VDirent
 	4 Index
 endstruct
 
-extern VFSPath  (* path -- vnode *)
+extern VFSPath  { path -- vnode }
 
-extern VNodeNew (* vnid mount -- vnode *)
+extern VNodeNew { vnid mount -- vnode }
 
-extern VNodePut (* vnode -- *)
+extern VNodePut { vnode -- }
 
-extern VNodeGet (* vnid mount -- vnode *)
+extern VNodeGet { vnid mount -- vnode }
 
-extern VNodeLock (* vnode -- killed *)
+extern VNodeLock { vnode -- killed }
 
-extern VNodeUnlock (* vnode -- *)
+extern VNodeUnlock { vnode -- }
 
-extern VNodeRef (* vnode -- *)
+extern VNodeRef { vnode -- }
 
-extern VNodeUnref (* vnode -- *)
+extern VNodeUnref { vnode -- }
 
-extern MountRef (* mount -- *)
+extern MountRef { mount -- }
 
-extern MountUnref (* mount -- *)
+extern MountUnref { mount -- }
 
-extern SyncVNodes (* mount evenifbusy -- res *)
+extern SyncVNodes { mount remove -- res }
 
-extern VFSMount (* name fs dev -- mount *)
+extern VFSMount { name fs dev -- mount }
 
-extern VFSUnmount (* mount -- ok *)
+extern VFSUnmount { mount -- ok }

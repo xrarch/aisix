@@ -10,10 +10,7 @@ var ClockDataPort 0
 
 const CLOCKINTERVAL 100
 
-externconst InterruptGet
-externconst InterruptAck
-
-procedure DrvClockFoundNode { node -- }
+fn DrvClockFoundNode { node -- }
 	if (ClockFound@)
 		return
 	end
@@ -38,7 +35,7 @@ procedure DrvClockFoundNode { node -- }
 	ClockSet
 end
 
-procedure ClockSet { -- }
+fn ClockSet { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -48,12 +45,10 @@ procedure ClockSet { -- }
 	rs@ InterruptRestore
 end
 
-extern TimerTick
-
-procedure ClockIntr { intn -- }
+fn ClockIntr { intn -- }
 	ClockSet
 
-	intn@ InterruptAck@ Call
+	intn@ InterruptAck@ InterruptAcker
 
 	CLOCKINTERVAL TimerTick
 end

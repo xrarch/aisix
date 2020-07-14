@@ -6,10 +6,7 @@ const LSICClaimComplete 0x10
 
 var LSICBase 0
 
-externconst InterruptGet
-externconst InterruptAck
-
-procedure DrvLSICFoundNode { node -- }
+fn DrvLSICFoundNode { node -- }
 	"address" a3xDGetProperty LSICBase!
 
 	pointerof LSICInterruptGet InterruptGet!
@@ -18,10 +15,10 @@ procedure DrvLSICFoundNode { node -- }
 	LSICBase@ "  lsic @ 0x%x\n" Printf
 end
 
-procedure private LSICInterruptGet (* -- intn *)
-	LSICBase@ LSICClaimComplete + @
+fn private LSICInterruptGet { -- intn }
+	LSICBase@ LSICClaimComplete + @ intn!
 end
 
-procedure private LSICInterruptAck (* intn -- *)
-	LSICBase@ LSICClaimComplete + !
+fn private LSICInterruptAck { intn -- }
+	intn@ LSICBase@ LSICClaimComplete + !
 end

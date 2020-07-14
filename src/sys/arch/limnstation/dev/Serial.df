@@ -11,9 +11,6 @@ const SerialCmdRead 2
 const SerialCmdIntr 3
 const SerialCmdIntrOff 4
 
-externconst InterruptGet
-externconst InterruptAck
-
 table SerialDriver
 	"serial"
 	DEV_BLOCK
@@ -29,7 +26,7 @@ var SerialFound 0
 
 var SerialKDebug 0
 
-procedure DrvSerialFoundNode { node -- }
+fn DrvSerialFoundNode { node -- }
 	if (SerialFound@)
 		return
 	end
@@ -63,35 +60,32 @@ procedure DrvSerialFoundNode { node -- }
 	"serial2" SerialDriver 0 DeviceRegister drop
 end
 
-procedure SerialOpen { unit -- ok }
+fn SerialOpen { unit -- ok }
 	0 ok!
 end
 
-procedure SerialClose { unit -- ok }
+fn SerialClose { unit -- ok }
 	0 ok!
 end
 
-procedure SerialIoctl { op1 op2 op3 op4 unit -- ok }
+fn SerialIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-procedure SerialRead { buf len unit seek -- ok }
+fn SerialRead { buf len unit seek -- ok }
 	0 ok!
 end
 
-procedure SerialWrite { buf len unit seek -- ok }
+fn SerialWrite { buf len unit seek -- ok }
 	0 ok!
 end
 
-extern KDebug
+extern KDebug { -- }
 
-externconst KLogWrite
-externconst KLogRead
-
-procedure SerialIntr { intn -- }
+fn SerialIntr { intn -- }
 	SerialIntrDisable
 
-	intn@ InterruptAck@ Call
+	intn@ InterruptAck@ InterruptAcker
 
 	auto c
 
@@ -118,7 +112,7 @@ procedure SerialIntr { intn -- }
 	SerialIntrEnable
 end
 
-procedure SerialIntrEnable { -- }
+fn SerialIntrEnable { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -127,7 +121,7 @@ procedure SerialIntrEnable { -- }
 	rs@ InterruptRestore
 end
 
-procedure SerialIntrDisable { -- }
+fn SerialIntrDisable { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -136,7 +130,7 @@ procedure SerialIntrDisable { -- }
 	rs@ InterruptRestore
 end
 
-procedure SerialPutc { c -- }
+fn SerialPutc { c -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -146,7 +140,7 @@ procedure SerialPutc { c -- }
 	rs@ InterruptRestore
 end
 
-procedure SerialGetc { -- c }
+fn SerialGetc { -- c }
 	auto rs
 	InterruptDisable rs!
 

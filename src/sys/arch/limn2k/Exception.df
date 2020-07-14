@@ -8,8 +8,6 @@ public InterruptGet
 var InterruptAck 0
 public InterruptAck
 
-extern Interrupt
-
 const CYCLESLICE 100000
 
 asm "
@@ -21,8 +19,6 @@ exception_vector:
 	             ; but it's much easier and faster to save it unconditionally,
 	             ; instead of trying to figure it out.
 
-	mov   k3, vs ; save value stack for the same reason
-
 	la    k0, CurrentThread
 	l.l   k0, k0, zero      ; k0 = [CurrentThread]
 
@@ -31,7 +27,6 @@ exception_vector:
 	                           ; for this thread.
 
 	lio.l sp, k0, Thread_KernelStackTop ; load new sp from the current thread's structure
-	lio.l k3, k0, Thread_ValueStackTop  ; load new dragonfruit value stack pointer
 
 .waskernel:
 	subi.i sp, Context_SIZEOF   ; reserve space in stack for context save
@@ -42,11 +37,9 @@ exception_vector:
 	sgpr   sp                   ; save the rest of the general purpose registers
 	                            ; what a convenient instruction sgpr is
 
-	mov    vs, k3            ; switch value stack
-
-	swd.l  vs, zero, badaddr ; push badaddr to the value stack
-	swd.l  vs, zero, ecause  ; push the exception cause to the value stack
-	swd.l  vs, zero, sp      ; push the context we just saved to the value stack
+	mov    a2, badaddr
+	mov    a1, ecause
+	mov    a0, sp            ; give Exception our context
 	jal    Exception         ; call Exception, to handle the exception
 
 	li     badaddr, 0        ; clear badaddr because the processor doesn't do it for us
@@ -60,13 +53,9 @@ exception_vector:
 
 	rfe ; give control back to the thread
 
-; don't use r3 in this routine because its used by cpukthreadentry
 ; old new -- 
 cswtch:
 .global cswtch
-	lwi.l  r1, vs,   zero
-	lwi.l  r2, vs,   zero
-
 	subi.i sp, Context_SIZEOF
 	sio.l  sp, Context_sp,  sp
 	sio.l  sp, Context_epc, lr
@@ -75,14 +64,14 @@ cswtch:
 	sio.l  sp, Context_ers, rs
 	sgpr   sp
 
-	s.l    r2, zero, sp
-	mov    sp, r1
+	s.l    a1, zero, sp
+	mov    sp, a0
 
 	lgpr   sp
-	lio.l  lr, sp,   Context_lr
-	lio.l  timer, sp, Context_timer
-	lio.l  rs, sp,   Context_ers
-	addi.i sp, Context_SIZEOF
+	lio.l  lr,    sp,   Context_lr
+	lio.l  timer, sp,   Context_timer
+	lio.l  rs,    sp,   Context_ers
+	addi.i sp,    Context_SIZEOF
 
 	ret
 
@@ -100,50 +89,24 @@ PlatformSetTimer:
 	la timer, CYCLESLICE
 	ret
 
+ExceptionInit:
+.global ExceptionInit
+	la ev, exception_vector
+	ret
+
 "
 
-extern PlatformSetTimer (* it's actually in this file but this makes the df compiler happy *)
+extern PlatformSetTimer { -- } (* it's actually in this file but this makes the df compiler happy *)
 
-procedure ExceptionInit (* -- *)
-	pointerof exception_vector _flush_all asm "
-
-	lwi.l ev, vs, zero
-
-	"
-end
-
-extern KDebug
-
-extern ThreadFree
-extern ThreadFreeSlot
+extern KDebug { -- }
 
 const EXCINTERRUPT 1
 const EXCSYS 2
 const EXCTIMER 5
 const EXCBREAK 6
 
-procedure Exception { badaddr ecause tf -- }
+fn Exception { badaddr ecause tf -- }
 	tf@ CurrentThread@ Thread_TrapFrame + !
-
-	if (tf@ Context_ers + @ 1 & 0 ==)
-
-		(* check stack bounds *)
-		if (tf@ Context_sp + @ CurrentThread@ Thread_KernelStack + @ <)
-			"kernel thread had a stack overflow at some point!\n" Panic
-		end
-
-		if (tf@ Context_sp + @ CurrentThread@ Thread_KernelStackTop + @ >)
-			"kernel thread had a stack underflow at some point!\n" Panic
-		end
-
-		if (tf@ Context_vs + @ CurrentThread@ Thread_ValueStack + @ <)
-			"kernel thread had a value stack overflow at some point!\n" Panic
-		end
-
-		if (tf@ Context_vs + @ CurrentThread@ Thread_ValueStackTop + @ >)
-			"kernel thread had a value stack underflow at some point!\n" Panic
-		end
-	end
 
 	if (ecause@ EXCTIMER ==)
 		PlatformSetTimer
@@ -158,7 +121,7 @@ procedure Exception { badaddr ecause tf -- }
 		end
 
 		auto int
-		while (InterruptGet@ Call dup int!)
+		while (InterruptGet@ InterruptGetter dup int!)
 			int@ Interrupt
 		end
 	end elseif (ecause@ EXCSYS ==)
@@ -196,10 +159,10 @@ CPUKThreadEntry:
 	bseti rs, rs, 1
 	bseti rs, rs, 3
 
-	jalr r3
+	jalr t0
 
-	la at, .pstring
-	swd.l vs, zero, at
+	la a1, .pstring
+	li a0, 0
 	jal Panic
 
 .pstring:
@@ -210,43 +173,34 @@ CPUKThreadEntry:
 
 "
 
-procedure CPUContextPrepare { vs entry stack -- ctx }
+fn CPUContextPrepare { entry stack -- ctx }
 	stack@ Context_SIZEOF - ctx!
 
-	vs@ ctx@ Context_vs + !
-	entry@ ctx@ Context_r3 + !
+	entry@ ctx@ Context_t0 + !
 	pointerof CPUKThreadEntry ctx@ Context_lr + !
 	CYCLESLICE ctx@ Context_timer + !
 end
 
-(* turns on the timer, as well *)
-procedure InterruptEnable (* -- *)
-	asm "
+asm "
 
+InterruptEnable:
+.global InterruptEnable
 	bseti rs, rs, 1
-	bseti rs, rs, 3
+	ret
 
-	"
-end
-
-(* turns off the timer, as well *)
-procedure InterruptDisable (* -- rs *)
-	asm "
-
-	swd.l vs, zero, rs
+InterruptDisable:
+.global InterruptDisable
+	mov v0, rs
 	bclri rs, rs, 3
 	bclri rs, rs, 1
+	ret
 
-	"
-end
+InterruptRestore:
+.global InterruptRestore
+	mov rs, a0
+	ret
 
-procedure InterruptRestore (* rs -- *)
-	asm "
-
-	lwi.l rs, vs, zero
-
-	"
-end
+"
 
 table ContextNames
 	"r1"    "r2"

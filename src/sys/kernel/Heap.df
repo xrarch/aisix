@@ -1,8 +1,6 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-externconst Pages
-
 (* ported from ancient AISIX *)
 
 var KHeapStart 0
@@ -24,7 +22,7 @@ struct KHeapHeader
 	4 allocated
 endstruct
 
-procedure HeapInit (* -- *)
+fn HeapInit { -- }
 	auto heapsizep
 	Pages@ FRACTION / MINSIZE max heapsizep!
 
@@ -46,7 +44,7 @@ procedure HeapInit (* -- *)
 	MAGIC KHeapStart@ KHeapHeader_magic + !
 end
 
-procedure HeapDump (* -- *)
+fn HeapDump { -- }
 	auto ept
 	KHeapStart@ ept!
 
@@ -114,7 +112,7 @@ end
 
 (* first-fit *)
 
-procedure private Malloc1 { endp startp sz -- ptr }
+fn private Malloc1 { endp startp sz -- ptr }
 	if (sz@ 0 ==)
 		"Malloc: sz = 0\n" Panic
 	end
@@ -199,15 +197,15 @@ procedure private Malloc1 { endp startp sz -- ptr }
 	end
 end
 
-procedure Malloc { sz -- ptr }
-	if (sz@ 0x3 & 0 ~=)
-		sz@ 0xFFFFFFFC & 4 + sz!
+fn Malloc { size -- ptr }
+	if (size@ 0x3 & 0 ~=)
+		size@ 0xFFFFFFFC & 4 + size!
 	end
 
 	auto rs
 	InterruptDisable rs!
 
-	0 KHeapLast@ sz@ Malloc1 ptr!
+	0 KHeapLast@ size@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
 		rs@ InterruptRestore
@@ -215,7 +213,7 @@ procedure Malloc { sz -- ptr }
 		return
 	end
 
-	KHeapLast@ 0 sz@ Malloc1 ptr!
+	KHeapLast@ 0 size@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
 		rs@ InterruptRestore
@@ -228,17 +226,17 @@ procedure Malloc { sz -- ptr }
 	-ENOMEM ptr! return
 end
 
-procedure Calloc { sz -- ptr }
-	sz@ Malloc ptr!
+fn Calloc { size -- ptr }
+	size@ Malloc ptr!
 
 	if (ptr@ iserr)
 		return
 	end
 
-	ptr@ sz@ 0 memset
+	ptr@ size@ 0 memset
 end
 
-procedure Free { ptr -- }
+fn Free { ptr -- }
 	if (ptr@ 0 == ptr@ iserr ||)
 		ptr@ "tried to free 0x%x!\n" Panic
 	end

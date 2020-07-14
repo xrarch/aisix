@@ -19,7 +19,7 @@ DIAG_DIR       := ./src/stand/diag
 LIMNVOL_DIR    := ./src/stand/limnvol
 KERNEL_DIR     := ./src/sys/kernel
 
-dist: $(DISTIMAGE) bootable stand #kernel
+dist: $(DISTIMAGE) bootable stand kernel
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)

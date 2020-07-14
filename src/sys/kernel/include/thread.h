@@ -4,10 +4,8 @@ struct Thread
 	4 Context
 	
 	4 KernelStackTop
-	4 ValueStackTop
 	
 	4 KernelStack
-	4 ValueStack
 	
 	4 Process
 	4 TID
@@ -52,7 +50,11 @@ struct Process
 	PROCNAMELEN Name
 endstruct
 
-externconst CurrentThread
+externptr CurrentThread
+
+externptr Processes
+
+externptr Threads
 
 const THREADMAX 128
 
@@ -60,32 +62,36 @@ const PROCMAX 64
 
 const KERNELSTACKPAGES 1
 
-const VALUESTACKPAGES 1
-
 const TS_NOTREADY 0
 const TS_READY 1
 const TS_RUNNING 2
 const TS_SLEEPING 3
 const TS_TIMER 4
 
-extern JumpIntoScheduler (* -- *)
+extern JumpIntoScheduler { -- }
 
-extern KernelThreadNew (* funcptr -- *)
+extern KernelThreadNew { entry name -- thread }
 
-extern ThreadReady (* thread -- *)
+extern ThreadReady { thread -- }
 
-extern Yield (* -- *)
+extern Yield { -- }
 
-extern Sleep (* channel -- killed *)
+extern Sleep { channel -- killed }
 
-extern Wakeup (* channel -- *)
+extern Wakeup { channel -- }
 
-extern ProcessExit (* ret -- *)
+extern ProcessExit { ret -- }
 
-extern ProcessKill (* ret process -- *)
+extern ProcessKill { ret process -- }
 
-extern ThreadExit (* -- *)
+extern ThreadExit { -- }
 
-extern SleepFor (* ms -- killed *)
+extern ThreadKill { thread -- }
 
-extern WakeupTimer (* uptime -- *)
+extern SleepFor { ms -- killed }
+
+extern WakeupTimer { uptime -- }
+
+extern ThreadFree { thread -- }
+
+extern cswtch { old new -- }

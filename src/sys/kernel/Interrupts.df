@@ -4,7 +4,7 @@
 
 table InterruptHandlers[INTERRUPTNUM]
 
-procedure Interrupt { intn -- }
+fn Interrupt { intn -- }
 	auto h
 	[intn@]InterruptHandlers@ h!
 
@@ -12,13 +12,13 @@ procedure Interrupt { intn -- }
 		intn@ "no handler for received interrupt %x\n" Panic
 	end
 
-	intn@ h@ Call
+	intn@ h@ IntHandler
 end
 
-procedure InterruptRegister { h n -- }
+fn InterruptRegister { h n -- }
 	h@ [n@]InterruptHandlers!
 end
 
-procedure InterruptUnregister { n -- }
+fn InterruptUnregister { n -- }
 	0 [n@]InterruptHandlers!
 end

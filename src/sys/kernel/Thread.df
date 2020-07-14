@@ -18,9 +18,9 @@ var InitProcess 0
 
 const KERNELPID 1
 
-extern AISIXInitialThread
+extern AISIXInitialThread { -- }
 
-procedure ThreadInit { -- }
+fn ThreadInit { -- }
 	PROCMAX THREADMAX "max %d threads, %d processes\n" Printf
 
 	auto process
@@ -33,7 +33,7 @@ procedure ThreadInit { -- }
 	process@ Process_MainThread + @ ThreadReady
 end
 
-procedure private ThreadAllocate { -- thread }
+fn private ThreadAllocate { -- thread }
 	auto tid
 	0 tid!
 
@@ -70,7 +70,7 @@ procedure private ThreadAllocate { -- thread }
 	end
 end
 
-procedure private ThreadFreeSlot { thread -- }
+fn private ThreadFreeSlot { thread -- }
 	auto tid
 	thread@ Thread_TID + @ tid!
 
@@ -79,14 +79,13 @@ procedure private ThreadFreeSlot { thread -- }
 	thread@ Free
 end
 
-procedure ThreadFree { thread -- }
+fn ThreadFree { thread -- }
 	KERNELSTACKPAGES thread@ Thread_KernelStack + @ PMMFree
-	VALUESTACKPAGES thread@ Thread_ValueStack + @ PMMFree
 
 	thread@ ThreadFreeSlot
 end
 
-procedure ThreadKill { thread -- }
+fn ThreadKill { thread -- }
 	auto thst
 	thread@ Thread_Status + @ thst!
 
@@ -109,7 +108,7 @@ procedure ThreadKill { thread -- }
 	end
 end
 
-procedure ThreadExit { -- }
+fn ThreadExit { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -134,7 +133,7 @@ procedure ThreadExit { -- }
 	"exit returned\n" Panic
 end
 
-procedure ThreadNew { process entry name -- thread }
+fn ThreadNew { process entry name -- thread }
 	ThreadAllocate thread!
 
 	if (thread@ iserr)
@@ -152,49 +151,35 @@ procedure ThreadNew { process entry name -- thread }
 		return
 	end
 
-	auto vs
-	VALUESTACKPAGES PMMCalloc vs!
-
-	if (vs@ iserr)
-		KERNELSTACKPAGES stack@ PMMFree
-		thread@ ThreadFreeSlot
-		vs@ thread!
-		return
-	end
-
 	stack@ thread@ Thread_KernelStack + !
-	vs@ thread@ Thread_ValueStack + !
 
 	auto uc
 
 	auto vst
 
 	KERNELSTACKPAGES 4096 * stack@ + dup thread@ Thread_KernelStackTop + ! uc!
-	VALUESTACKPAGES 4096 * vs@ + dup thread@ Thread_ValueStackTop + ! vst!
 
-	vst@ entry@ uc@ CPUContextPrepare thread@ Thread_Context + !
+	entry@ uc@ CPUContextPrepare thread@ Thread_Context + !
 
 	thread@ Thread_Name + name@ THREADNAMELEN 1 - strncpy
 
 	1 process@ Process_Threads + +=
 end
 
-procedure ThreadReady { thread -- }
+fn ThreadReady { thread -- }
 	TS_READY thread@ Thread_Status + !
 end
 
-procedure KernelThreadNew { entry name -- thread }
+fn KernelThreadNew { entry name -- thread }
 	KernelProcess@ entry@ name@ ThreadNew thread!
 end
 
-extern cswtch
-
-extern CPUIdle
+extern CPUIdle { -- }
 
 var SchedulerContext 0
 
 (* scheduler *)
-procedure Scheduler { -- }
+fn Scheduler { -- }
 	"entering scheduler loop\n" Printf
 
 	auto rs
@@ -234,7 +219,7 @@ procedure Scheduler { -- }
 	end
 end
 
-procedure JumpIntoScheduler { -- }
+fn JumpIntoScheduler { -- }
 	if (CurrentThread@ Thread_Status + @ TS_RUNNING ==)
 		"JumpIntoScheduler: thread is running\n" Panic
 	end
@@ -242,7 +227,7 @@ procedure JumpIntoScheduler { -- }
 	CurrentThread@ Thread_Context + SchedulerContext@ cswtch
 end
 
-procedure Yield { -- }
+fn Yield { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -253,7 +238,7 @@ procedure Yield { -- }
 	rs@ InterruptRestore
 end
 
-procedure SleepFor { ms -- killed }
+fn SleepFor { ms -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -268,7 +253,7 @@ procedure SleepFor { ms -- killed }
 	CurrentThread@ Thread_Killed + @ killed!
 end
 
-procedure WakeupTimer { uptime -- }
+fn WakeupTimer { uptime -- }
 	auto i
 	0 i!
 
@@ -294,7 +279,7 @@ procedure WakeupTimer { uptime -- }
 	end
 end
 
-procedure Sleep { channel -- killed }
+fn Sleep { channel -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -309,7 +294,7 @@ procedure Sleep { channel -- killed }
 	CurrentThread@ Thread_Killed + @ killed!
 end
 
-procedure Wakeup { channel -- }
+fn Wakeup { channel -- }
 	auto i
 	0 i!
 
@@ -339,7 +324,7 @@ end
 
 var NextPID 1
 
-procedure private ProcessAllocate { -- process }
+fn private ProcessAllocate { -- process }
 	auto i
 	0 i!
 
@@ -382,7 +367,7 @@ procedure private ProcessAllocate { -- process }
 	end
 end
 
-procedure private ProcessFreeSlot { process -- }
+fn private ProcessFreeSlot { process -- }
 	auto index
 	process@ Process_Index + @ index!
 
@@ -391,7 +376,7 @@ procedure private ProcessFreeSlot { process -- }
 	[index@]Processes@ Free
 end
 
-procedure ProcessNew { entry name -- process }
+fn ProcessNew { entry name -- process }
 	ProcessAllocate process!
 
 	if (process@ iserr)
@@ -436,7 +421,7 @@ procedure ProcessNew { entry name -- process }
 	end
 end
 
-procedure ProcessDestroyThreads { process -- }
+fn ProcessDestroyThreads { process -- }
 	auto i
 	0 i!
 
@@ -460,7 +445,7 @@ procedure ProcessDestroyThreads { process -- }
 	end
 end
 
-procedure ProcessFreeResources { process -- }
+fn ProcessFreeResources { process -- }
 	if (process@ Process_Threads + @ 0 >)
 		"ProcessFreeResources: process still had extant threads\n" Panic
 	end
@@ -474,14 +459,14 @@ procedure ProcessFreeResources { process -- }
 	(* don't free slot now, will be needed later *)
 end
 
-procedure ProcessExit { ret -- }
+fn ProcessExit { ret -- }
 	auto process
 	CurrentThread@ Thread_Process + @ process!
 
 	ret@ process@ ProcessKill
 end
 
-procedure ProcessKill { ret process -- }
+fn ProcessKill { ret process -- }
 	if (process@ KernelProcess@ ==)
 		"kernel process killed!\n" Panic
 	end

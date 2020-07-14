@@ -1,13 +1,13 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-procedure InitMutex { name mutex -- }
+fn InitMutex { name mutex -- }
 	0 mutex@ Mutex_Locked + !
 	0 mutex@ Mutex_OwnerThread + !
 	name@ mutex@ Mutex_Name + !
 end
 
-procedure LockMutex { mutex -- killed }
+fn LockMutex { mutex -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -45,7 +45,7 @@ procedure LockMutex { mutex -- killed }
 	rs@ InterruptRestore
 end
 
-procedure UnlockMutex { mutex -- }
+fn UnlockMutex { mutex -- }
 	auto rs
 	InterruptDisable rs!
 

@@ -2,6 +2,6 @@
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
 
-procedure PlatformPanic (* ... fstr -- *)
+fn PlatformPanic { -- }
 	-1 a3xReturn
 end

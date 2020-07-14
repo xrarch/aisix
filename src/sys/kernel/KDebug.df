@@ -13,7 +13,7 @@ struct MonitorCommand
 	4 HelpText
 endstruct
 
-procedure KDebug (* -- *)
+fn KDebug { -- }
 	if (MonitorCommandList@ 0 ==)
 		MonitorCommandsInit
 	end
@@ -35,12 +35,12 @@ const ConsoleAssumedHeight 22
 var UsedLines 0
 var AllLines 0
 
-procedure ResetLines (* -- *)
+fn ResetLines { -- }
 	0 UsedLines!
 	0 AllLines!
 end
 
-procedure WaitNext { -- result }
+fn WaitNext { -- result }
 	1 result!
 
 	if (AllLines@)
@@ -70,13 +70,13 @@ procedure WaitNext { -- result }
 	1 UsedLines +=
 end
 
-extern HeapDump
+extern HeapDump { -- }
 
-extern VFSPrintMounts
+extern VFSPrintMounts { -- }
 
-extern DevFSPrintDevs
+extern DevFSPrintDevs { -- }
 
-procedure MonitorCommandsInit (* -- *)
+fn MonitorCommandsInit { -- }
 	ListCreate MonitorCommandList!
 
 	"Dump heap."
@@ -140,11 +140,11 @@ procedure MonitorCommandsInit (* -- *)
 	MonitorAddCommand
 end
 
-procedure CommandPanic { -- }
+fn CommandPanic { -- }
 	"debug\n" Panic
 end
 
-procedure DumpContext { con -- }
+fn DumpContext { con -- }
 	if (con@ 0 ==)
 		"no context\n" Printf
 		return
@@ -167,7 +167,7 @@ procedure DumpContext { con -- }
 	end
 end
 
-procedure DumpTF (* -- *)
+fn DumpTF { -- }
 	auto tidw
 	MonitorParseWord tidw!
 
@@ -190,7 +190,7 @@ procedure DumpTF (* -- *)
 	thread@ Thread_TrapFrame + @ DumpContext
 end
 
-procedure DumpCTX (* -- *)
+fn DumpCTX { -- }
 	auto tidw
 	MonitorParseWord tidw!
 
@@ -213,13 +213,11 @@ procedure DumpCTX (* -- *)
 	thread@ Thread_Context + @ DumpContext
 end
 
-procedure MonitorCommandExit (* -- *)
+fn MonitorCommandExit { -- }
 	0 MonitorRunning!
 end
 
-extern ThreadKill
-
-procedure MonitorCommandKillThread (* -- *)
+fn MonitorCommandKillThread { -- }
 	auto tidw
 	MonitorParseWord tidw!
 
@@ -242,7 +240,7 @@ procedure MonitorCommandKillThread (* -- *)
 	thread@ ThreadKill
 end
 
-procedure MonitorCommandKill (* -- *)
+fn MonitorCommandKill { -- }
 	auto tidw
 	MonitorParseWord tidw!
 
@@ -265,7 +263,7 @@ procedure MonitorCommandKill (* -- *)
 	-1 proc@ ProcessKill
 end
 
-procedure MonitorCommandHelp (* -- *)
+fn MonitorCommandHelp { -- }
 	auto plist
 	MonitorCommandList@ plist!
 
@@ -279,25 +277,28 @@ procedure MonitorCommandHelp (* -- *)
 		n@ ListNodeValue
 		pnode!
 
-		pnode@ MonitorCommand_HelpText + @ dup if (0 ~=)
+		auto ht
+		pnode@ MonitorCommand_HelpText + @ ht!
+
+		if (ht@ 0 ~=)
 			if (WaitNext ~~)
-				0 return
+				return
 			end
 		
-			pnode@ MonitorCommand_Name + @ "\[[33m%s\[[0m\t\t%s\n" Printf
-		end else drop end
+			ht@ pnode@ MonitorCommand_Name + @ "\[[33m%s\[[0m\t\t%s\n" Printf
+		end
 
 		n@ ListNodeNext n!
 	end
 end
 
-procedure MonitorPrompt (* -- *)
+fn MonitorPrompt { -- }
 	MonitorLine@ MonitorLinePoint!
 	"dbg> " Printf
 	MonitorLine@ 255 Gets
 end
 
-procedure MonitorDoLine (* -- *)
+fn MonitorDoLine { -- }
 	auto word
 	MonitorParseWord word!
 
@@ -310,13 +311,15 @@ procedure MonitorDoLine (* -- *)
 	end
 end
 
-procedure MonitorParseWord { -- word }
+fn MonitorParseWord { -- word }
 	256 Calloc word!
 
 	MonitorLinePoint@ word@ ' ' 255 strntok MonitorLinePoint!
 end
 
-procedure MonitorDoCommand { name -- ok }
+fnptr MonitorCmd { -- }
+
+fn MonitorDoCommand { name -- ok }
 	auto plist
 	MonitorCommandList@ plist!
 
@@ -331,7 +334,7 @@ procedure MonitorDoCommand { name -- ok }
 		if (pnode@ MonitorCommand_Name + @ name@ strcmp)
 			name@ Free
 
-			pnode@ MonitorCommand_Callback + @ Call 1 ok! return
+			pnode@ MonitorCommand_Callback + @ MonitorCmd 1 ok! return
 		end
 
 		n@ ListNodeNext n!
@@ -342,7 +345,7 @@ procedure MonitorDoCommand { name -- ok }
 	0 ok!
 end
 
-procedure MonitorAddCommand { helptext callback name -- }
+fn MonitorAddCommand { helptext callback name -- }
 	auto command
 	MonitorCommand_SIZEOF Calloc command!
 
@@ -355,10 +358,7 @@ procedure MonitorAddCommand { helptext callback name -- }
 	command@ MonitorCommandList@ ListInsert
 end
 
-externconst Processes
-externconst Threads
-
-procedure ListProcesses (* -- *)
+fn ListProcesses { -- }
 	auto i
 	0 i!
 
@@ -382,7 +382,7 @@ procedure ListProcesses (* -- *)
 	end
 end
 
-procedure ListThreads (* -- *)
+fn ListThreads { -- }
 	auto i
 	0 i!
 

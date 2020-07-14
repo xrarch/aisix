@@ -1,9 +1,11 @@
-externconst MachineType (* var *)
+externptr MachineType (* var *)
 
-externconst MachineCPU (* var *)
+externptr MachineCPU (* var *)
 
-externconst MachineBus (* var *)
+externptr MachineBus (* var *)
 
-externconst MachineRAMBase (* var *)
+externptr MachineRAMBase (* var *)
 
-externconst MachineRAMSize (* var *)
+externptr MachineRAMSize (* var *)
+
+extern MachineInfo { -- }

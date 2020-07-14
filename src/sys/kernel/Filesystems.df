@@ -1,8 +1,6 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-externconst DevFSTab
-
 table FilesystemTab
 	pointerof DevFSTab
 endtable
@@ -15,7 +13,7 @@ var DevMount 0
 
 buffer MountListMutex Mutex_SIZEOF
 
-procedure LockMountList { -- killed }
+fn LockMountList { -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -24,7 +22,7 @@ procedure LockMountList { -- killed }
 	rs@ InterruptRestore
 end
 
-procedure UnlockMountList { -- }
+fn UnlockMountList { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -33,7 +31,7 @@ procedure UnlockMountList { -- }
 	rs@ InterruptRestore
 end
 
-procedure MountRef { mount -- }
+fn MountRef { mount -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -42,7 +40,7 @@ procedure MountRef { mount -- }
 	rs@ InterruptRestore
 end
 
-procedure MountUnref { mount -- }
+fn MountUnref { mount -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -55,11 +53,12 @@ procedure MountUnref { mount -- }
 	rs@ InterruptRestore
 end
 
-procedure VFSInit { -- }
+fn VFSInit { -- }
 	"dev" "devfs" FSByName 0 VFSMount DevMount!
 
 	if (DevMount@ iserr)
-		[DevMount@ abs]ErrorNames@ "couldn't mount devfs: %s\n" Panic
+		DevMount@ abs@ DevMount!
+		[DevMount@]ErrorNames@ "couldn't mount devfs: %s\n" Panic
 	end
 
 	"mount list" MountListMutex InitMutex
@@ -68,15 +67,14 @@ procedure VFSInit { -- }
 	pointerof VFSSyncWorker "sync" KernelThreadNew syncw!
 
 	if (syncw@ iserr)
-		[syncw@ abs]ErrorNames@ "couldn't start sync worker: %s\n" Panic
+		syncw@ abs syncw!
+		[syncw@]ErrorNames@ "couldn't start sync worker: %s\n" Panic
 	end
 
 	syncw@ ThreadReady
 end
 
-externconst Levels
-
-procedure VFSPath { path -- vnode }
+fn VFSPath { path -- vnode }
 	auto pcomp
 	256 Calloc pcomp!
 
@@ -167,7 +165,7 @@ procedure VFSPath { path -- vnode }
 			break
 		end
 
-		dirent@ rwd@ Call ok!
+		dirent@ rwd@ FSRewindDir ok!
 
 		if (ok@ iserr)
 			vnode@ VNodePut
@@ -179,7 +177,7 @@ procedure VFSPath { path -- vnode }
 		0 found!
 
 		while (1)
-			dirent@ rd@ Call ok!
+			dirent@ rd@ FSReadDir ok!
 
 			if (ok@ iserr)
 				vnode@ VNodePut
@@ -210,7 +208,7 @@ procedure VFSPath { path -- vnode }
 	pcomp@ Free
 end
 
-procedure FSByName { name -- fs }
+fn FSByName { name -- fs }
 	auto i
 	while (i@ Filesystems <)
 		[i@]FilesystemTab@ fs!
@@ -225,7 +223,7 @@ procedure FSByName { name -- fs }
 	0 fs!
 end
 
-procedure VFSMountByName { name -- mount }
+fn VFSMountByName { name -- mount }
 	if (MountListMutex Mutex_OwnerThread + @ CurrentThread@ ~=)
 		"VFSMountByName\n" Panic
 	end
@@ -245,7 +243,7 @@ procedure VFSMountByName { name -- mount }
 	0 mount!
 end
 
-procedure private MountSanitize { name -- }
+fn private MountSanitize { name -- }
 	while (name@ gb 0 ~=)
 		if (name@ gb '/' ==)
 			'_' name@ sb
@@ -255,7 +253,7 @@ procedure private MountSanitize { name -- }
 	end
 end
 
-procedure VFSMount { name fs dev -- mount }
+fn VFSMount { name fs dev -- mount }
 	if (fs@ 0 ==)
 		"VFSMount: fs = 0\n" Panic
 	end
@@ -310,7 +308,7 @@ procedure VFSMount { name fs dev -- mount }
 
 	mount@ Mount_Name + name@ MOUNTNAMELEN 1 - strncpy
 
-	mount@ fs@ Filesystem_Mount + @ Call fsdata! root!
+	mount@ fs@ Filesystem_Mount + @ FSMount fsdata! root!
 
 	if (root@ iserr)
 		mount@ Free
@@ -347,25 +345,25 @@ procedure VFSMount { name fs dev -- mount }
 	fs@ Filesystem_Name + @ name@ devname@ "mounted %s on /%s as %s\n" Printf
 end
 
-procedure VFSUnmount { mount -- res }
+fn VFSUnmount { mount -- ok }
 	auto rs
 	InterruptDisable rs!
 
 	if (mount@ Mount_MRefs + @ 0 ~=)
-		-EBUSY res!
+		-EBUSY ok!
 		rs@ InterruptRestore
 		return
 	end
 
 	if (mount@ Mount_VRefs + @ 1 >)
-		-EBUSY res!
+		-EBUSY ok!
 		rs@ InterruptRestore
 		return
 	end
 
 	if (LockMountList)
 		rs@ InterruptRestore
-		-EINTR res!
+		-EINTR ok!
 		return
 	end
 
@@ -385,10 +383,11 @@ procedure VFSUnmount { mount -- res }
 
 	root@ VNodeUnref
 
-	mount@ 1 SyncVNodes res!
+	mount@ 1 SyncVNodes ok!
 
-	if (res@ iserr)
-		[res@ abs]ErrorNames@ "VFSUnmount: couldn't sync: %s\n" Printf
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "VFSUnmount: couldn't sync: %s\n" Printf
 	end
 	
 	(* for when block cache works: *)
@@ -416,12 +415,12 @@ procedure VFSUnmount { mount -- res }
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
 
-	mount@ fs@ Filesystem_Unmount + @ Call res!
+	mount@ fs@ Filesystem_Unmount + @ FSUnmount ok!
 
 	mount@ Free
 end
 
-procedure VFSSyncWorker { -- }
+fn VFSSyncWorker { -- }
 	"vfs sync worker!\n" Printf
 
 	while (1)
@@ -453,7 +452,7 @@ procedure VFSSyncWorker { -- }
 	end
 end
 
-procedure VFSPrintMounts { -- }
+fn VFSPrintMounts { -- }
 	auto mount
 
 	MountListHead@ mount!

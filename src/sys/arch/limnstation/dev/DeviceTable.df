@@ -2,10 +2,12 @@
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
 
-extern DrvCitronFoundNode
-extern DrvLSICFoundNode
-extern DrvSerialFoundNode
-extern DrvClockFoundNode
+extern DrvCitronFoundNode { node -- }
+extern DrvLSICFoundNode { node -- }
+extern DrvSerialFoundNode { node -- }
+extern DrvClockFoundNode { node -- }
+
+fnptr FoundNode { node -- }
 
 const Devices 4
 
@@ -27,7 +29,7 @@ table DeviceTable
 endtable
 public DeviceTable
 
-procedure private CheckDevTable { -- }
+fn private CheckDevTable { -- }
 	auto i
 	0 i!
 
@@ -82,13 +84,13 @@ procedure private CheckDevTable { -- }
 
 		model@ dt@ "  %s: %s\n" Printf
 
-		a3xDGetCurrent [tbase@ 4 +]DeviceTable@ Call
+		a3xDGetCurrent [tbase@ 4 +]DeviceTable@ FoundNode
 
 		break
 	end
 end
 
-procedure private IterateNode { iter -- }
+fn private IterateNode { iter -- }
 	while (iter@)
 		iter@ a3xDevIterate iter!
 			CheckDevTable
@@ -98,7 +100,7 @@ procedure private IterateNode { iter -- }
 	end
 end
 
-procedure DeviceTree { -- }
+fn DeviceTree { -- }
 	"enumerating device tree\n" Printf
 
 	"/platform" a3xDeviceSelect

@@ -1,18 +1,17 @@
 #include "<df>/dragonfruit.h"
+#include "<inc>/args.h"
 
 var ArgsBuffer 0
 
-procedure ArgsInit { argp -- }
+fn ArgsInit { argp -- }
 	if (argp@ 0 ==)
 		return
 	end
 
-	argp@ strlen 1 + Calloc ArgsBuffer!
-
-	ArgsBuffer@ argp@ strcpy
+	argp@ ArgsBuffer!
 end
 
-procedure ArgsValue { arg -- out }
+fn ArgsValue { arg -- out }
 	if (ArgsBuffer@ 0 ==)
 		0 out!
 		return
@@ -47,7 +46,7 @@ procedure ArgsValue { arg -- out }
 	namebuf@ Free
 end
 
-procedure ArgsCheck { arg -- present }
+fn ArgsCheck { arg -- present }
 	if (ArgsBuffer@ 0 ==)
 		0 present!
 		return

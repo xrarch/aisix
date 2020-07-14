@@ -1,3 +1,5 @@
-extern ArgsValue (* arg -- out *)
+extern ArgsInit { argp -- }
 
-extern ArgsCheck (* arg -- present *)
+extern ArgsValue { arg -- out }
+
+extern ArgsCheck { arg -- present }

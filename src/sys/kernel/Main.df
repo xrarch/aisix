@@ -1,20 +1,16 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-extern ArgsInit
-extern MachineInfo
-extern PMMInit
-extern HeapInit
-extern PlatformInit
-extern ThreadInit
+extern PMMInit { -- }
+extern HeapInit { -- }
+extern PlatformInit { -- }
+extern ThreadInit { -- }
 
-extern CPURestoreContext
+extern HeapDump { -- }
 
-extern HeapDump
+extern Scheduler { -- }
 
-extern Scheduler
-
-procedure AISIX { ksz args -- ret }
+fn AISIX { ksz args -- ret }
 	0 ret!
 
 	"aisix coming up\n" Printf
@@ -37,15 +33,11 @@ procedure AISIX { ksz args -- ret }
 	(* the scheduler loop shouldn't return, but if it does, drop back out here *)
 end
 
-extern VFSInit
-
-extern ThreadKill
-
-externconst Levels
+extern VFSInit { -- }
 
 var Done 0
 
-procedure AISIXInitialThread { -- }
+fn AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
 
 	VFSInit
@@ -77,7 +69,8 @@ procedure AISIXInitialThread { -- }
 		buf@ VFSPath vnode!
 
 		if (vnode@ iserr)
-			[vnode@ abs]ErrorNames@ "%s\n" Printf
+			vnode@ abs vnode!
+			[vnode@]ErrorNames@ "%s\n" Printf
 		end else
 			auto m
 			vnode@ VNode_Mount + @ m!
@@ -90,13 +83,14 @@ procedure AISIXInitialThread { -- }
 			m@ VFSUnmount vnode!
 
 			if (vnode@ iserr)
-				[vnode@ abs]ErrorNames@ "unmount: %s\n" Printf
+				vnode@ abs vnode!
+				[vnode@]ErrorNames@ "unmount: %s\n" Printf
 			end
 		end 
 	end
 end
 
-procedure Thread2 { -- }
+fn Thread2 { -- }
 	while (1)
 		if (Done@)
 			1 Done -=
@@ -109,7 +103,8 @@ procedure Thread2 { -- }
 		"/dev/serial0" VFSPath vn!
 
 		if (vn@ iserr)
-			[vn@ abs]ErrorNames@ "%s\n" Printf
+			vn@ abs vn!
+			[vn@]ErrorNames@ "%s\n" Printf
 		end else
 			vn@ VNodePut
 		end
@@ -118,7 +113,7 @@ procedure Thread2 { -- }
 	end
 end
 
-procedure Thread3 { -- }
+fn Thread3 { -- }
 	while (1)
 		if (Done@)
 			1 Done -=
@@ -131,7 +126,8 @@ procedure Thread3 { -- }
 		"/dev/serial0" VFSPath vn!
 
 		if (vn@ iserr)
-			[vn@ abs]ErrorNames@ "%s\n" Printf
+			vn@ abs vn!
+			[vn@]ErrorNames@ "%s\n" Printf
 		end else
 			vn@ VNodePut
 		end

@@ -7,26 +7,26 @@ public KLogWrite
 var KLogRead 0
 public KLogRead
 
-procedure KLogAttach { read write -- }
+fn KLogAttach { read write -- }
 	read@ KLogRead!
 	write@ KLogWrite!
 end
 
-procedure Putc { c -- }
+fn Putc { c -- }
 	if (KLogWrite@)
-		c@ KLogWrite@ Call
+		c@ KLogWrite@ KLogWriter
 	end
 end
 
-procedure Getc { -- c }
+fn Getc { -- c }
 	-1 c!
 
 	if (KLogRead@)
-		KLogRead@ Call c!
+		KLogRead@ KLogReader c!
 	end
 end
 
-procedure Gets { s max -- }
+fn Gets { s max -- }
 	auto len
 	0 len!
 
@@ -61,28 +61,28 @@ procedure Gets { s max -- }
 	0 s@ len@ + sb
 end
 
-procedure Puts { s -- }
+fn Puts { s -- }
 	while (s@ gb 0 ~=)
 		s@ gb Putc
 		1 s +=
 	end
 end
 
-extern PlatformAlertUser
+extern PlatformAlertUser { -- }
 
-procedure AskUser { question anslen -- answer }
+fn AskUser { ... fmt anslen -- answer }
 	PlatformAlertUser
 
-	question@ Printf
+	argv argc@ fmt@ VPrintf
 
 	anslen@ 1 + Calloc answer!
 
 	answer@ anslen@ Gets
 end
 
-extern PlatformPanic
+extern PlatformPanic { -- }
 
-procedure Panic (* ... fstr -- *)
+fn Panic { ... fmt -- }
 	InterruptDisable drop
 
 	auto procn
@@ -106,7 +106,7 @@ procedure Panic (* ... fstr -- *)
 	CurrentThread@ thn@ procn@ "running process: %s (thread: %s [%x])\n" Printf
 
 	"panic: " Printf
-	Printf
+	argv argc@ fmt@ VPrintf
 
 	PlatformPanic
 end

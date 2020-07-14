@@ -5,7 +5,7 @@ table VNodeCache[VNCACHESIZE]
 
 buffer VNodeCacheMutex Mutex_SIZEOF
 
-procedure LockVCache { -- killed }
+fn LockVCache { -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -14,7 +14,7 @@ procedure LockVCache { -- killed }
 	rs@ InterruptRestore
 end
 
-procedure UnlockVCache { -- }
+fn UnlockVCache { -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -25,7 +25,7 @@ end
 
 var LastIndex 0
 
-procedure VNodeRef { vnode -- }
+fn VNodeRef { vnode -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -36,7 +36,7 @@ procedure VNodeRef { vnode -- }
 	rs@ InterruptRestore
 end
 
-procedure VNodeUnref { vnode -- }
+fn VNodeUnref { vnode -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -51,7 +51,7 @@ procedure VNodeUnref { vnode -- }
 	rs@ InterruptRestore
 end
 
-procedure VNodeRemove { vnode -- res }
+fn VNodeRemove { vnode -- res }
 	if (vnode@ VNode_Refs + @)
 		"tried to remove vnode with hanging references!\n" Panic
 	end
@@ -59,10 +59,10 @@ procedure VNodeRemove { vnode -- res }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	vnode@ mount@ Mount_Filesystem + @ Filesystem_PutNode + @ Call res!
+	vnode@ mount@ Mount_Filesystem + @ Filesystem_PutNode + @ FSPutNode res!
 end
 
-procedure VNodeNew { vnid mount -- vnode }
+fn VNodeNew { vnid mount -- vnode }
 	auto i
 	0 i!
 
@@ -169,14 +169,14 @@ procedure VNodeNew { vnid mount -- vnode }
 
 	auto r
 
-	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_GetNode + @ Call r!
+	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_GetNode + @ FSGetNode r!
 
 	if (r@ iserr)
 		"VNodeNew: GetNode\n" Panic
 	end
 end
 
-procedure VNodeLock { vnode -- killed }
+fn VNodeLock { vnode -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -185,7 +185,7 @@ procedure VNodeLock { vnode -- killed }
 	rs@ InterruptRestore
 end
 
-procedure VNodeUnlock { vnode -- }
+fn VNodeUnlock { vnode -- }
 	auto rs
 	InterruptDisable rs!
 
@@ -194,13 +194,13 @@ procedure VNodeUnlock { vnode -- }
 	rs@ InterruptRestore
 end
 
-procedure VNodePut { vnode -- }
+fn VNodePut { vnode -- }
 	vnode@ VNodeUnref
 
 	vnode@ VNodeUnlock
 end
 
-procedure VNodeGet { vnid mount -- vnode }
+fn VNodeGet { vnid mount -- vnode }
 	auto i
 	0 i!
 
@@ -262,7 +262,7 @@ procedure VNodeGet { vnid mount -- vnode }
 	mount@ MountUnref
 end
 
-procedure SyncVNodes { mount remove -- res }
+fn SyncVNodes { mount remove -- res }
 	auto i
 	0 i!
 
@@ -317,10 +317,11 @@ procedure SyncVNodes { mount remove -- res }
 				0 [vnode@ VNode_Index + @]VNodeCache!
 				vnode@ Free
 			end else
-				vnode@ fs@ Filesystem_Sync + @ Call res! (* ignore the result, just keep syncing *)
+				vnode@ fs@ Filesystem_Sync + @ FSSync res! (* ignore the result, just keep syncing *)
 
 				if (res@ iserr)
-					[res@ abs]ErrorNames@ vnode@ "(%x) sync error: %s\n" Printf
+					res@ abs res!
+					[res@]ErrorNames@ vnode@ "(%x) sync error: %s\n" Printf
 				end
 
 				vnode@ VNodeUnlock

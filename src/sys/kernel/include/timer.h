@@ -1,1 +1,3 @@
-extern TimerUptime (* -- ms *)
+extern TimerUptime { -- ms }
+
+extern TimerTick { ms -- }

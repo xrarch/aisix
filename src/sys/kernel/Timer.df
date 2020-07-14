@@ -4,12 +4,12 @@
 var Uptime 0
 
 (* likely called from interrupt context, should be kept concise-ish *)
-procedure TimerTick { ms -- }
+fn TimerTick { ms -- }
 	ms@ Uptime +=
 
 	Uptime@ WakeupTimer
 end
 
-procedure TimerUptime { -- ms }
+fn TimerUptime { -- ms }
 	Uptime@ ms!
 end

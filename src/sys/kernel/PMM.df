@@ -6,7 +6,7 @@ public Pages
 
 buffer PMMBitmap 8192
 
-procedure PMMInit (* -- *)
+fn PMMInit { -- }
 	auto pages
 	MachineRAMSize@ 4096 / pages!
 
@@ -17,7 +17,7 @@ procedure PMMInit (* -- *)
 	pages@ dup Pages! "managing %d pages\n" Printf
 end
 
-procedure private CheckRow { pages start -- real }
+fn private CheckRow { pages start -- real }
 	auto pmb
 	PMMBitmap pmb!
 
@@ -60,7 +60,7 @@ procedure private CheckRow { pages start -- real }
 	end
 end
 
-procedure private PMMSetString { with pages start -- }
+fn private PMMSetString { with pages start -- }
 	auto max
 	pages@ start@ + max!
 
@@ -78,20 +78,17 @@ procedure private PMMSetString { with pages start -- }
 		auto bef
 		rbp@ gb bef!
 
-		rbp@ gb start@ 8 %
 		if (with@ 1 ==)
-			bitset
+			rbp@ gb start@ 8 % bitset rbp@ sb
 		end else
-			bitclear
+			rbp@ gb start@ 8 % bitclear rbp@ sb
 		end
-
-		rbp@ sb
 
 		1 start +=
 	end
 end
 
-procedure PMMFree { pages addr -- }
+fn PMMFree { pages addr -- }
 	if (addr@ 0xFFF & 0 ~=)
 		"PMMFree: address not aligned to a page\n" Panic
 	end
@@ -111,7 +108,7 @@ procedure PMMFree { pages addr -- }
 	rs@ InterruptRestore
 end
 
-procedure PMMCalloc { pages -- addr }
+fn PMMCalloc { pages -- addr }
 	pages@ PMMAlloc addr!
 
 	if (addr@ iserr ~~)
@@ -119,7 +116,7 @@ procedure PMMCalloc { pages -- addr }
 	end
 end
 
-procedure PMMAlloc { pages -- addr }
+fn PMMAlloc { pages -- addr }
 	if (pages@ 0 ==)
 		"allocating zero pages\n" Panic
 	end
