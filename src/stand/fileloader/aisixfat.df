@@ -230,6 +230,11 @@ fn AFSFileSize { path -- size }
 end
 
 fn AFSFileByName { path -- dirent }
+	if (path@ strlen 0 ==)
+		0 dirent!
+		return
+	end
+
 	path@ AFSPathSeek dirent!
 	if (dirent@ 0 ==)
 		return
