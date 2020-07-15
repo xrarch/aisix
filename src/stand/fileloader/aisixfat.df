@@ -9,9 +9,9 @@ extern Panic { ... fmt -- }
 const AFSSuperblockNumber 0x0
 const AFSSuperblockCache 0x47F00
 const AFSFATCache 0x48F00
-const AFSRootCache 0x49F00
+const AFSDirCache 0x49F00
 const AFSSuperblockMagic 0xAFBBAFBB
-const AFSSuperblockVersion 0x4
+const AFSSuperblockVersion 0x5
 
 struct AFSSuperblock
 	4 Version
@@ -26,6 +26,7 @@ struct AFSSuperblock
 	4 FATSize
 	4 Root
 	4 DataStart
+	4 RootSize
 endstruct
 
 struct AFSDirEnt
@@ -109,24 +110,31 @@ fn AFSLoadFile { count name destptr -- size ok }
 	count@ 4096 * size! 1 ok!
 end
 
-fn AFSDirentByName { name -- dirent }
+fn AFSDirentByName { name dirsz dirblock -- dirent }
 	if (name@ strlen 0 ==)
 		0 dirent!
 		return
 	end
 
-	auto i
-	0 i!
-	while (i@ 64 <)
-		auto off
-		i@ 64 * AFSRootCache + off!
-
-		if (off@ AFSDirEnt_name + name@ strcmp)
-			off@ dirent!
-			return
+	auto off
+	0 off!
+	while (off@ dirsz@ <)
+		if (off@ 4096 % 0 ==)
+			dirblock@ AFSDirCache IReadBlock
+			dirblock@ AFSBlockStatus dirblock!
 		end
 
-		1 i +=
+		auto ptr
+		off@ 4096 % AFSDirCache + ptr!
+
+		if (ptr@ AFSDirEnt_type + @ 0 ~=)
+			if (ptr@ AFSDirEnt_name + name@ strcmp)
+				ptr@ dirent!
+				return
+			end
+		end
+
+		AFSDirEnt_SIZEOF off +=
 	end
 
 	0 dirent!
@@ -139,9 +147,13 @@ fn AFSPathSeek { path -- dirent }
 	auto last
 	2 last!
 
-	-1 dirent!
+	auto lastsz
+	AFSSuperblockCache AFSSuperblock_RootSize + @ lastsz!
 
-	AFSReadRoot
+	auto lastdirblock
+	AFSSuperblockCache AFSSuperblock_Root + @ lastdirblock!
+
+	-1 dirent!
 
 	while (path@ 0 ~=)
 		path@ pcomp@ '/' 255 strntok path!
@@ -158,11 +170,7 @@ fn AFSPathSeek { path -- dirent }
 			return
 		end
 
-		if (dirent@ -1 ~=)
-			dirent@ AFSDirEnt_startblock + @ AFSRootCache IReadBlock
-		end
-
-		pcomp@ AFSDirentByName dirent!
+		pcomp@ lastsz@ lastdirblock@ AFSDirentByName dirent!
 		if (dirent@ 0 ==)
 			pcomp@ Free
 			0 dirent!
@@ -170,16 +178,23 @@ fn AFSPathSeek { path -- dirent }
 		end
 
 		dirent@ AFSDirEnt_type + @ last!
+		dirent@ AFSDirEnt_bytesize + @ lastsz!
+		dirent@ AFSDirEnt_startblock + @ lastdirblock!
 	end
 
 	pcomp@ Free
 end
 
 fn AFSPrintList { path -- }
+	auto dirblock
+	auto dirsz
+
 	if (path@ strlen 0 ==)
-		AFSReadRoot
+		AFSSuperblockCache AFSSuperblock_RootSize + @ dirsz!
+		AFSSuperblockCache AFSSuperblock_Root + @ dirblock!
 	end elseif (path@ "/" strcmp)
-		AFSReadRoot
+		AFSSuperblockCache AFSSuperblock_RootSize + @ dirsz!
+		AFSSuperblockCache AFSSuperblock_Root + @ dirblock!
 	end else
 		auto dirent
 		path@ AFSPathSeek dirent!
@@ -193,27 +208,32 @@ fn AFSPrintList { path -- }
 			return
 		end
 
-		dirent@ AFSDirEnt_startblock + @ AFSRootCache IReadBlock
+		dirent@ AFSDirEnt_startblock + @ dirblock!
+		dirent@ AFSDirEnt_bytesize + @ dirsz!
 	end
 
 	path@ "%s:\n" Printf
-	"\tNAME\tBYTES\n" Printf
 
-	auto i
-	0 i!
-	while (i@ 64 <)
-		auto off
-		i@ 64 * AFSRootCache + off!
+	auto off
+	0 off!
+	while (off@ dirsz@ <)
+		if (off@ 4096 % 0 ==)
+			dirblock@ AFSDirCache IReadBlock
+			dirblock@ AFSBlockStatus dirblock!
+		end
 
-		if (off@ AFSDirEnt_type + @ 0 ~=)
-			if (off@ AFSDirEnt_type + @ 1 ==)
-				off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + "\t%s\t%d\n" Printf
+		auto ptr
+		off@ 4096 % AFSDirCache + ptr!
+
+		if (ptr@ AFSDirEnt_type + @ 0 ~=)
+			if (ptr@ AFSDirEnt_type + @ 1 ==)
+				ptr@ AFSDirEnt_bytesize + @ ptr@ AFSDirEnt_name + "\t%s\t%d\n" Printf
 			end else
-				off@ AFSDirEnt_bytesize + @ off@ AFSDirEnt_name + "\t%s/\t%d\n" Printf
+				ptr@ AFSDirEnt_bytesize + @ ptr@ AFSDirEnt_name + "\t%s/\t%d\n" Printf
 			end
 		end
 
-		1 i +=
+		AFSDirEnt_SIZEOF off +=
 	end
 
 	'\n' Putc
@@ -247,7 +267,7 @@ fn AFSFileByName { path -- dirent }
 end
 
 fn AFSReadRoot { -- }
-	AFSSuperblockCache AFSSuperblock_Root + @ AFSRootCache IReadBlock
+	AFSSuperblockCache AFSSuperblock_Root + @ AFSDirCache IReadBlock
 end
 
 var AFSFatCached -1

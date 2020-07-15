@@ -85,19 +85,19 @@ fn DeviceRegister { name driver unit -- device }
 	rs@ InterruptRestore
 end
 
-fn DevFSMount { mount -- root fsdata }
+fn (FSMount) DevFSMount { mount -- root fsdata }
 	0 mount@ VNodeNew root!
 
 	0 fsdata!
 end
 
-fn DevFSUnmount { mount -- ok }
+fn (FSUnmount) DevFSUnmount { mount -- ok }
 	"devfs: unmount\n" Printf
 
 	0 ok!
 end
 
-fn DevFSGetNode { vnode -- ok }
+fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	vnode@ "devfs get: %x\n" Printf
 
 	auto vnid
@@ -135,19 +135,19 @@ fn DevFSGetNode { vnode -- ok }
 	0 ok!
 end
 
-fn DevFSPutNode { vnode -- ok }
+fn (FSPutNode) DevFSPutNode { vnode -- ok }
 	vnode@ "devfs put: %x\n" Printf
 
 	0 ok!
 end
 
-fn DevFSRewindDir { dirent -- ok }
+fn (FSRewindDir) DevFSRewindDir { dirent -- ok }
 	0 ok!
 
 	1 dirent@ VDirent_Index + !
 end
 
-fn DevFSReadDir { dirent -- ok }
+fn (FSReadDir) DevFSReadDir { dirent -- ok }
 	0 ok!
 
 	auto vnode
@@ -185,7 +185,7 @@ fn DevFSReadDir { dirent -- ok }
 	index@ 1 + dirent@ VDirent_Index + !
 end
 
-fn DevFSSync { vnode -- ok }
+fn (FSSync) DevFSSync { vnode -- ok }
 	vnode@ "devfs: sync %x\n" Printf
 
 	0 ok!

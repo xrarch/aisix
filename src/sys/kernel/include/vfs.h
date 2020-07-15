@@ -16,11 +16,17 @@ struct Filesystem
 endstruct
 
 fnptr FSMount { mount -- root fsdata }
+
 fnptr FSGetNode { vnode -- ok }
+
 fnptr FSPutNode { vnode -- ok }
+
 fnptr FSSync { vnode -- ok }
+
 fnptr FSRewindDir { dirent -- ok }
+
 fnptr FSReadDir { dirent -- ok }
+
 fnptr FSUnmount { mount -- ok }
 
 struct Mount

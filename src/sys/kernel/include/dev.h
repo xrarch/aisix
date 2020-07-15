@@ -11,6 +11,16 @@ struct Driver
 	4 Size
 endstruct
 
+fnptr DevOpen { unit -- ok }
+
+fnptr DevClose { unit -- ok }
+
+fnptr DevIoctl { op1 op2 op3 op4 unit -- ok }
+
+fnptr DevRead { buf len unit seek -- ok }
+
+fnptr DevWrite { buf len unit seek -- ok }
+
 struct Device
 	DEVNAMELEN Name
 	4 Driver

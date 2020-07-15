@@ -2,7 +2,7 @@ FLATIMAGE  := no
 
 DISTIMAGE  := ./dist/dist.img
 DISTIMGSZ  := 256
-FSUTIL     := ../sdk/fsutil.sh
+FSTOOL     := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
 CPU        := limn2k
@@ -23,17 +23,17 @@ dist: $(DISTIMAGE) bootable stand kernel
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
-	$(FSUTIL) $(DISTIMAGE) offset=$(OFFSET) w /kernel $(KERNEL_DIR)/aisix.a3x
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /kernel $(KERNEL_DIR)/aisix.a3x
 
 stand: diag limnvol
 
 diag:
 	make --directory=$(DIAG_DIR)
-	$(FSUTIL) $(DISTIMAGE) offset=$(OFFSET) w /stand/diag $(DIAG_DIR)/diag.a3x
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /stand/diag $(DIAG_DIR)/diag.a3x
 
 limnvol:
 	make --directory=$(LIMNVOL_DIR)
-	$(FSUTIL) $(DISTIMAGE) offset=$(OFFSET) w /stand/limnvol $(LIMNVOL_DIR)/limnvol.a3x
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /stand/limnvol $(LIMNVOL_DIR)/limnvol.a3x
 
 bootable:
 	make --directory=$(FILELOADER_DIR)
@@ -49,4 +49,4 @@ ifneq ($(DISKLABEL),none)
 endif
 endif
 
-	$(FSUTIL) $(DISTIMAGE) offset=$(OFFSET) f
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) f

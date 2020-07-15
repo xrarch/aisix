@@ -15,10 +15,10 @@ fn DrvLSICFoundNode { node -- }
 	LSICBase@ "  lsic @ 0x%x\n" Printf
 end
 
-fn private LSICInterruptGet { -- intn }
+fn (InterruptGetter) private LSICInterruptGet { -- intn }
 	LSICBase@ LSICClaimComplete + @ intn!
 end
 
-fn private LSICInterruptAck { intn -- }
+fn (InterruptAcker) private LSICInterruptAck { intn -- }
 	intn@ LSICBase@ LSICClaimComplete + !
 end

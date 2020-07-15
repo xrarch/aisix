@@ -13,7 +13,7 @@ const SerialCmdIntrOff 4
 
 table SerialDriver
 	"serial"
-	DEV_BLOCK
+	DEV_CHAR
 	pointerof SerialOpen
 	pointerof SerialClose
 	pointerof SerialIoctl
@@ -60,29 +60,29 @@ fn DrvSerialFoundNode { node -- }
 	"serial2" SerialDriver 0 DeviceRegister drop
 end
 
-fn SerialOpen { unit -- ok }
+fn (DevOpen) SerialOpen { unit -- ok }
 	0 ok!
 end
 
-fn SerialClose { unit -- ok }
+fn (DevClose) SerialClose { unit -- ok }
 	0 ok!
 end
 
-fn SerialIoctl { op1 op2 op3 op4 unit -- ok }
+fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-fn SerialRead { buf len unit seek -- ok }
+fn (DevRead) SerialRead { buf len unit seek -- ok }
 	0 ok!
 end
 
-fn SerialWrite { buf len unit seek -- ok }
+fn (DevWrite) SerialWrite { buf len unit seek -- ok }
 	0 ok!
 end
 
 extern KDebug { -- }
 
-fn SerialIntr { intn -- }
+fn (IntHandler) SerialIntr { intn -- }
 	SerialIntrDisable
 
 	intn@ InterruptAck@ InterruptAcker
