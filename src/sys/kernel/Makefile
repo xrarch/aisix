@@ -4,8 +4,8 @@ CPU      := limn2k
 PLATFORM_DIR := ../arch/$(PLATFORM)
 CPU_DIR      := ../arch/$(CPU)
 
-DFILES := $(shell find . -type f -name '*.df') $(shell find $(PLATFORM_DIR) -type f -name '*.df') $(shell find $(CPU_DIR) -type f -name '*.df')
-SFILES := $(shell find $(PLATFORM_DIR) -type f -name '*.s') $(shell find $(CPU_DIR) -type f -name '*.s')
+DFILES := $(shell find . -type f -name "*.df") $(shell find $(PLATFORM_DIR) -type f -name "*.df") $(shell find $(CPU_DIR) -type f -name "*.df")
+SFILES := $(shell find $(PLATFORM_DIR) -type f -name "*.s") $(shell find $(CPU_DIR) -type f -name "*.s")
 OBJ    := $(DFILES:.df=.o) $(SFILES:.s=.o)
 
 DC      =  ../../../../sdk/dragonc.sh

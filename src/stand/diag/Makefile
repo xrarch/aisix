@@ -1,4 +1,4 @@
-DFILES := $(shell find . -type f -name '*.df')
+DFILES := $(shell find . -type f -name "*.df")
 OBJ    := $(DFILES:.df=.o)
 
 DC      =  ../../../../sdk/dragonc.sh
