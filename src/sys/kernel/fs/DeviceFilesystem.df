@@ -10,6 +10,11 @@ table DevFSTab
 	pointerof DevFSRewindDir
 	pointerof DevFSReadDir
 	pointerof DevFSUnmount
+	pointerof DevFSRead
+	pointerof DevFSWrite
+	pointerof DevFSCreate
+	pointerof DevFSRename
+	pointerof DevFSDelete
 endtable
 public DevFSTab
 
@@ -69,6 +74,10 @@ fn DeviceRegister { name driver unit -- device }
 
 	driver@ device@ Device_Driver + !
 
+	0 device@ Device_Offset + !
+
+	0 device@ Device_RawDev + !
+
 	device@ Device_Name + name@ DEVNAMELEN 1 - strncpy
 
 	InterruptDisable rs!
@@ -85,6 +94,155 @@ fn DeviceRegister { name driver unit -- device }
 	rs@ InterruptRestore
 end
 
+fn DeviceRead { buf len seek dev -- bytes }
+	buf@
+	len@
+	dev@ Device_Unit + @
+	seek@
+	dev@ Device_Driver + @ Driver_Read + @ DevRead bytes!
+end
+
+fn DeviceWrite { buf len seek dev -- bytes }
+	buf@
+	len@
+	dev@ Device_Unit + @
+	seek@
+	dev@ Device_Driver + @ Driver_Write + @ DevWrite bytes!
+end
+
+fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
+	auto dev
+
+	vnode@ VNode_FSData + @ dev!
+
+	if (vnode@ VNode_Type + @ VNODE_CHAR ==)
+		buf@
+		len@
+		seek@
+		dev@
+		DeviceRead bytes!
+
+		return
+	end
+
+	(* it must be a block device, be cleverer *)
+
+	auto tot
+	0 tot!
+
+	auto bbuf
+
+	while (tot@ len@ <)
+		seek@ 4096 / dev@ bread bbuf!
+
+		if (bbuf@ iserr)
+			bbuf@ bytes!
+			return
+		end
+
+		auto m
+		4096 len@ min m!
+
+		auto off
+		seek@ 0xFFF & off!
+
+		len@ tot@ -
+		4096 off@ -
+		min m!
+
+		buf@
+		bbuf@ Buffer_Data + @ off@ +
+		m@
+		memcpy
+
+		if (bbuf@ brelse)
+			-EINTR bytes!
+			return
+		end
+
+		m@ seek +=
+		m@ buf +=
+		m@ tot +=
+	end
+end
+
+fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
+	auto dev
+
+	vnode@ VNode_FSData + @ dev!
+
+	if (vnode@ VNode_Type + @ VNODE_CHAR ==)
+		buf@
+		len@
+		seek@
+		dev@
+		DeviceWrite bytes!
+
+		return
+	end
+
+	(* it must be a block device, be cleverer *)
+
+	auto tot
+	0 tot!
+
+	auto bbuf
+
+	auto r
+
+	while (tot@ len@ <)
+		seek@ 4096 / dev@ bread bbuf!
+
+		if (bbuf@ iserr)
+			bbuf@ bytes!
+			return
+		end
+
+		auto m
+		4096 len@ min m!
+
+		auto off
+		seek@ 0xFFF & off!
+
+		len@ tot@ -
+		4096 off@ -
+		min m!
+
+		bbuf@ Buffer_Data + @ off@ +
+		buf@
+		m@
+		memcpy
+
+		bbuf@ bwrite r!
+
+		if (bbuf@ brelse iserr)
+			-EINTR bytes!
+			return
+		end
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
+
+		m@ seek +=
+		m@ buf +=
+		m@ tot +=
+	end
+end
+
+fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnode }
+	-EPERM vnode!
+end
+
+fn (FSRename) DevFSRename { srcdirvnode srcname destdirvnode destname -- ok }
+	-EPERM ok!
+end
+
+fn (FSDelete) DevFSDelete { vnode -- ok }
+	-EPERM ok!
+end
+
 fn (FSMount) DevFSMount { mount -- root fsdata }
 	0 mount@ VNodeNew root!
 
@@ -98,8 +256,6 @@ fn (FSUnmount) DevFSUnmount { mount -- ok }
 end
 
 fn (FSGetNode) DevFSGetNode { vnode -- ok }
-	vnode@ "devfs get: %x\n" Printf
-
 	auto vnid
 	vnode@ VNode_VNID + @ vnid!
 
@@ -127,6 +283,7 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	end elseif (type@ DEV_BLOCK ==)
 		VNODE_BLOCK type!
 	end else
+		"DevFSGetNode\n" Panic
 		VNODE_FILE type!
 	end
 
@@ -186,8 +343,6 @@ fn (FSReadDir) DevFSReadDir { dirent -- ok }
 end
 
 fn (FSSync) DevFSSync { vnode -- ok }
-	vnode@ "devfs: sync %x\n" Printf
-
 	0 ok!
 end
 

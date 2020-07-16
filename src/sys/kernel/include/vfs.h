@@ -13,6 +13,11 @@ struct Filesystem
 	4 RewindDir
 	4 ReadDir
 	4 Unmount
+	4 Read
+	4 Write
+	4 Create
+	4 Rename
+	4 Delete
 endstruct
 
 fnptr FSMount { mount -- root fsdata }
@@ -28,6 +33,16 @@ fnptr FSRewindDir { dirent -- ok }
 fnptr FSReadDir { dirent -- ok }
 
 fnptr FSUnmount { mount -- ok }
+
+fnptr FSRead { buf len seek vnode -- bytes }
+
+fnptr FSWrite { buf len seek vnode -- bytes }
+
+fnptr FSCreate { dirvnode name type uid permissions -- vnode }
+
+fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
+
+fnptr FSDelete { vnode -- ok }
 
 struct Mount
 	MOUNTNAMELEN Name
@@ -51,6 +66,8 @@ struct VNode
 	Mutex_SIZEOF Mutex
 	4 Index
 	4 Type
+	4 UID
+	4 Permissions
 endstruct
 
 const VNODE_FILE 1
@@ -65,6 +82,10 @@ struct VDirent
 	4 Name
 	4 Index
 endstruct
+
+extern VRead { buf len seek vnode -- bytes }
+
+extern VWrite { buf len seek vnode -- bytes }
 
 extern VFSPath  { path -- vnode }
 

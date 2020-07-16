@@ -56,8 +56,6 @@ fn DrvSerialFoundNode { node -- }
 	SerialIntrEnable
 
 	"serial0" SerialDriver 0 DeviceRegister drop
-	"serial1" SerialDriver 0 DeviceRegister drop
-	"serial2" SerialDriver 0 DeviceRegister drop
 end
 
 fn (DevOpen) SerialOpen { unit -- ok }
@@ -72,12 +70,12 @@ fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-fn (DevRead) SerialRead { buf len unit seek -- ok }
-	0 ok!
+fn (DevRead) SerialRead { buf len unit seek -- bytes }
+	len@ bytes!
 end
 
-fn (DevWrite) SerialWrite { buf len unit seek -- ok }
-	0 ok!
+fn (DevWrite) SerialWrite { buf len unit seek -- bytes }
+	len@ bytes!
 end
 
 extern KDebug { -- }

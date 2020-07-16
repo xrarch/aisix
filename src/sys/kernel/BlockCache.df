@@ -1,2 +1,196 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
+
+const BufHeadSize (NBUF Buffer_SIZEOF *)
+
+buffer BufferHeads BufHeadSize
+
+buffer BufCacheMutex Mutex_SIZEOF
+
+buffer BufferHead Buffer_SIZEOF
+
+fn LockBCache { -- killed }
+	BufCacheMutex LockMutex killed!
+end
+
+fn UnlockBCache { -- }
+	BufCacheMutex UnlockMutex
+end
+
+fn LockBuf { buf -- killed }
+	buf@ Buffer_Mutex + LockMutex killed!
+end
+
+fn UnlockBuf { buf -- }
+	buf@ Buffer_Mutex + UnlockMutex
+end
+
+fn BlockInit { -- }
+	"block cache" BufCacheMutex InitMutex
+
+	BufferHead BufferHead Buffer_Prev + !
+	BufferHead BufferHead Buffer_Next + !
+
+	auto b
+	BufferHeads b!
+
+	auto max
+	BufferHeads BufHeadSize + max!
+
+	while (b@ max@ <)
+		BufferHead Buffer_Next + @ b@ Buffer_Next + !
+		BufferHead b@ Buffer_Prev + !
+
+		"block buffer" b@ Buffer_Mutex + InitMutex
+
+		b@ BufferHead Buffer_Next + @ Buffer_Prev + !
+
+		b@ BufferHead Buffer_Next + !
+
+		1 PMMAlloc b@ Buffer_Data + !
+
+		Buffer_SIZEOF b +=
+	end
+
+	NBUF "%d block buffers\n" Printf
+end
+
+fn bget { blockno dev -- buf }
+	if (LockBCache)
+		-EINTR buf!
+		return
+	end
+
+	auto rs
+
+	BufferHead Buffer_Next + @ buf!
+
+	auto sbno
+	blockno@ sbno!
+
+	auto sdev
+	dev@ sdev!
+
+	if (dev@ Device_RawDev + @)
+		dev@ Device_RawDev + @ sdev!
+		dev@ Device_Offset + @ blockno@ + sbno!
+	end
+
+	while (buf@ BufferHead ~=)
+		if (buf@ Buffer_RawDev + @ sdev@ ==)
+			if (buf@ Buffer_RawBlockNum + @ sbno@ ==)
+				1 buf@ Buffer_Refs + +=
+
+				UnlockBCache
+
+				if (buf@ LockBuf)
+					InterruptDisable rs!
+
+					1 buf@ Buffer_Refs + -=
+
+					rs@ InterruptRestore
+
+					-EINTR buf!
+				end
+
+				return
+			end
+		end
+
+		buf@ Buffer_Next + @ buf!
+	end
+
+	BufferHead Buffer_Prev + @ buf!
+
+	while (buf@ BufferHead ~=)
+		if (buf@ Buffer_Refs + @ 0 ==)
+			dev@ buf@ Buffer_Device + !
+			blockno@ buf@ Buffer_BlockNum + !
+			sdev@ buf@ Buffer_RawDev + !
+			sbno@ buf@ Buffer_RawBlockNum + !
+			0 buf@ Buffer_Valid + !
+			1 buf@ Buffer_Refs + !
+
+			UnlockBCache
+
+			if (buf@ LockBuf)
+				InterruptDisable rs!
+
+				1 buf@ Buffer_Refs + -=
+
+				rs@ InterruptRestore
+
+				-EINTR buf!
+			end
+
+			return
+		end
+
+		buf@ Buffer_Prev + @ buf!
+	end
+
+	UnlockBCache
+
+	-ENOMEM buf!
+end
+
+fn bread { blockno dev -- buf }
+	blockno@ dev@ bget buf!
+
+	if (buf@ iserr)
+		return
+	end
+
+	auto ok
+
+	if (buf@ Buffer_Valid + @ ~~)
+		buf@ Buffer_Data + @
+		BLOCKSZ
+		blockno@ BLOCKSZ *
+		dev@ DeviceRead ok!
+
+		if (ok@ iserr)
+			if (buf@ brelse iserr)
+				-EINTR buf!
+			end else
+				ok@ buf!
+			end
+
+			return
+		end
+
+		1 buf@ Buffer_Valid + !
+	end
+end
+
+fn bwrite { buf -- ok }
+	buf@ Buffer_Data + @
+	BLOCKSZ
+	buf@ Buffer_BlockNum + @ BLOCKSZ *
+	buf@ Buffer_Device + @ DeviceWrite ok!
+end
+
+fn brelse { buf -- ok }
+	1 buf@ Buffer_Refs + -=
+
+	buf@ UnlockBuf
+
+	if (LockBCache)
+		-EINTR ok!
+
+		return
+	end
+
+	if (buf@ Buffer_Refs + @ 0 ==)
+		buf@ Buffer_Prev + @ buf@ Buffer_Next + @ Buffer_Prev + !
+		buf@ Buffer_Next + @ buf@ Buffer_Prev + @ Buffer_Next + !
+		BufferHead Buffer_Next + @ buf@ Buffer_Next + !
+		BufferHead buf@ Buffer_Prev + !
+		buf@ BufferHead Buffer_Next + @ Buffer_Prev + !
+		buf@ BufferHead Buffer_Next + !
+	end
+
+	UnlockBCache
+
+	0 ok!
+end

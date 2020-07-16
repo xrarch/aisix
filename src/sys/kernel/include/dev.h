@@ -17,15 +17,17 @@ fnptr DevClose { unit -- ok }
 
 fnptr DevIoctl { op1 op2 op3 op4 unit -- ok }
 
-fnptr DevRead { buf len unit seek -- ok }
+fnptr DevRead { buf len unit seek -- bytes }
 
-fnptr DevWrite { buf len unit seek -- ok }
+fnptr DevWrite { buf len unit seek -- bytes }
 
 struct Device
 	DEVNAMELEN Name
 	4 Driver
 	4 Unit
 	4 Mount
+	4 Offset
+	4 RawDev
 	4 Next
 	4 Prev
 endstruct
@@ -34,6 +36,10 @@ const DEV_CHAR 1
 const DEV_BLOCK 2
 
 externptr DevFSTab
+
+extern DeviceRead { buf len seek dev -- bytes }
+
+extern DeviceWrite { buf len seek dev -- bytes }
 
 extern DevByName { name -- dev }
 

@@ -74,6 +74,14 @@ fn VFSInit { -- }
 	syncw@ ThreadReady
 end
 
+fn VRead { buf len seek vnode -- bytes }
+	buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Read + @ FSRead bytes!
+end
+
+fn VWrite { buf len seek vnode -- bytes }
+	buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Write + @ FSWrite bytes!
+end
+
 fn VFSPath { path -- vnode }
 	auto pcomp
 	256 Calloc pcomp!

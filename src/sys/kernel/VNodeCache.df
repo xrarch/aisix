@@ -6,21 +6,11 @@ table VNodeCache[VNCACHESIZE]
 buffer VNodeCacheMutex Mutex_SIZEOF
 
 fn LockVCache { -- killed }
-	auto rs
-	InterruptDisable rs!
-
 	VNodeCacheMutex LockMutex killed!
-
-	rs@ InterruptRestore
 end
 
 fn UnlockVCache { -- }
-	auto rs
-	InterruptDisable rs!
-
 	VNodeCacheMutex UnlockMutex
-
-	rs@ InterruptRestore
 end
 
 var LastIndex 0

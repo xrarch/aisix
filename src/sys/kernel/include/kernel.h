@@ -8,6 +8,7 @@
 #include "<inc>/vfs.h"
 #include "<inc>/dev.h"
 #include "<inc>/timer.h"
+#include "<inc>/block.h"
 
 extern Panic { ... fmt -- }
 

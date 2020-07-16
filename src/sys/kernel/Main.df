@@ -5,6 +5,7 @@ extern PMMInit { -- }
 extern HeapInit { -- }
 extern PlatformInit { -- }
 extern ThreadInit { -- }
+extern BlockInit { -- }
 
 extern HeapDump { -- }
 
@@ -26,6 +27,8 @@ fn AISIX { ksz args -- ret }
 
 	PlatformInit
 
+	BlockInit
+
 	ThreadInit
 
 	Scheduler
@@ -42,96 +45,96 @@ fn AISIXInitialThread { -- }
 
 	VFSInit
 
-	auto zonk
-
-	pointerof Thread2 "thread2" KernelThreadNew zonk!
-
-	zonk@ ThreadReady
-
-	pointerof Thread3 "thread3" KernelThreadNew ThreadReady
-
-	while (Getc ERR ==) end
-
-	2 Done!
-
-	while (Done@) end
-
-	"done\n" Printf
-
 	auto buf
 	256 Malloc buf!
 
+	auto ret
+
+	auto dev
+	"dks1" DevByName dev!
+
+	3 dev@ bread ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "%s\n" Printf
+	end else
+		ret@ "buf: %x\n" Printf
+
+		ret@ Buffer_Data + @ 255 Gets
+
+		auto ok
+
+		ret@ bwrite ok!
+
+		if (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ "%s\n" Printf
+		end
+
+		ret@ brelse drop
+	end
+
+	3 dev@ bread ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "%s\n" Printf
+	end else
+		ret@ "buf: %x\n" Printf
+
+		ret@ Buffer_Data + @ 255 Gets
+
+		ret@ bwrite ok!
+
+		if (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ "%s\n" Printf
+		end
+
+		ret@ brelse drop
+	end
+
+	auto bytes
+
+	auto seek
+
 	while (1)
+		"bytes to write: " Printf
+		buf@ 255 Gets
+		buf@ atoi bytes!
+
+		"seek: " Printf
+		buf@ 255 Gets
+		buf@ atoi seek!
+
+		"path: " Printf
 		buf@ 255 Gets
 
-		auto vnode
+		auto nbuf
+		bytes@ Malloc nbuf!
 
-		buf@ VFSPath vnode!
+		"write wot: " Printf
+		nbuf@ bytes@ 1 - Gets
 
-		if (vnode@ iserr)
-			vnode@ abs vnode!
-			[vnode@]ErrorNames@ "%s\n" Printf
+		buf@ VFSPath ret!
+
+		if (ret@ iserr)
+			ret@ abs ret!
+			[ret@]ErrorNames@ "%s\n" Printf
 		end else
-			auto m
-			vnode@ VNode_Mount + @ m!
+			nbuf@ bytes@ seek@ ret@ VWrite bytes!
 
-			vnode@ VNodePut
-
-			m@ Mount_VRefs + @ "%d\n" Printf
-			m@ Mount_MRefs + @ "%d\n" Printf
-
-			m@ VFSUnmount vnode!
-
-			if (vnode@ iserr)
-				vnode@ abs vnode!
-				[vnode@]ErrorNames@ "unmount: %s\n" Printf
+			if (bytes@ iserr)
+				bytes@ abs bytes!
+				[bytes@]ErrorNames@ "%s\n" Printf
+			end else
+				nbuf@ "%s\n" Printf
 			end
+
+			ret@ VNodePut
 		end 
-	end
-end
 
-fn Thread2 { -- }
-	while (1)
-		if (Done@)
-			1 Done -=
-
-			ThreadExit
-		end
-
-		auto vn
-
-		"/dev/serial0" VFSPath vn!
-
-		if (vn@ iserr)
-			vn@ abs vn!
-			[vn@]ErrorNames@ "%s\n" Printf
-		end else
-			vn@ VNodePut
-		end
-
-		Yield
-	end
-end
-
-fn Thread3 { -- }
-	while (1)
-		if (Done@)
-			1 Done -=
-
-			ThreadExit
-		end
-
-		auto vn
-
-		"/dev/serial0" VFSPath vn!
-
-		if (vn@ iserr)
-			vn@ abs vn!
-			[vn@]ErrorNames@ "%s\n" Printf
-		end else
-			vn@ VNodePut
-		end
-
-		Yield
+		nbuf@ Free
 	end
 end

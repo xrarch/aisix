@@ -1,0 +1,238 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/citron.h"
+
+const DKSCmdPort 0x19
+const DKSPortA 0x1A
+const DKSPortB 0x1B
+
+const DKSCmdSelect 0x1
+const DKSCmdRead 0x2
+const DKSCmdWrite 0x3
+const DKSCmdInfo 0x4
+const DKSCmdPoll 0x5
+
+const DKSBuffer 0xF8020000
+
+table DKSDriver
+	"dks"
+	DEV_BLOCK
+	pointerof DKSOpen
+	pointerof DKSClose
+	pointerof DKSIoctl
+	pointerof DKSRead
+	pointerof DKSWrite
+	0
+endtable
+
+struct DKS
+	4 Exists
+	4 Unit
+	4 Offset
+	4 Blocks
+	4 Name
+endstruct
+
+var DKSLastUnit 0
+
+const DKSMAX 32
+
+const DKSNAMEMAX 32
+
+buffer DKSTable (DKSMAX DKS_SIZEOF *)
+
+fn DrvDKSFoundNode { node -- }
+	if (DKSLastUnit@ DKSMAX ==)
+		return
+	end
+
+	auto dks
+	DKSLastUnit@ DKS_SIZEOF * DKSTable + dks!
+
+	auto unit
+
+	1 dks@ DKS_Exists + !
+	"satsuma,id" a3xDGetProperty unit!
+	unit@ dks@ DKS_Unit + !
+	"blocks" a3xDGetProperty dks@ DKS_Blocks + !
+
+	auto offset
+	"offset" a3xDGetProperty offset!
+	offset@ dks@ DKS_Offset + !
+
+	DKSLastUnit@ "aisix,unit" a3xDSetProperty
+
+	auto name
+	DKSNAMEMAX Calloc name!
+
+	name@ dks@ DKS_Name + !
+
+	name@ "dks" strcpy
+
+	(* there can only be 8 disks, and only 8 partitions per disk, so assume itoa always puts 1 digit *)
+
+	unit@ name@ 3 + itoa
+
+	auto part
+	0 part!
+
+	if ("deviceType" a3xDGetProperty "disk-logical" strcmp)
+		(* is a partition *)
+		's' name@ 4 + sb
+		"partition#" a3xDGetProperty name@ 5 + itoa
+
+		1 part!
+	end
+
+	name@ "  %s\n" Printf
+
+	auto devn
+
+	name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
+
+	devn@ "aisix,dev" a3xDSetProperty
+
+	if (part@)
+		a3xDeviceParent
+			"aisix,dev" a3xDGetProperty part!
+		a3xDeviceExit
+
+		part@ "%x\n" Printf
+
+		offset@ devn@ Device_Offset + !
+		part@ devn@ Device_RawDev + !
+	end
+
+	1 DKSLastUnit +=
+end
+
+fn DrvDKSLogicalFoundNode { node -- }
+	node@ DrvDKSFoundNode
+end
+
+fn (DevOpen) DKSOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) DKSClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) DKSIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+buffer DKSLock Mutex_SIZEOF
+
+fn private LockDKS { -- killed }
+	DKSLock LockMutex killed!
+end
+
+fn private UnlockDKS { -- }
+	DKSLock UnlockMutex
+end
+
+fn (DevRead) DKSRead { buf len unit seek -- bytes }
+	if (len@ 4096 ~=)
+		len@ "dksread: bad len %d\n" Panic
+	end
+
+	if (seek@ 0xFFF &)
+		"dksread: bad seek\n" Panic
+	end
+
+	if (unit@ DKSMAX >=)
+		unit@ "dksread: unit too big %x\n" Panic
+	end
+
+	auto dks
+	unit@ DKS_SIZEOF * DKSTable + dks!
+
+	if (dks@ DKS_Exists + @ ~~)
+		unit@ "dksread: no such drive %x\n" Panic
+	end
+
+	12 seek >>=
+	dks@ DKS_Offset + @ seek +=
+
+	if (seek@ dks@ DKS_Blocks + @ >=)
+		dks@ DKS_Name + @ "%s: seek > size\n" Printf
+		-EIO bytes!
+		return
+	end
+
+	if (LockDKS)
+		-EINTR bytes!
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	dks@ DKS_Unit + @ DKSPortA DCitronOutl
+	DKSCmdSelect DKSCmdPort DCitronCommand
+
+	seek@ DKSPortA DCitronOutl
+	DKSCmdRead DKSCmdPort DCitronCommand
+
+	rs@ InterruptRestore
+
+	buf@ DKSBuffer 4096 memcpy
+
+	UnlockDKS
+
+	4096 bytes!
+end
+
+fn (DevWrite) DKSWrite { buf len unit seek -- bytes }
+	if (len@ 4096 ~=)
+		len@ "dkswrite: bad len %d\n" Panic
+	end
+
+	if (seek@ 0xFFF &)
+		"dkswrite: bad seek\n" Panic
+	end
+
+	if (unit@ DKSMAX >=)
+		unit@ "dkswrite: unit too big %x\n" Panic
+	end
+
+	auto dks
+	unit@ DKS_SIZEOF * DKSTable + dks!
+
+	if (dks@ DKS_Exists + @ ~~)
+		unit@ "dkswrite: no such drive %x\n" Panic
+	end
+
+	12 seek >>=
+	dks@ DKS_Offset + @ seek +=
+
+	if (seek@ dks@ DKS_Blocks + @ >=)
+		dks@ DKS_Name + @ "%s: seek > size\n" Printf
+		-EIO bytes!
+		return
+	end
+
+	if (LockDKS)
+		-EINTR bytes!
+		return
+	end
+
+	DKSBuffer buf@ 4096 memcpy
+
+	auto rs
+	InterruptDisable rs!
+
+	dks@ DKS_Unit + @ DKSPortA DCitronOutl
+	DKSCmdSelect DKSCmdPort DCitronCommand
+
+	seek@ DKSPortA DCitronOutl
+	DKSCmdWrite DKSCmdPort DCitronCommand
+
+	rs@ InterruptRestore
+
+	UnlockDKS
+
+	4096 bytes!
+end
