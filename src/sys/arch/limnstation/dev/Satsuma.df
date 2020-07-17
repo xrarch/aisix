@@ -23,7 +23,7 @@ table DKSDriver
 	pointerof DKSIoctl
 	pointerof DKSRead
 	pointerof DKSWrite
-	0
+	pointerof DKSSysctl
 endtable
 
 struct DKS
@@ -89,7 +89,7 @@ fn DrvDKSFoundNode { node -- }
 
 	auto devn
 
-	name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
+	OWNER_W OWNER_R | 0 0 name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
 
 	devn@ "aisix,dev" a3xDSetProperty
 
@@ -97,8 +97,6 @@ fn DrvDKSFoundNode { node -- }
 		a3xDeviceParent
 			"aisix,dev" a3xDGetProperty part!
 		a3xDeviceExit
-
-		part@ "%x\n" Printf
 
 		offset@ devn@ Device_Offset + !
 		part@ devn@ Device_RawDev + !
@@ -109,6 +107,10 @@ end
 
 fn DrvDKSLogicalFoundNode { node -- }
 	node@ DrvDKSFoundNode
+end
+
+fn (DevSysctl) DKSSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevOpen) DKSOpen { unit -- ok }

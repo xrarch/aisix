@@ -1,0 +1,176 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+fn AllocIOBuf { size -- iobuf }
+	IOBuffer_SIZEOF Calloc iobuf!
+
+	if (iobuf@ iserr)
+		-ENOMEM iobuf!
+		return
+	end
+
+	auto dat
+
+	if (size@)
+		size@ Calloc dat!
+
+		if (dat@ iserr)
+			iobuf@ Free
+			-ENOMEM iobuf!
+			return
+		end
+
+		dat@ iobuf@ IOBuffer_Data + !
+	end
+
+	size@ iobuf@ IOBuffer_Size + !
+end
+
+fn FreeIOBuf { iobuf -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (iobuf@ IOBuffer_Writers + @)
+		"FreeIOBuf: can't free buffer waited on by writers\n" Panic
+	end
+
+	if (iobuf@ IOBuffer_Readers + @)
+		"FreeIOBuf: can't free buffer waited on by readers\n" Panic
+	end
+
+	iobuf@ IOBuffer_Data + @ Free
+
+	iobuf@ Free
+
+	rs@ InterruptRestore
+end
+
+(* ok is 1 if char put, 0 if buffer full, negative if error *)
+fn IOBufPutc { c buf sleeponfull -- ok }
+	auto rs
+	InterruptDisable rs!
+
+	auto wf
+	buf@ IOBuffer_WriterF + @ wf!
+
+	if (wf@)
+		(* try to write directly *)
+
+		c@ buf@ wf@ IOBufWriter ok!
+
+		if (ok@)
+			rs@ InterruptRestore
+			return
+		end
+
+		(* wasn't able to cuz device busy or what have you, buffer *)
+	end
+
+	auto rp
+	buf@ IOBuffer_ReadP + @ rp!
+
+	auto wp
+	buf@ IOBuffer_WriteP + @ wp!
+
+	if (wp@ 0xFFFFFFFF ==)
+		"wp overflow\n" Panic
+	end
+
+	auto sz
+	buf@ IOBuffer_Size + @ sz!
+
+	if (sz@ 0 ==)
+		"0 size buffer with no writer\n" Panic
+	end
+
+	if (wp@ rp@ - sz@ >=)
+		if (sleeponfull@)
+			1 buf@ IOBuffer_Writers + +=
+
+			while (buf@ IOBuffer_WriteP + @ buf@ IOBuffer_ReadP + @ - sz@ >=)
+				if (buf@ IOBuffer_WriteP + Sleep)
+					rs@ InterruptRestore
+					-EINTR ok!
+					return
+				end
+			end
+
+			1 buf@ IOBuffer_Writers + -=
+
+			(* it changed since we slept, so, update these *)
+
+			buf@ IOBuffer_WriteP + @ wp!
+			buf@ IOBuffer_ReadP + @ rp!
+		end else
+			rs@ InterruptRestore
+			0 ok!
+			return
+		end
+	end
+
+	c@ wp@ sz@ % buf@ IOBuffer_Data + @ + sb
+
+	wp@ 1 + buf@ IOBuffer_WriteP + !
+
+	if (buf@ IOBuffer_Readers + @)
+		buf@ IOBuffer_ReadP + Wakeup
+	end
+
+	1 ok!
+
+	rs@ InterruptRestore
+end
+
+(* c is char if available, IOBUFEMPTY if buf empty, negative if error *)
+fn IOBufGetc { buf sleeponempty -- c }
+	auto rs
+	InterruptDisable rs!
+
+	auto rp
+	buf@ IOBuffer_ReadP + @ rp!
+
+	auto wp
+	buf@ IOBuffer_WriteP + @ wp!
+
+	if (rp@ 0xFFFFFFFF ==)
+		"rp overflow\n" Panic
+	end
+
+	auto sz
+	buf@ IOBuffer_Size + @ sz!
+
+	if (wp@ rp@ ==)
+		if (sleeponempty@)
+			1 buf@ IOBuffer_Readers + +=
+
+			while (buf@ IOBuffer_WriteP + @ buf@ IOBuffer_ReadP + @ ==)
+				if (buf@ IOBuffer_ReadP + Sleep)
+					rs@ InterruptRestore
+					-EINTR c!
+					return
+				end
+			end
+
+			1 buf@ IOBuffer_Readers + -=
+
+			(* it changed since we slept, so, update these *)
+
+			buf@ IOBuffer_WriteP + @ wp!
+			buf@ IOBuffer_ReadP + @ rp!
+		end else
+			rs@ InterruptRestore
+			IOBUFEMPTY c!
+			return
+		end
+	end
+
+	rp@ sz@ % buf@ IOBuffer_Data + @ + gb c!
+
+	rp@ 1 + buf@ IOBuffer_ReadP + !
+
+	if (buf@ IOBuffer_Writers + @)
+		buf@ IOBuffer_WriteP + Wakeup
+	end
+
+	rs@ InterruptRestore
+end

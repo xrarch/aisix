@@ -52,7 +52,7 @@ fn DevByIndex { index -- dev }
 	end
 end
 
-fn DeviceRegister { name driver unit -- device }
+fn DeviceRegister { permissions ibuffer obuffer name driver unit -- device }
 	auto rs
 	InterruptDisable rs!
 
@@ -73,6 +73,12 @@ fn DeviceRegister { name driver unit -- device }
 	unit@ device@ Device_Unit + !
 
 	driver@ device@ Device_Driver + !
+
+	permissions@ device@ Device_Permissions + !
+
+	ibuffer@ device@ Device_IBuffer + !
+
+	obuffer@ device@ Device_OBuffer + !
 
 	0 device@ Device_Offset + !
 
@@ -108,6 +114,15 @@ fn DeviceWrite { buf len seek dev -- bytes }
 	dev@ Device_Unit + @
 	seek@
 	dev@ Device_Driver + @ Driver_Write + @ DevWrite bytes!
+end
+
+fn DeviceSysctl { op1 op2 op3 op4 dev -- ok }
+	op1@
+	op2@
+	op3@
+	op4@
+	dev@ Device_Unit + @
+	dev@ Device_Driver + @ Driver_Write + @ DevSysctl ok!
 end
 
 fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
@@ -277,6 +292,10 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 
 	auto type
 	dev@ Device_Driver + @ Driver_Type + @ type!
+
+	0 vnode@ VNode_UID + !
+
+	dev@ Device_Permissions + @ vnode@ VNode_Permissions + !
 
 	if (type@ DEV_CHAR ==)
 		VNODE_CHAR type!

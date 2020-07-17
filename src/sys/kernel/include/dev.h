@@ -8,7 +8,7 @@ struct Driver
 	4 Ioctl
 	4 Read
 	4 Write
-	4 Size
+	4 Sysctl
 endstruct
 
 fnptr DevOpen { unit -- ok }
@@ -21,6 +21,8 @@ fnptr DevRead { buf len unit seek -- bytes }
 
 fnptr DevWrite { buf len unit seek -- bytes }
 
+fnptr DevSysctl { op1 op2 op3 op4 unit -- ok }
+
 struct Device
 	DEVNAMELEN Name
 	4 Driver
@@ -28,6 +30,9 @@ struct Device
 	4 Mount
 	4 Offset
 	4 RawDev
+	4 Permissions
+	4 IBuffer
+	4 OBuffer
 	4 Next
 	4 Prev
 endstruct
@@ -37,6 +42,8 @@ const DEV_BLOCK 2
 
 externptr DevFSTab
 
+extern DeviceSysctl { op1 op2 op3 op4 dev -- ok }
+
 extern DeviceRead { buf len seek dev -- bytes }
 
 extern DeviceWrite { buf len seek dev -- bytes }
@@ -45,4 +52,7 @@ extern DevByName { name -- dev }
 
 extern DevByIndex { index -- dev }
 
-extern DeviceRegister { name driver unit -- device }
+extern DeviceRegister { permissions ibuffer obuffer name driver unit -- device }
+
+const SYSCTL_SETINBUF 1
+const SYSCTL_SETOUTBUF 2

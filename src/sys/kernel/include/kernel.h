@@ -9,6 +9,7 @@
 #include "<inc>/dev.h"
 #include "<inc>/timer.h"
 #include "<inc>/block.h"
+#include "<inc>/char.h"
 
 extern Panic { ... fmt -- }
 

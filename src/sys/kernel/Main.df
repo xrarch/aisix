@@ -40,10 +40,151 @@ extern VFSInit { -- }
 
 var Done 0
 
+var TestIOBuf 0
+
+extern ConsInit { -- }
+
 fn AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
 
 	VFSInit
 
-	while (1) end
+	ConsInit
+
+	8 AllocIOBuf TestIOBuf!
+
+	if (TestIOBuf@ iserr)
+		TestIOBuf@ abs TestIOBuf!
+		[TestIOBuf@]ErrorNames@ "%s\n" Panic
+	end
+
+	pointerof Test1 "test1" KernelThreadNew ThreadReady
+
+	pointerof Test3 "test3" KernelThreadNew ThreadReady
+
+	pointerof Test2 "test2" KernelThreadNew ThreadReady
+
+	pointerof Test4 "test4" KernelThreadNew ThreadReady
+
+	while (1) Yield end
+
+	auto buf
+	256 Malloc buf!
+
+	auto ret
+
+	auto bytes
+
+	auto seek
+
+	while (1)
+		"bytes to write: " Printf
+		buf@ 255 Gets
+		buf@ atoi bytes!
+
+		"seek: " Printf
+		buf@ 255 Gets
+		buf@ atoi seek!
+
+		"path: " Printf
+		buf@ 255 Gets
+
+		auto nbuf
+		bytes@ Malloc nbuf!
+
+		"write wot: " Printf
+		nbuf@ bytes@ 1 - Gets
+
+		buf@ VFSPath ret!
+
+		if (ret@ iserr)
+			ret@ abs ret!
+			[ret@]ErrorNames@ "%s\n" Printf
+		end else
+			nbuf@ bytes@ seek@ ret@ VWrite bytes!
+
+			if (bytes@ iserr)
+				bytes@ abs bytes!
+				[bytes@]ErrorNames@ "%s\n" Printf
+			end else
+				nbuf@ "%s\n" Printf
+			end
+
+			ret@ VNodePut
+		end 
+
+		nbuf@ Free
+	end
+end
+
+fn Test3 { -- }
+	auto c
+	'0' c!
+
+	while (1)
+		if (c@ '9' >)
+			'0' c!
+		end
+
+		auto r
+		c@ TestIOBuf@ 1 IOBufPutc r!
+
+		if (r@ iserr)
+			r@ abs r!
+			[r@]ErrorNames@ "test3: %s\n" Panic
+		end
+
+		1 c +=
+	end
+end
+
+fn Test1 { -- }
+	auto c
+	'a' c!
+
+	while (1)
+		if (c@ 'z' >)
+			'a' c!
+		end
+
+		auto r
+		c@ TestIOBuf@ 1 IOBufPutc r!
+
+		if (r@ iserr)
+			r@ abs r!
+			[r@]ErrorNames@ "test1: %s\n" Panic
+		end
+
+		1 c +=
+	end
+end
+
+extern SerialPutc { c -- }
+
+fn Test4 { -- }
+	while (1)
+		auto c
+		TestIOBuf@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ abs c!
+			[c@]ErrorNames@ "test4: %s\n" Panic
+		end
+
+		c@ SerialPutc
+	end
+end
+
+fn Test2 { -- }
+	while (1)
+		auto c
+		TestIOBuf@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ abs c!
+			[c@]ErrorNames@ "test2: %s\n" Panic
+		end
+
+		c@ Putc
+	end
 end

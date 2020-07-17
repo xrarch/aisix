@@ -19,12 +19,16 @@ table SerialDriver
 	pointerof SerialIoctl
 	pointerof SerialRead
 	pointerof SerialWrite
-	0
+	pointerof SerialSysctl
 endtable
 
 var SerialFound 0
 
 var SerialKDebug 0
+
+var SerialIBuffer 0
+
+var SerialOBuffer 0
 
 fn DrvSerialFoundNode { node -- }
 	if (SerialFound@)
@@ -32,6 +36,20 @@ fn DrvSerialFoundNode { node -- }
 	end
 
 	1 SerialFound!
+
+	8 AllocIOBuf SerialIBuffer!
+
+	if (SerialIBuffer@ iserr)
+		"couldn't allocate SerialIBuffer\n" Panic
+	end
+
+	0 AllocIOBuf SerialOBuffer!
+
+	if (SerialOBuffer@ iserr)
+		"couldn't allocate SerialOBuffer\n" Panic
+	end
+
+	pointerof SerialWriter SerialOBuffer@ IOBuffer_WriterF + !
 
 	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
 
@@ -55,7 +73,11 @@ fn DrvSerialFoundNode { node -- }
 
 	SerialIntrEnable
 
-	"serial0" SerialDriver 0 DeviceRegister drop
+	OWNER_W OWNER_R | WORLD_W | WORLD_R | SerialIBuffer@ SerialOBuffer@ "serial0" SerialDriver 0 DeviceRegister drop
+end
+
+fn (DevSysctl) SerialSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevOpen) SerialOpen { unit -- ok }
@@ -71,10 +93,39 @@ fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
 end
 
 fn (DevRead) SerialRead { buf len unit seek -- bytes }
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		auto c
+
+		SerialIBuffer@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ bytes!
+			return
+		end
+
+		c@ buf@ sb
+
+		1 buf +=
+		1 i +=
+	end
+
 	len@ bytes!
 end
 
 fn (DevWrite) SerialWrite { buf len unit seek -- bytes }
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		buf@ gb SerialPutc
+
+		1 buf +=
+		1 i +=
+	end
+
 	len@ bytes!
 end
 
@@ -104,6 +155,8 @@ fn (IntHandler) SerialIntr { intn -- }
 	end else
 		while (SerialGetc dup c! -1 ~=)
 			c@ SerialPutc
+
+			c@ SerialIBuffer@ 0 IOBufPutc drop
 		end
 	end
 
@@ -126,6 +179,12 @@ fn SerialIntrDisable { -- }
 	SerialCmdIntrOff SerialCmdPort@ DCitronCommand
 
 	rs@ InterruptRestore
+end
+
+fn (IOBufWriter) SerialWriter { c buf -- written }
+	c@ SerialPutc
+
+	1 written!
 end
 
 fn SerialPutc { c -- }

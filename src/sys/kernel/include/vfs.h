@@ -75,6 +75,18 @@ const VNODE_DIR 2
 const VNODE_CHAR 3
 const VNODE_BLOCK 4
 
+const WORLD_X 1
+const WORLD_W 2
+const WORLD_R 4
+
+const GROUP_X 8
+const GROUP_W 16
+const GROUP_R 32
+
+const OWNER_X 64
+const OWNER_W 128
+const OWNER_R 256
+
 struct VDirent
 	4 Mount
 	4 DirVNode

@@ -279,6 +279,8 @@ fn WakeupTimer { uptime -- }
 	end
 end
 
+extern KDebug { -- }
+
 fn Sleep { channel -- killed }
 	auto rs
 	InterruptDisable rs!
@@ -298,10 +300,10 @@ fn Wakeup { channel -- }
 	auto i
 	0 i!
 
-	while (i@ THREADMAX <)
-		auto rs
-		InterruptDisable rs!
+	auto rs
+	InterruptDisable rs!
 
+	while (i@ THREADMAX <)
 		auto thr
 		[i@]Threads@ thr!
 
@@ -314,10 +316,10 @@ fn Wakeup { channel -- }
 			end
 		end
 
-		rs@ InterruptRestore
-
 		1 i +=
 	end
+
+	rs@ InterruptRestore
 end
 
 (* =========== process management =========== *)
