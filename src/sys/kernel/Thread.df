@@ -49,7 +49,6 @@ fn private ThreadAllocate { -- thread }
 
 			if (ts@ iserr)
 				rs@ InterruptRestore
-				ts@ thread!
 				return
 			end
 
@@ -85,27 +84,89 @@ fn ThreadFree { thread -- }
 	thread@ ThreadFreeSlot
 end
 
+(* if the thread is in the kernel,
+wake it up and let it finish up whatever it's doing,
+and maybe find out it was killed and do something special.
+it will eventually call ThreadExit when it returns to
+the exception vectoring code.
+this prevents locks from being held forever, buffers never being
+freed, etc.
+however, user threads can just be killed, and their
+resources immediately freed.
+if the process has no more threads left, kill it too, unless
+it already exited. *)
+
 fn ThreadKill { thread -- }
+	if (thread@ Thread_Process + @ KernelProcess@ ==)
+		"tried to kill a kernel thread!\n" Panic
+	end
+
+	if (thread@ CurrentThread@ ==)
+		"tried to kill self\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
 	auto thst
 	thread@ Thread_Status + @ thst!
 
-	auto asleep
-	0 asleep!
+	auto notnow
+	0 notnow!
 
-	if (thst@ TS_SLEEPING ==)
-		1 asleep!
-	end elseif (thst@ TS_TIMER ==)
-		1 asleep!
+	if (thread@ Thread_InKernel + @)
+		1 notnow!
 	end
 
-	if (asleep@ ~~)
+	if (notnow@ ~~)
 		thread@ ThreadFree
+
+		auto process
+		thread@ Thread_Process + @ process!
+
+		if (process@ Process_Threads + @ 1 <=)
+			0 process@ Process_Threads + !
+			
+			if (process@ Process_Exited + @ ~~)
+				0 ProcessExit
+			end
+		end else
+			1 process@ Process_Threads + -=
+		end
 	end else
-		0 thread@ Thread_WaitChan + !
+		if (thst@ TS_EVENT ==)
+			(* remove from whatever EventQueue its waiting in *)
+			auto eq
+			thread@ Thread_EvQ + @ eq!
+
+			auto pw
+			thread@ Thread_PrevWaiter + @ pw!
+
+			auto nw
+			thread@ Thread_NextWaiter + @ nw!
+
+			if (pw@)
+				nw@ pw@ Thread_NextWaiter + !
+			end
+
+			if (nw@)
+				pw@ nw@ Thread_PrevWaiter + !
+			end
+
+			if (eq@ EventQueue_FirstWaiter + @ thread@ ==)
+				nw@ eq@ EventQueue_FirstWaiter + !
+			end
+
+			if (eq@ EventQueue_LastWaiter + @ thread@ ==)
+				pw@ eq@ EventQueue_LastWaiter + !
+			end
+		end
 
 		1 thread@ Thread_Killed + !
 		TS_READY thread@ Thread_Status + !
 	end
+
+	rs@ InterruptRestore
 end
 
 fn ThreadExit { -- }
@@ -118,13 +179,17 @@ fn ThreadExit { -- }
 	auto process
 	thread@ Thread_Process + @ process!
 
-	if (process@ Process_Threads + @ 1 ==)
-		0 ProcessExit
+	if (process@ Process_Threads + @ 1 <=)
+		0 process@ Process_Threads + !
+		
+		if (process@ Process_Exited + @ ~~)
+			0 ProcessExit
+		end
 	end else
 		1 process@ Process_Threads + -=
-
-		thread@ ThreadKill
 	end
+
+	thread@ ThreadFree
 
 	0 thread@ Thread_Status + !
 
@@ -185,24 +250,33 @@ fn Scheduler { -- }
 	auto rs
 	auto thread
 
+	InterruptEnable
+
 	while (1)
 		auto i
 		0 i!
 
-		InterruptDisable rs!
+		auto ran
+		0 ran!
 
 		while (i@ THREADMAX <)
+			InterruptDisable rs!
+
 			[i@]Threads@ thread!
 
 			if (thread@ 0 ==)
 				1 i +=
+				rs@ InterruptRestore
 				continue
 			end
 
 			if (thread@ Thread_Status + @ TS_READY ~=)
 				1 i +=
+				rs@ InterruptRestore
 				continue
 			end
+
+			1 ran!
 
 			thread@ CurrentThread!
 
@@ -213,9 +287,13 @@ fn Scheduler { -- }
 			0 CurrentThread!
 
 			1 i +=
+
+			rs@ InterruptRestore
 		end
 
-		rs@ InterruptRestore
+		if (ran@ ~~)
+			CPUIdle
+		end
 	end
 end
 
@@ -281,43 +359,73 @@ end
 
 extern KDebug { -- }
 
-fn Sleep { channel -- killed }
+fn WaitQueue { evq -- killed }
 	auto rs
 	InterruptDisable rs!
 
-	channel@ CurrentThread@ Thread_WaitChan + !
+	if (CurrentThread@ Thread_Killed + @)
+		rs@ InterruptRestore
+		1 killed!
+		return
+	end
 
-	TS_SLEEPING CurrentThread@ Thread_Status + !
+	auto lw
+	evq@ EventQueue_LastWaiter + @ lw!
+
+	if (lw@)
+		CurrentThread@ lw@ Thread_NextWaiter + !
+		lw@ CurrentThread@ Thread_PrevWaiter + !
+	end else
+		(* no last waiter means no first waiter, set myself as first waiter *)
+		CurrentThread@ evq@ EventQueue_FirstWaiter + !
+	end
+
+	CurrentThread@ evq@ EventQueue_LastWaiter + !
+
+	TS_EVENT CurrentThread@ Thread_Status + !
+
+	evq@ CurrentThread@ Thread_EvQ + !
 
 	JumpIntoScheduler
 
-	rs@ InterruptRestore
+	0 CurrentThread@ Thread_EvQ + !
 
 	CurrentThread@ Thread_Killed + @ killed!
+
+	rs@ InterruptRestore
 end
 
-fn Wakeup { channel -- }
-	auto i
-	0 i!
-
+fn WakeQueue { evq -- }
 	auto rs
 	InterruptDisable rs!
 
-	while (i@ THREADMAX <)
-		auto thr
-		[i@]Threads@ thr!
+	auto w
+	evq@ EventQueue_FirstWaiter + @ w!
 
-		if (thr@)
-			if (thr@ Thread_Status + @ TS_SLEEPING ==)
-				if (thr@ Thread_WaitChan + @ channel@ ==)
-					0 thr@ Thread_WaitChan + !
-					TS_READY thr@ Thread_Status + !
-				end
-			end
-		end
-
-		1 i +=
+	if (w@ ~~)
+		rs@ InterruptRestore
+		return
 	end
+
+	TS_READY w@ Thread_Status + !
+
+	auto nw
+	w@ Thread_NextWaiter + @ nw!
+
+	nw@ evq@ EventQueue_FirstWaiter + !
+
+	if (nw@ 0 ==)
+		0 evq@ EventQueue_LastWaiter + !
+	end else
+		0 nw@ Thread_PrevWaiter + !
+	end
+
+	if (evq@ EventQueue_LastWaiter + @ w@ ==)
+		0 evq@ EventQueue_LastWaiter + !
+	end
+
+	0 w@ Thread_NextWaiter + !
+	0 w@ Thread_PrevWaiter + !
 
 	rs@ InterruptRestore
 end
@@ -346,7 +454,6 @@ fn private ProcessAllocate { -- process }
 
 			if (ps@ iserr)
 				rs@ InterruptRestore
-				ps@ process!
 				return
 			end
 
@@ -423,30 +530,6 @@ fn ProcessNew { entry name -- process }
 	end
 end
 
-fn ProcessDestroyThreads { process -- }
-	auto i
-	0 i!
-
-	while (i@ THREADMAX <)
-		auto thread
-		[i@]Threads@ thread!
-
-		if (thread@)
-			if (thread@ Thread_Process + @ process@ ==)
-				thread@ ThreadKill
-
-				1 process@ Process_Threads + -=
-			end
-		end
-
-		1 i +=
-	end
-
-	if (process@ Process_Threads + @ 0 ~=)
-		"ProcessDestroyThreads: process wasn't murdered hard enough\n" Panic
-	end
-end
-
 fn ProcessFreeResources { process -- }
 	if (process@ Process_Threads + @ 0 >)
 		"ProcessFreeResources: process still had extant threads\n" Panic
@@ -476,15 +559,42 @@ fn ProcessKill { ret process -- }
 	auto rs
 	InterruptDisable rs!
 
+	1 process@ Process_Exited + !
+
 	ret@ process@ Process_ReturnValue + !
 
-	process@ ProcessDestroyThreads
+	auto i
+	0 i!
 
-	process@ ProcessFreeResources
+	while (i@ THREADMAX <)
+		auto thread
+		[i@]Threads@ thread!
+
+		if (thread@)
+			if (thread@ Thread_Process + @ process@ ==)
+				thread@ ThreadKill
+
+				1 process@ Process_Threads + -=
+			end
+		end
+
+		1 i +=
+	end
+
+	if (process@ Process_Threads + @ 0 ~=)
+		"threads weren't hard enough\n" Panic
+	end
+
+	(* all of the userspace threads will never run again, and the kernel ones will exit
+	instead of returning home, so it's safe to free the process image now *)
+	if (process@ Process_Mapped + @)
+		process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
+		process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
+		process@ Process_BSSPages + @ process@ Process_BSSPhysical + @ PMMFree
+	end
 
 	(* do wait syscall stuff here *)
 
-	auto i
 	0 i!
 
 	while (i@ PROCMAX <)

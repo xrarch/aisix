@@ -30,11 +30,11 @@ fn FreeIOBuf { iobuf -- }
 	auto rs
 	InterruptDisable rs!
 
-	if (iobuf@ IOBuffer_Writers + @)
+	if (iobuf@ IOBuffer_WriteQ + EventQueue_FirstWaiter + @)
 		"FreeIOBuf: can't free buffer waited on by writers\n" Panic
 	end
 
-	if (iobuf@ IOBuffer_Readers + @)
+	if (iobuf@ IOBuffer_ReadQ + EventQueue_FirstWaiter + @)
 		"FreeIOBuf: can't free buffer waited on by readers\n" Panic
 	end
 
@@ -85,26 +85,25 @@ fn IOBufPutc { c buf sleeponfull -- ok }
 
 	if (wp@ rp@ - sz@ >=)
 		if (sleeponfull@)
-			1 buf@ IOBuffer_Writers + +=
-
-			while (buf@ IOBuffer_WriteP + @ buf@ IOBuffer_ReadP + @ - sz@ >=)
-				if (buf@ IOBuffer_WriteP + Sleep)
-					rs@ InterruptRestore
-					-EINTR ok!
-					return
-				end
+			if (buf@ IOBuffer_WriteQ + WaitQueue)
+				-EINTR ok!
+				rs@ InterruptRestore
+				return
 			end
-
-			1 buf@ IOBuffer_Writers + -=
 
 			(* it changed since we slept, so, update these *)
 
 			buf@ IOBuffer_WriteP + @ wp!
 			buf@ IOBuffer_ReadP + @ rp!
 		end else
-			rs@ InterruptRestore
-			0 ok!
-			return
+			if (buf@ IOBuffer_Overwrite + @)
+				1 rp +=
+				rp@ buf@ IOBuffer_ReadP + !
+			end else
+				rs@ InterruptRestore
+				0 ok!
+				return
+			end
 		end
 	end
 
@@ -112,8 +111,26 @@ fn IOBufPutc { c buf sleeponfull -- ok }
 
 	wp@ 1 + buf@ IOBuffer_WriteP + !
 
-	if (buf@ IOBuffer_Readers + @)
-		buf@ IOBuffer_ReadP + Wakeup
+	auto btty
+	buf@ IOBuffer_TTY + @ btty!
+
+	auto wake
+	0 wake!
+
+	(* only wake on this char if this isn't the input buffer to a TTY
+	in order to allow in-place line editing by the line discipline layer *)
+	if (btty@)
+		if (c@ '\n' ==)
+			1 wake!
+		end elseif (c@ 4 ==)
+			1 wake!
+		end
+	end else
+		1 wake!
+	end
+
+	if (wake@)
+		buf@ IOBuffer_ReadQ + WakeQueue
 	end
 
 	1 ok!
@@ -141,17 +158,11 @@ fn IOBufGetc { buf sleeponempty -- c }
 
 	if (wp@ rp@ ==)
 		if (sleeponempty@)
-			1 buf@ IOBuffer_Readers + +=
-
-			while (buf@ IOBuffer_WriteP + @ buf@ IOBuffer_ReadP + @ ==)
-				if (buf@ IOBuffer_ReadP + Sleep)
-					rs@ InterruptRestore
-					-EINTR c!
-					return
-				end
+			if (buf@ IOBuffer_ReadQ + WaitQueue)
+				-EINTR c!
+				rs@ InterruptRestore
+				return
 			end
-
-			1 buf@ IOBuffer_Readers + -=
 
 			(* it changed since we slept, so, update these *)
 
@@ -168,9 +179,60 @@ fn IOBufGetc { buf sleeponempty -- c }
 
 	rp@ 1 + buf@ IOBuffer_ReadP + !
 
-	if (buf@ IOBuffer_Writers + @)
-		buf@ IOBuffer_WriteP + Wakeup
+	buf@ IOBuffer_WriteQ + WakeQueue
+
+	rs@ InterruptRestore
+end
+
+fn IOBufPutBack { c buf -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto rp
+	buf@ IOBuffer_ReadP + @ rp!
+
+	auto wp
+	buf@ IOBuffer_WriteP + @ wp!
+
+	auto sz
+	buf@ IOBuffer_Size + @ sz!
+
+	if (wp@ rp@ - sz@ >=)
+		return
 	end
+
+	1 rp -=
+
+	c@ rp@ sz@ % buf@ IOBuffer_Data + @ + sb
+
+	rp@ buf@ IOBuffer_ReadP + !
+
+	rs@ InterruptRestore
+end
+
+fn IOBufRubout { buf -- c }
+	auto rs
+	InterruptDisable rs!
+
+	auto rp
+	buf@ IOBuffer_ReadP + @ rp!
+
+	auto wp
+	buf@ IOBuffer_WriteP + @ wp!
+
+	auto sz
+	buf@ IOBuffer_Size + @ sz!
+
+	if (wp@ rp@ ==)
+		ERR c!
+		return
+	end
+
+	1 wp -=
+
+	wp@ sz@ % buf@ IOBuffer_Data + @ + gb c!
+
+	wp@ buf@ IOBuffer_WriteP + !
 
 	rs@ InterruptRestore
 end

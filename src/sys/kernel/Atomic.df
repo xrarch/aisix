@@ -13,7 +13,7 @@ fn LockMutex { mutex -- killed }
 
 	0 killed!
 
-	while (mutex@ Mutex_Locked + @)
+	if (mutex@ Mutex_Locked + @)
 		if (CurrentThread@ 0 ==)
 			"LockMutex: if we aren't in thread context, we can lock a mutex, but we can't wait on one!\n" Panic
 		end
@@ -30,11 +30,9 @@ fn LockMutex { mutex -- killed }
 			mn@ "LockMutex: '%s' already owned\n" Panic
 		end
 
-		mutex@ Sleep killed!
-
-		if (killed@)
+		if (mutex@ Mutex_LockQ + WaitQueue)
+			1 killed!
 			rs@ InterruptRestore
-
 			return
 		end
 	end
@@ -64,7 +62,7 @@ fn UnlockMutex { mutex -- }
 	0 mutex@ Mutex_Locked + !
 	0 mutex@ Mutex_OwnerThread + !
 
-	mutex@ Wakeup
+	mutex@ Mutex_LockQ + WakeQueue
 
 	rs@ InterruptRestore
 end

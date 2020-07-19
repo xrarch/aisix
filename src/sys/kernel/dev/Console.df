@@ -1,0 +1,150 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var ConsInited 0
+public ConsInited
+
+var ConsTTY 0
+
+var ConsIBuf 0
+public ConsIBuf
+
+var ConsOBuf 0
+public ConsOBuf
+
+table ConsDriver
+	"cons"
+	DEV_CHAR
+	pointerof ConsOpen
+	pointerof ConsClose
+	pointerof ConsIoctl
+	pointerof ConsRead
+	pointerof ConsWrite
+	pointerof ConsSysctl
+endtable
+
+fn GetConsIn { devname -- consibuf }
+	auto dev
+	devname@ DevByName dev!
+
+	if (dev@ ~~)
+		-ENODEV consibuf!
+		return
+	end
+
+	dev@ Device_IBuffer + @ consibuf!
+
+	if (consibuf@ 0 ==)
+		-ENOTBLK consibuf!
+		return
+	end
+end
+
+fn GetConsOut { devname -- consobuf }
+	auto dev
+	devname@ DevByName dev!
+
+	if (dev@ ~~)
+		-ENODEV consobuf!
+		return
+	end
+
+	dev@ Device_OBuffer + @ consobuf!
+
+	if (consobuf@ 0 ==)
+		-ENOTBLK consobuf!
+		return
+	end
+end
+
+fn ConsInit { -- }
+	if (ConsInited@)
+		"ConsInit\n" Panic
+	end
+
+	auto consin
+	auto consout
+
+	auto ab
+
+	"consin" ArgsValue ab!
+
+	if (ab@)
+		ab@ consin!
+	end else
+		"serial0" consin!
+	end
+
+	consin@ "consin=%s\n" Printf
+
+	consin@ GetConsIn consin!
+
+	if (consin@ iserr)
+		consin@ abs consin!
+		[consin@]ErrorNames@ "couldn't get consin: %s\n" Panic
+	end
+
+	if (ab@)
+		ab@ Free
+	end
+
+	"consout" ArgsValue ab!
+
+	if (ab@)
+		ab@ consout!
+	end else
+		"serial0" consout!
+	end
+
+	consout@ "consout=%s\n" Printf
+
+	consout@ GetConsOut consout!
+
+	if (consout@ iserr)
+		consout@ abs consout!
+		[consout@]ErrorNames@ "couldn't get consout: %s\n" Panic
+	end
+
+	if (ab@)
+		ab@ Free
+	end
+
+	consin@ ConsIBuf!
+
+	consout@ ConsOBuf!
+
+	consin@ consout@ AllocTTY ConsTTY!
+
+	if (ConsTTY@ iserr)
+		ConsTTY@ abs ConsTTY!
+		[ConsTTY@]ErrorNames@ "couldn't allocate ConsTTY: %s\n" Panic
+	end
+
+	OWNER_W OWNER_R | WORLD_W | WORLD_R | 0 0 "cons" ConsDriver 0 DeviceRegister drop
+
+	1 ConsInited!
+end
+
+fn (DevSysctl) ConsSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) ConsOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) ConsClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) ConsIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) ConsRead { buf len unit seek -- bytes }
+	buf@ len@ ConsTTY@ TTYRead bytes!
+end
+
+fn (DevWrite) ConsWrite { buf len unit seek -- bytes }
+	buf@ len@ ConsTTY@ TTYWrite bytes!
+end

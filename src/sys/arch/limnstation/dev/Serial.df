@@ -37,7 +37,7 @@ fn DrvSerialFoundNode { node -- }
 
 	1 SerialFound!
 
-	8 AllocIOBuf SerialIBuffer!
+	256 AllocIOBuf SerialIBuffer!
 
 	if (SerialIBuffer@ iserr)
 		"couldn't allocate SerialIBuffer\n" Panic
@@ -153,10 +153,16 @@ fn (IntHandler) SerialIntr { intn -- }
 
 		sr@ sw@ KLogAttach
 	end else
-		while (SerialGetc dup c! -1 ~=)
-			c@ SerialPutc
+		auto inputf
+		SerialIBuffer@ IOBuffer_InputF + @ inputf!
 
-			c@ SerialIBuffer@ 0 IOBufPutc drop
+		while (SerialGetc dup c! -1 ~=)
+			if (inputf@)
+				c@ SerialIBuffer@ inputf@ IOCharInput
+			end else
+				c@ SerialIBuffer@ 0 IOBufPutc drop
+				c@ SerialPutc
+			end
 		end
 	end
 

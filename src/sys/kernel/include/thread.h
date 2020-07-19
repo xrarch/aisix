@@ -1,3 +1,8 @@
+struct EventQueue
+	4 FirstWaiter
+	4 LastWaiter
+endstruct
+
 const THREADNAMELEN 32
 
 struct Thread
@@ -14,6 +19,12 @@ struct Thread
 	4 TrapFrame
 
 	4 WaitChan
+
+	4 EvQ
+	4 PrevWaiter
+	4 NextWaiter
+
+	4 InKernel
 
 	4 Killed
 
@@ -43,6 +54,8 @@ struct Process
 	4 BSSPhysical
 	4 BSSPages
 
+	4 Exited
+
 	4 Index
 	4 PID
 
@@ -65,8 +78,8 @@ const KERNELSTACKPAGES 1
 const TS_NOTREADY 0
 const TS_READY 1
 const TS_RUNNING 2
-const TS_SLEEPING 3
 const TS_TIMER 4
+const TS_EVENT 5
 
 extern JumpIntoScheduler { -- }
 
@@ -75,6 +88,10 @@ extern KernelThreadNew { entry name -- thread }
 extern ThreadReady { thread -- }
 
 extern Yield { -- }
+
+extern WaitQueue { evq -- killed }
+
+extern WakeQueue { evq -- }
 
 extern Sleep { channel -- killed }
 

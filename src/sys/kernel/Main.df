@@ -51,23 +51,6 @@ fn AISIXInitialThread { -- }
 
 	ConsInit
 
-	8 AllocIOBuf TestIOBuf!
-
-	if (TestIOBuf@ iserr)
-		TestIOBuf@ abs TestIOBuf!
-		[TestIOBuf@]ErrorNames@ "%s\n" Panic
-	end
-
-	pointerof Test1 "test1" KernelThreadNew ThreadReady
-
-	pointerof Test3 "test3" KernelThreadNew ThreadReady
-
-	pointerof Test2 "test2" KernelThreadNew ThreadReady
-
-	pointerof Test4 "test4" KernelThreadNew ThreadReady
-
-	while (1) Yield end
-
 	auto buf
 	256 Malloc buf!
 
@@ -78,7 +61,7 @@ fn AISIXInitialThread { -- }
 	auto seek
 
 	while (1)
-		"bytes to write: " Printf
+		"bytes to read: " Printf
 		buf@ 255 Gets
 		buf@ atoi bytes!
 
@@ -92,16 +75,13 @@ fn AISIXInitialThread { -- }
 		auto nbuf
 		bytes@ Malloc nbuf!
 
-		"write wot: " Printf
-		nbuf@ bytes@ 1 - Gets
-
 		buf@ VFSPath ret!
 
 		if (ret@ iserr)
 			ret@ abs ret!
 			[ret@]ErrorNames@ "%s\n" Printf
 		end else
-			nbuf@ bytes@ seek@ ret@ VWrite bytes!
+			nbuf@ bytes@ seek@ ret@ VRead bytes!
 
 			if (bytes@ iserr)
 				bytes@ abs bytes!

@@ -1,0 +1,125 @@
+(* generic code for tty, ptty, syscon, etc; anything that wants line discipline *)
+
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+fn AllocTTY { ibuf obuf -- tty }
+	TTY_SIZEOF Calloc tty!
+
+	if (tty@ iserr)
+		-ENOMEM tty!
+		return
+	end
+
+	ibuf@ tty@ TTY_IBuffer + !
+
+	pointerof TTYInput ibuf@ IOBuffer_InputF + !
+
+	tty@ ibuf@ IOBuffer_TTY + !
+
+	obuf@ tty@ TTY_OBuffer + !
+end
+
+(* this is often called from interrupt context,
+so NEVER sleep on any IOBufPutc's *)
+fn (IOCharInput) TTYInput { c buf -- }
+	auto ob
+	buf@ IOBuffer_TTY + @ TTY_OBuffer + @ ob!
+
+	if (ob@ 0 ==)
+		return
+	end
+
+	if (c@ '\b' ==)
+		if (buf@ IOBufRubout ERR ~=)
+			'\b' ob@ 0 IOBufPutc drop
+			' ' ob@ 0 IOBufPutc drop
+			'\b' ob@ 0 IOBufPutc drop
+		end
+	end elseif (c@ 21 ==) (* ^U *)
+		while (buf@ IOBufRubout ERR ~=)
+			'\b' ob@ 0 IOBufPutc drop
+			' ' ob@ 0 IOBufPutc drop
+			'\b' ob@ 0 IOBufPutc drop
+		end
+	end else
+		if (c@ buf@ 0 IOBufPutc 1 ==)
+			c@ ob@ 0 IOBufPutc drop
+		end
+	end
+end
+
+fn TTYRead { buf len tty -- bytes }
+	auto ib
+	tty@ TTY_IBuffer + @ ib!
+
+	if (ib@ ~~)
+		-ENOTBLK bytes!
+		return
+	end
+
+	auto rs
+
+	0 bytes!
+
+	while (bytes@ len@ <)
+		InterruptDisable rs!
+
+		auto c
+		ib@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			rs@ InterruptRestore
+			c@ bytes!
+			return
+		end
+
+		if (c@ 4 ==) (* ^D *)
+			if (bytes@ 0 ==)
+				rs@ InterruptRestore
+				return
+			end
+
+			4 ib@ IOBufPutBack
+
+			rs@ InterruptRestore
+			return
+		end
+
+		rs@ InterruptRestore
+
+		c@ buf@ sb
+		1 buf +=
+		1 bytes +=
+
+		if (c@ '\n' ==)
+			return
+		end
+	end
+end
+
+fn TTYWrite { buf len tty -- bytes }
+	auto ob
+	tty@ TTY_OBuffer + @ ob!
+
+	if (ob@ ~~)
+		-ENOTBLK bytes!
+		return
+	end
+
+	0 bytes!
+
+	auto r
+
+	while (bytes@ len@ <)
+		buf@ gb ob@ 1 IOBufPutc r!
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
+
+		1 buf +=
+		1 bytes +=
+	end
+end

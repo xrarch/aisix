@@ -19,8 +19,6 @@ fn Putc { c -- }
 end
 
 fn Getc { -- c }
-	-1 c!
-
 	if (KLogRead@)
 		KLogRead@ KLogReader c!
 	end

@@ -77,11 +77,10 @@ cswtch:
 
 CPUIdle:
 .global CPUIdle 
-	mov r1, rs
+	mov t0, rs
 	bseti rs, rs, 1
-	bseti rs, rs, 3
 	hlt
-	mov rs, r1
+	mov rs, t0
 	ret
 
 PlatformSetTimer:
@@ -115,6 +114,13 @@ fn Exception { badaddr ecause tf -- }
 		return
 	end
 
+	auto mode
+	tf@ Context_ers + @ RS_USER & mode!
+
+	if (mode@ RS_USER ==)
+		1 CurrentThread@ Thread_InKernel + !
+	end
+
 	if (ecause@ EXCINTERRUPT ==)
 		if (InterruptGet@ 0 ==)
 			"no interrupt controller\n" Panic
@@ -140,7 +146,7 @@ fn Exception { badaddr ecause tf -- }
 		tf@ Context_ers + @ "ERS: %x\n" Printf
 		badaddr@ "BADADDR: %x\n" Printf
 
-		if (tf@ Context_ers + @ RS_USER & 0 ==)
+		if (mode@ 0 ==)
 			(* kernel mode exception, panic *)
 			"unexpected kernel mode exception!\n" Panic
 		end
@@ -148,8 +154,12 @@ fn Exception { badaddr ecause tf -- }
 		-1 ProcessExit
 	end
 
+	if (mode@ RS_USER ==)
+		0 CurrentThread@ Thread_InKernel + !
+	end
+
 	if (CurrentThread@ Thread_Killed + @)
-		CurrentThread@ ThreadFree
+		ThreadExit
 	end
 end
 
@@ -182,6 +192,12 @@ fn CPUContextPrepare { entry stack -- ctx }
 end
 
 asm "
+
+PreemptEnable:
+.global PreemptEnable
+	mov v0, rs
+	bseti rs, rs, 3
+	ret
 
 InterruptEnable:
 .global InterruptEnable
