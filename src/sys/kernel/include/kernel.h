@@ -11,6 +11,7 @@
 #include "<inc>/block.h"
 #include "<inc>/char.h"
 #include "<inc>/tty.h"
+#include "<inc>/gfx.h"
 
 extern Panic { ... fmt -- }
 

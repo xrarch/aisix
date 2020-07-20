@@ -1,0 +1,155 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table GFXTab[MAXGFX]
+
+fn AllocGFX { -- gfx }
+	auto i
+	0 i!
+
+	while (i@ MAXGFX <)
+		[i@]GFXTab@ gfx!
+
+		if (gfx@ 0 ==)
+			GFX_SIZEOF Calloc gfx!
+			if (gfx@ iserr)
+				-ENOMEM gfx!
+				return
+			end
+			i@ gfx@ GFX_Unit + !
+			gfx@ [i@]GFXTab!
+			return
+		end
+
+		1 i +=
+	end
+
+	-ENOMEM gfx!
+end
+
+fn GFXRegister { gfx -- }
+	auto name
+	16 Calloc name!
+
+	name@ "gfx" strcpy
+
+	gfx@ GFX_Unit + @ name@ 3 + itoa
+
+	OWNER_W OWNER_R |
+	0 0
+	name@
+	GFXDriver
+	gfx@ GFX_Unit + @
+	DeviceRegister drop
+end
+
+fn GFXByUnit { unit -- gfx }
+	[unit@]GFXTab@ gfx!
+
+	if (gfx@ ~~)
+		-ENODEV gfx!
+	end
+end
+
+table GFXDriver
+	"gfx"
+	DEV_CHAR
+	pointerof GFXOpen
+	pointerof GFXClose
+	pointerof GFXIoctl
+	pointerof GFXRead
+	pointerof GFXWrite
+	pointerof GFXSysctl
+endtable
+
+fn (DevSysctl) GFXSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) GFXOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) GFXClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) GFXIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) GFXRead { buf len unit seek -- bytes }
+	auto gfx
+	unit@ GFXByUnit gfx!
+
+	if (gfx@ iserr)
+		"GFXRead\n" Panic
+	end
+
+	auto sz
+	gfx@ GFX_FBSize + @ sz!
+
+	if (sz@ 0 ==)
+		-ENOTBLK bytes!
+		return
+	end
+
+	if (seek@ sz@ >=)
+		-ENOSPC bytes!
+		return
+	end
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	0 bytes!
+
+	while (bytes@ len@ <)
+		if (seek@ sz@ >=)
+			return
+		end
+
+		fb@ seek@ + gb buf@ bytes@ + sb
+
+		1 bytes +=
+		1 seek +=
+	end
+end
+
+fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
+	auto gfx
+	unit@ GFXByUnit gfx!
+
+	if (gfx@ iserr)
+		"GFXWrite\n" Panic
+	end
+
+	auto sz
+	gfx@ GFX_FBSize + @ sz!
+
+	if (sz@ 0 ==)
+		-ENOTBLK bytes!
+		return
+	end
+
+	if (seek@ sz@ >=)
+		-ENOSPC bytes!
+		return
+	end
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	0 bytes!
+
+	while (bytes@ len@ <)
+		if (seek@ sz@ >=)
+			return
+		end
+
+		buf@ bytes@ + gb fb@ seek@ + sb
+
+		1 bytes +=
+		1 seek +=
+	end
+end

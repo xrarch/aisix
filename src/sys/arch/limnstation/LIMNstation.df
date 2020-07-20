@@ -71,10 +71,13 @@ end
 
 extern DeviceTree { -- }
 extern ExceptionInit { -- }
+extern LGFXExclude { -- }
 fn PlatformInit { -- }
 	ExceptionInit
 
 	DeviceTree
+
+	LGFXExclude
 end
 
 fn PlatformPutc { c -- }

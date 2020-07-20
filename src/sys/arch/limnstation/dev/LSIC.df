@@ -6,13 +6,18 @@ const LSICClaimComplete 0x10
 
 var LSICBase 0
 
+var LSICFound 0
+public LSICFound
+
 fn DrvLSICFoundNode { node -- }
 	"address" a3xDGetProperty LSICBase!
 
 	pointerof LSICInterruptGet InterruptGet!
 	pointerof LSICInterruptAck InterruptAck!
 
-	LSICBase@ "  lsic @ 0x%x\n" Printf
+	LSICBase@ "lsic @ 0x%x" Printf
+
+	1 LSICFound!
 end
 
 fn (InterruptGetter) private LSICInterruptGet { -- intn }

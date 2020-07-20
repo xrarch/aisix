@@ -20,6 +20,70 @@ fn AllocTTY { ibuf obuf -- tty }
 	obuf@ tty@ TTY_OBuffer + !
 end
 
+const MAXPRINT 0x7E
+
+table TTYCtrl
+	'@'
+	'A' 'B' 'C'
+	'D' 'E' 'F'
+	'G' 'H' 'I'
+	'J' 'K' 'L'
+	'M' 'N' 'O'
+	'P' 'Q' 'R'
+	'S' 'T' 'U'
+	'V' 'W' 'X'
+	'Y' 'Z'
+	'['
+	'\\'
+	']'
+	'^'
+	'_'
+	' '
+endtable
+
+fn TTYRubout { ib ob -- ro }
+	auto c
+	ib@ IOBufRubout c!
+
+	if (c@ ERR ==)
+		0 ro!
+		return
+	end
+
+	if (c@ '\n' ==)
+		0 ro!
+		c@ ib@ 0 IOBufPutc drop
+		return
+	end
+
+	if (c@ 4 ==)
+		0 ro!
+		c@ ib@ 0 IOBufPutc drop
+		return
+	end
+
+	1 ro!
+
+	if (c@ MAXPRINT >)
+		return
+	end
+
+	auto rt
+	1 rt!
+
+	if (c@ 0x20 <)
+		2 rt!
+	end
+
+	while (rt@)
+		'\b' ob@ 0 IOBufPutc drop
+		' ' ob@ 0 IOBufPutc drop
+		'\b' ob@ 0 IOBufPutc drop
+
+		1 rt -=
+	end
+end
+
 (* this is often called from interrupt context,
 so NEVER sleep on any IOBufPutc's *)
 fn (IOCharInput) TTYInput { c buf -- }
@@ -31,20 +95,26 @@ fn (IOCharInput) TTYInput { c buf -- }
 	end
 
 	if (c@ '\b' ==)
-		if (buf@ IOBufRubout ERR ~=)
-			'\b' ob@ 0 IOBufPutc drop
-			' ' ob@ 0 IOBufPutc drop
-			'\b' ob@ 0 IOBufPutc drop
-		end
+		buf@ ob@ TTYRubout drop
 	end elseif (c@ 21 ==) (* ^U *)
-		while (buf@ IOBufRubout ERR ~=)
-			'\b' ob@ 0 IOBufPutc drop
-			' ' ob@ 0 IOBufPutc drop
-			'\b' ob@ 0 IOBufPutc drop
-		end
+		while (buf@ ob@ TTYRubout) end
 	end else
 		if (c@ buf@ 0 IOBufPutc 1 ==)
-			c@ ob@ 0 IOBufPutc drop
+			if (c@ MAXPRINT >)
+				return
+			end
+
+			if (c@ '\n' ==)
+				c@ ob@ 0 IOBufPutc drop
+				return
+			end
+
+			if (c@ 0x20 <)
+				'^' ob@ 0 IOBufPutc drop
+				[c@]TTYCtrl@ ob@ 0 IOBufPutc drop
+			end else
+				c@ ob@ 0 IOBufPutc drop
+			end
 		end
 	end
 end

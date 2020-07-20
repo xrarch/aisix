@@ -7,7 +7,7 @@ var DCitronBase 0
 fn DrvCitronFoundNode { node -- }
 	"address" a3xDGetProperty DCitronBase!
 
-	DCitronBase@ "  citron @ 0x%x\n" Printf
+	DCitronBase@ "citron @ 0x%x" Printf
 end
 
 fn DCitronInb { port -- byte }

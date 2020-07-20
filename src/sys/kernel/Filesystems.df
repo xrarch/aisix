@@ -14,21 +14,11 @@ var DevMount 0
 buffer MountListMutex Mutex_SIZEOF
 
 fn LockMountList { -- killed }
-	auto rs
-	InterruptDisable rs!
-
 	MountListMutex LockMutex killed!
-
-	rs@ InterruptRestore
 end
 
 fn UnlockMountList { -- }
-	auto rs
-	InterruptDisable rs!
-
 	MountListMutex UnlockMutex
-
-	rs@ InterruptRestore
 end
 
 fn MountRef { mount -- }
@@ -429,8 +419,6 @@ fn VFSUnmount { mount -- ok }
 end
 
 fn VFSSyncWorker { -- }
-	"vfs sync worker!\n" Printf
-
 	while (1)
 		if (3000 SleepFor)
 			"sync thread killed in its sleep\n" Panic

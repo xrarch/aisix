@@ -13,7 +13,14 @@ struct MonitorCommand
 	4 HelpText
 endstruct
 
+externptr Panicked
+
 fn KDebug { -- }
+	auto op
+	Panicked@ op!
+
+	1 Panicked! (* we aren't but this makes it use strictly polled console *)
+
 	if (MonitorCommandList@ 0 ==)
 		MonitorCommandsInit
 	end
@@ -28,6 +35,8 @@ fn KDebug { -- }
 	end
 
 	MonitorLine@ Free
+
+	op@ Panicked!
 end
 
 const ConsoleAssumedHeight 22
@@ -292,10 +301,12 @@ fn MonitorCommandHelp { -- }
 	end
 end
 
+extern PolledGets { s max -- }
+
 fn MonitorPrompt { -- }
 	MonitorLine@ MonitorLinePoint!
 	"dbg> " Printf
-	MonitorLine@ 255 Gets
+	MonitorLine@ 255 PolledGets
 end
 
 fn MonitorDoLine { -- }

@@ -3,37 +3,59 @@
 #include "<inc>/kernel.h"
 
 extern DrvCitronFoundNode { node -- }
+extern DrvDMAFoundNode { node -- }
 extern DrvLSICFoundNode { node -- }
 extern DrvSerialFoundNode { node -- }
 extern DrvClockFoundNode { node -- }
 extern DrvDKSFoundNode { node -- }
 extern DrvDKSLogicalFoundNode { node -- }
+extern DrvLGFXFoundNode { node -- }
+extern DrvAmtsuFoundNode { node -- }
+extern DrvKeybdFoundNode { node -- }
 
 fnptr FoundNode { node -- }
 
-const Devices 6
+externptr DMAFound
+
+externptr LSICFound
+
+externptr AmtsuFound
+
+const Devices 10
 
 const ElemPerDevice 5
 
-(*  NAME     TYPE                     MODEL              REV *)
+(*  NAME     TYPE                     MODEL               REV *)
 table DeviceTable
-	"Citron" "bus"                    "AISA,citron"       1
+	"citron" "bus"                    "AISA,citron"       1
 	pointerof DrvCitronFoundNode
 
-    "LSIC"   "interrupt-controller"   "AISA,lsic"         1
+	"dma"    "dma-controller"         "AISA,ebus-dma"     1
+	pointerof DrvDMAFoundNode
+
+    "lsic"   "interrupt-controller"   "AISA,lsic"         1
     pointerof DrvLSICFoundNode
 
-    "Serial" "serial"                 "AISA,serial-port"  1
+    "serial" "serial"                 "AISA,serial-port"  1
     pointerof DrvSerialFoundNode
 
-    "Clock"  "rtc"                    "AISA,clock"        1
+    "clock"  "rtc"                    "AISA,clock"        1
     pointerof DrvClockFoundNode
 
-    "DKS"    "disk"                   "AISA,satsuma-disk" 1
+    "dks"    "disk"                   "AISA,satsuma-disk" 1
     pointerof DrvDKSFoundNode
 
-    "DKS"    "disk-logical"           "AISA,satsuma-disk" 1
+    "dks"    "disk-logical"           "AISA,satsuma-disk" 1
     pointerof DrvDKSLogicalFoundNode
+
+    "lgfx"   "display"                "AISA,limngfx"      1
+    pointerof DrvLGFXFoundNode
+
+    "amtsu"  "bus"                    "AISA,amanatsu"     1
+    pointerof DrvAmtsuFoundNode
+
+    "keybd"  "keyboard"               "AISA,keyboard"     1
+    pointerof DrvKeybdFoundNode
 endtable
 public DeviceTable
 
@@ -90,9 +112,11 @@ fn private CheckDevTable { -- }
 			ans@ Free
 		end
 
-		model@ dt@ "%s: %s\n" Printf
+		model@ dt@ "\t%s: %s: " Printf
 
 		a3xDGetCurrent [tbase@ 4 +]DeviceTable@ FoundNode
+
+		'\n' Putc
 
 		break
 	end
@@ -114,4 +138,16 @@ fn DeviceTree { -- }
 	"/platform" a3xDeviceSelect
 		a3xDevIteratorInit IterateNode
 	a3xDeviceExit
+
+	if (LSICFound@ ~~)
+		"couldn't find LSIC node!\n" Panic
+	end
+
+	if (DMAFound@ ~~)
+		"couldn't find DMA node!\n" Panic
+	end
+
+	if (AmtsuFound@ ~~)
+		"couldn't find amanatsu bus node!\n" Panic
+	end
 end

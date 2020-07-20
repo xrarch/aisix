@@ -1,0 +1,287 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/amtsu.h"
+
+table KeybdDriver
+	"kbd"
+	DEV_CHAR
+	pointerof KeybdOpen
+	pointerof KeybdClose
+	pointerof KeybdIoctl
+	pointerof KeybdRead
+	pointerof KeybdWrite
+	pointerof KeybdSysctl
+endtable
+
+var KeybdFound 0
+
+var KeybdIBufferRaw 0
+
+var KeybdIBuffer 0
+
+var KeybdOBuffer 0
+
+var KeybdID 0
+
+fn DrvKeybdFoundNode { node -- }
+	if (KeybdFound@)
+		return
+	end
+
+	1 KeybdFound!
+
+	1024 AllocIOBuf KeybdIBufferRaw!
+
+	if (KeybdIBufferRaw@ iserr)
+		"couldn't allocate KeybdIBufferRaw\n" Panic
+	end
+
+	1024 AllocIOBuf KeybdIBuffer!
+
+	if (KeybdIBuffer@ iserr)
+		"couldn't allocate KeybdIBuffer\n" Panic
+	end
+
+	1 KeybdIBuffer@ IOBuffer_Overwrite + !
+
+	"amanatsu,unit" a3xDGetProperty KeybdID!
+
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	intn@ KeybdID@ "keyboard @ amtsu:%d int:%d" Printf
+
+	pointerof KeybdIntr intn@ InterruptRegister
+
+	KeybdID@ AmanatsuSetInterrupt
+
+	OWNER_R WORLD_R | KeybdIBuffer@ 0 "kbd0" KeybdDriver 0 DeviceRegister drop
+end
+
+fn (DevSysctl) KeybdSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) KeybdOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) KeybdClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) KeybdIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) KeybdRead { buf len unit seek -- bytes }
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		auto c
+
+		KeybdIBufferRaw@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ bytes!
+			return
+		end
+
+		c@ buf@ sb
+
+		1 buf +=
+		1 i +=
+	end
+
+	len@ bytes!
+end
+
+fn (DevWrite) KeybdWrite { buf len unit seek -- bytes }
+	-ENOTBLK bytes!
+end
+
+fn AKeyboardPopCode { id -- code }
+	auto rs
+	InterruptDisable rs!
+
+	id@ AmanatsuSelectDev
+	1 AmanatsuCommand
+	AmanatsuReadA code!
+
+	rs@ InterruptRestore
+end
+
+fn AKeyboardSpecial { code -- char }
+	if (code@ 50 ==)
+		'\n' char!
+	end elseif (code@ 51 ==)
+		'\b' char!
+	end else
+		ERR char!
+	end
+end
+
+fn AKeyboardRead { -- mod scan c }
+	auto id
+	KeybdID@ id!
+
+	id@ AKeyboardPopCode scan!
+
+	0 mod!
+
+	if (scan@ 0xFFFF ==)
+		ERR scan!
+		ERR c!
+		return
+	end
+
+	if (scan@ 0xF0 ==) (* shift *)
+		0xF0 mod!
+
+		id@ AKeyboardPopCode scan!
+
+		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
+
+		[scan@]AKeyboardLayoutShift@ c!
+	end elseif (scan@ 0xF1 ==) (* ctrl *)
+		0xF1 mod!
+
+		id@ AKeyboardPopCode scan!
+
+		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
+
+		[scan@]AKeyboardLayoutCtrl@ c!
+	end else
+		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
+
+		[scan@]AKeyboardLayout@ c!
+	end
+end
+
+fn (IntHandler) KeybdIntr { intn -- }
+	KeybdID@ AmanatsuClearInterrupt
+
+	intn@ InterruptAck@ InterruptAcker
+
+	auto c
+	auto scan
+	auto mod
+
+	auto inputf
+	KeybdIBuffer@ IOBuffer_InputF + @ inputf!
+
+	AKeyboardRead c! scan! mod!
+
+	while (scan@ ERR ~=)
+		if (c@ ERR ~=)
+			if (inputf@)
+				c@ KeybdIBuffer@ inputf@ IOCharInput
+			end
+		end
+
+		if (mod@)
+			mod@ KeybdIBufferRaw@ 0 IOBufPutc drop
+		end
+
+		scan@ KeybdIBufferRaw@ 0 IOBufPutc drop
+
+		AKeyboardRead c! scan! mod!
+	end
+
+	KeybdID@ AmanatsuSetInterrupt
+end
+
+table AKeyboardLayout
+	'a'
+	'b' 'c' 'd'
+	'e' 'f' 'g'
+	'h' 'i' 'j'
+	'k' 'l' 'm'
+	'n' 'o' 'p'
+	'q' 'r' 's'
+	't' 'u' 'v'
+	'w' 'x' 'y'
+	'z'
+	'0' '1' '2'
+	'3' '4' '5'
+	'6' '7' '8'
+	'9'
+	';'
+	' '
+	' '
+	'-'
+	'='
+	'['
+	']'
+	'\\'
+	0
+	'/'
+	'.'
+	'\''
+	','
+	'`'
+endtable
+
+table AKeyboardLayoutCtrl
+	1
+	2 3 4
+	5 6 7
+	8 9 10
+	11 12 13
+	14 15 16
+	17 18 19
+	20 21 22
+	23 24 25
+	26
+	-1 -1 0
+	-1 -1 -1
+	30 -1 -1
+	-1
+	-1
+	-1
+	-1
+	31
+	-1
+	27
+	29
+	28
+	-1
+	-1
+	-1
+	-1
+	-1
+	-1
+endtable
+
+table AKeyboardLayoutShift
+	'A'
+	'B' 'C' 'D'
+	'E' 'F' 'G'
+	'H' 'I' 'J'
+	'K' 'L' 'M'
+	'N' 'O' 'P'
+	'Q' 'R' 'S'
+	'T' 'U' 'V'
+	'W' 'X' 'Y'
+	'Z'
+	')' '!' '@'
+	'#' '$' '%'
+	'^' '&' '*'
+	'('
+	':'
+	' '
+	' '
+	'_'
+	'+'
+	'{'
+	'}'
+	'|'
+	0
+	'?'
+	'>'
+	'"'
+	'<'
+	'~'
+endtable

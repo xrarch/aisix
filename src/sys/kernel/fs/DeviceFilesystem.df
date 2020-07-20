@@ -156,7 +156,6 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 		end
 
 		auto m
-		4096 len@ min m!
 
 		auto off
 		seek@ 0xFFF & off!

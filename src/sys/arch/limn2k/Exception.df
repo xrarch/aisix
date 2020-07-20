@@ -134,6 +134,7 @@ fn Exception { badaddr ecause tf -- }
 		InterruptEnable
 
 		(* handle syscall ... *)
+		"no syscalls rn\n" Panic
 
 		0 InterruptRestore
 	end elseif (ecause@ EXCBREAK ==)

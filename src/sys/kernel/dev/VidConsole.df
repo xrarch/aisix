@@ -1,0 +1,558 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var GCGWidth 0
+var GCGHeight 0
+
+var GCColorBG 0x00
+var GCColorFG 0x00
+
+var GCColorDefBG 0x00
+var GCColorDefFG 0x00
+
+var GCCurX 0
+var GCCurY 0
+
+var GCWidth 0
+var GCHeight 0
+
+const GConsoleBG 0x6B5A
+const GConsoleFG 0x0000
+
+const FontWidth 8
+const FontWidthA (FontWidth 1 -)
+
+const FontBytesPerRow 1
+const FontHeight 19
+
+const FontBitD 1
+
+const GConsoleMargin (FontWidth 6 *)
+const GConsoleMargin2 (GConsoleMargin 2 *)
+
+var VConsOBuffer 0
+public VConsOBuffer
+
+var GCGFX 0
+
+var GCNeedsDraw 1
+
+var GCInitialConfig 1
+
+var GCEscape 0
+
+var GCLineLenBuf 0
+
+var GCRectP 0
+var GCScrollP 0
+
+var GConsoleX 0
+var GConsoleY 0
+
+var GConsoleModified 0
+
+var GCInverted 0
+
+var VConsUpdate 0
+public VConsUpdate
+
+table ColorIndex
+	0
+	0x14
+	0x1C0
+	0x3FF
+	0x5000
+	0x7C1F
+	0x7FE0
+	0x5AD6
+endtable
+
+table ColorIndex2
+	0x1CE7
+	0x5B1F
+	0x5FEF
+	0x5BFF
+	0x7F56
+	0x7DFF
+	0x7FF6
+	0x7FFF
+endtable
+
+fn GConsoleDefault { -- }
+	GCGFX@ GFX_Width + @ GCGWidth!
+	GCGFX@ GFX_Height + @ GCGHeight!
+
+	GConsoleBG dup GCColorDefBG! GCColorBG!
+	GConsoleFG dup GCColorDefFG! GCColorFG!
+
+	auto crows
+	34 crows!
+	auto ccols
+	80 ccols!
+
+	GCGWidth@ GConsoleMargin2 - GCGWidth@ min FontWidth / GCWidth!
+	GCGHeight@ GConsoleMargin2 - GCGHeight@ min FontHeight / GCHeight!
+
+	GCGWidth@ 2 / GCWidth@ FontWidth * 2 / - GConsoleX!
+	GCGHeight@ 2 / GCHeight@ FontHeight * 2 / - GConsoleY!
+
+	0 GCCurX!
+	0 GCCurY!
+
+	GCLineLenBuf@ GCHeight@ 4 * 0 memset
+
+	1 GCInitialConfig!
+	1 GCNeedsDraw!
+end
+
+fn VConsInit { -- }
+	auto gfx
+	0 GFXByUnit gfx!
+
+	if (gfx@ iserr)
+		return
+	end
+
+	4096 AllocIOBuf VConsOBuffer!
+
+	if (VConsOBuffer@ iserr)
+		"couldn't allocate VConsOBuffer\n" Panic
+	end
+
+	1 VConsOBuffer@ IOBuffer_Overwrite + !
+
+	1024 Calloc GCLineLenBuf!
+
+	gfx@ GCGFX!
+
+	gfx@ GFX_Rect + @ GCRectP!
+	gfx@ GFX_Scroll + @ GCScrollP!
+
+	gfx@ FontInit
+
+	GConsoleDefault
+
+	auto vcw
+	pointerof VConsWorker "vcons" KernelThreadNew vcw!
+
+	if (vcw@ iserr)
+		vcw@ abs vcw!
+		[vcw@]ErrorNames@ "couldn't start vcons worker: %s\n" Panic
+	end
+
+	vcw@ ThreadReady
+end
+
+fn VConsWorker { -- }
+	while (1)
+		auto c
+		VConsOBuffer@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ abs c!
+			[c@]ErrorNames@ "vcons worker: %s\n" Panic
+		end
+
+		c@ GConsolePutChar
+	end
+end
+
+fn GConsoleLongestLine { -- width }
+	auto i
+	0 i!
+
+	0 width!
+
+	while (i@ GCHeight@ <)
+		auto len
+		i@ 4 * GCLineLenBuf@ + @ len!
+
+		if (len@ width@ >)
+			len@ width!
+		end
+
+		1 i +=
+	end
+end
+
+fn GConsoleClear { -- }
+	0 0 GConsoleLongestLine FontWidth * GCHeight@ FontHeight * GCColorBG@ GConsoleRect
+
+	0 GCCurX!
+	0 GCCurY!
+
+	GCLineLenBuf@ GCHeight@ 4 * 0 memset
+
+	1 GConsoleModified!
+end
+
+fn GConsoleRRect { x y w h color -- }
+	x@ y@ w@ h@ color@ GCGFX@ GCRectP@ GFXRect
+end
+
+fn GConsoleRect { x y w h color -- }
+	x@ GConsoleX@ +
+	y@ GConsoleY@ +
+	w@ h@
+	color@
+	GCGFX@ GCRectP@ GFXRect
+end
+
+fn GConsoleScroll { rows -- }
+	GConsoleX@ GConsoleY@
+	GConsoleLongestLine FontWidth *
+	FontHeight GCHeight@ *
+	GCColorDefBG@
+	rows@ FontHeight *
+	GCGFX@ GCScrollP@ GFXScroll
+
+	auto k
+	GCHeight@ k!
+
+	auto gclb
+	GCLineLenBuf@ gclb!
+
+	auto r
+	gclb@ r!
+
+	auto max
+	GCHeight@ rows@ - 4 * gclb@ + max!
+
+	while (r@ max@ <)
+		r@ rows@ 4 * + @ r@ !
+		4 r +=
+	end
+
+	GCHeight@ rows@ - 4 * gclb@ + r!
+	GCHeight@ 4 * gclb@ + max!
+
+	while (r@ max@ <)
+		0 r@ !
+		4 r +=
+	end
+end
+
+fn GConsoleDoCur { color -- }
+	GCCurX@ FontWidth * GCCurY@ FontHeight * FontWidth FontHeight color@ GConsoleRect
+end
+
+fn GConsoleClearCur { -- }
+	GCColorBG@ GConsoleDoCur
+end
+
+fn GConsoleDrawCur { -- }
+	GCColorFG@ GConsoleDoCur
+end
+
+fn GConsoleNewline { -- }
+	GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + !
+
+	0 GCCurX!
+	GCCurY@ 1 + GCCurY!
+
+	if (GCCurY@ GCHeight@ >=)
+		GCHeight@ 1 - GCCurY!
+		0 GCCurX!
+		1 GConsoleScroll
+	end
+end
+
+fn GConsoleBack { -- }
+	if (GCCurX@ 0 ==)
+		if (GCCurY@ 0 >)
+			GCCurY@ 1 - GCCurY!
+			GCWidth@ 1 - GCCurX!
+		end
+		return
+	end
+
+	GCCurX@ 1 - GCCurX!
+end
+
+fn GConsoleUIBox { title x y w h -- }
+	x@ 10 - y@ 6 - w@ 21 + h@ 12 + 0x0000 GConsoleBox
+	x@ 9 - y@ 5 - w@ 19 + h@ 10 + 0x6318 GConsoleBox
+	x@ 8 - y@ 4 - w@ 18 + h@ 9 + GConsoleBG GConsoleRRect
+
+	auto ttbw
+	title@ strlen FontWidth * 13 + ttbw!
+
+	x@ 10 - y@ FontHeight - 10 - ttbw@ FontHeight 5 + 0x0000 GConsoleBox
+	x@ 9 - y@ FontHeight - 9 - ttbw@ 2 - FontHeight 4 + 0x3907 GConsoleRRect
+
+	x@
+	y@ FontHeight - 7 -
+	title@
+	-1
+	0x6318 FontDrawString
+end
+
+fn GConsoleBox { x y w h color -- }
+	x@ y@ w@ 1 color@ GConsoleRRect
+
+	x@ y@ 1 + 1 h@ 1 - color@ GConsoleRRect
+
+	x@ w@ + 1 -
+	y@ 1 +
+	1
+	h@ 1 -
+	color@
+	GConsoleRRect
+
+	x@ 1 +
+	y@ h@ + 1 -
+	w@ 2 -
+	1
+	color@
+	GConsoleRRect
+end
+
+fn VConsoleDraw { -- }
+	if (GConsoleX@ GConsoleMargin >= GConsoleY@ GConsoleMargin >= &&) (* there is at least GConsoleMargin pixels around the edge, do a pretty box *)
+		GConsoleX@
+		GConsoleY@
+		GCGWidth@
+		GCGHeight@
+		0x39C0
+		GConsoleRRect
+
+		"AISIX System Console"
+		GConsoleX@
+		GConsoleY@
+		GCWidth@ FontWidth *
+		GCHeight@ FontHeight *
+		GConsoleUIBox
+
+		GConsoleX@ 4 -
+		GConsoleY@ 4 -
+		GCWidth@ FontWidth * 8 +
+		GCHeight@ FontHeight * 8 +
+		GConsoleBG
+		GConsoleRRect
+	end else (* un-pretty box *)
+		0 0 GCGWidth@ GCGHeight@ GConsoleBG GConsoleRRect
+	end
+end
+
+fn GConsoleDraw { -- }
+	VConsoleDraw
+end
+
+fn GConsoleTab { -- }
+	GCCurX@ 8 / 1 + 8 * GCCurX!
+
+	if (GCCurX@ GCWidth@ >=)
+		GConsoleNewline
+	end
+end
+
+table GCEVT
+	0
+	0
+	0
+	0
+endtable
+
+const GCEVC 4
+
+var GCEV 0
+
+fn GConsoleSetColor { -- }
+	auto color
+
+	if ([0]GCEVT@ 0 ==)
+		GCColorDefFG@ GCColorFG!
+		GCColorDefBG@ GCColorBG!
+
+		0 GCInverted!
+
+		return
+	end elseif ([0]GCEVT@ 7 ==)
+		if (GCInverted@ ~~)
+			GCColorFG@ color!
+			GCColorBG@ GCColorFG!
+			color@ GCColorBG!
+
+			1 GCInverted!
+		end
+
+		return
+	end elseif ([0]GCEVT@ 39 ==)
+		GCColorDefFG@ GCColorFG!
+	end elseif ([0]GCEVT@ 49 ==)
+		GCColorDefBG@ GCColorBG!
+	end elseif ([0]GCEVT@ 30 >= [0]GCEVT@ 37 <= &&) (* foreground, first 8 *)
+		[0]GCEVT@ 30 - color!
+
+		[color@]ColorIndex@ GCColorFG!
+	end elseif ([0]GCEVT@ 40 >= [0]GCEVT@ 47 <= &&) (* background, first 8 *)
+		[0]GCEVT@ 40 - color!
+
+		[color@]ColorIndex@ GCColorBG!
+	end elseif ([0]GCEVT@ 90 >= [0]GCEVT@ 97 <= &&) (* foreground, second 8 *)
+		[0]GCEVT@ 90 - color!
+
+		[color@]ColorIndex2@ GCColorFG!
+	end elseif ([0]GCEVT@ 100 >= [0]GCEVT@ 107 <= &&) (* background, second 8 *)
+		[0]GCEVT@ 100 - color!
+
+		[color@]ColorIndex2@ GCColorBG!
+	end elseif ([1]GCEVT@ 5 ==)
+		if ([0]GCEVT@ 38 ==)
+			[2]GCEVT@ GCColorFG!
+		end elseif ([0]GCEVT@ 48 ==)
+			[2]GCEVT@ GCColorBG!
+		end
+	end
+end
+
+fn GConsoleClearLine { -- }
+	auto ox
+	GCCurX@ ox!
+
+	while (GCCurX@ 0 >)
+		'\b' GConsolePutChar
+	end
+
+	ox@ GCCurX!
+end
+
+fn GConsoleReset { -- }
+	GCColorDefFG@ GCColorFG!
+	GCColorDefBG@ GCColorBG!
+
+	0 GCInverted!
+
+	GConsoleClear
+end
+
+fn GConsoleParseEscape { c -- }
+	if (c@ '0' >= c@ '9' <= &&)
+		auto np
+		GCEV@ 4 * GCEVT + np!
+
+		10 np@ *=
+		c@ '0' - np@ +=
+
+		return
+	end
+
+	if (c@ '[' ==) return end
+	elseif (c@ ';' ==) GCEV@ 1 + GCEVC % GCEV! return end
+	elseif (c@ 'm' ==) GConsoleSetColor end
+	elseif (c@ 'c' ==) GConsoleReset end
+	elseif (c@ 'K' ==) GConsoleClearLine end
+
+	0 GCEscape!
+end
+
+fn GConsolePutChar { char -- }
+	if (char@ 255 >)
+		return
+	end
+
+	if (GCNeedsDraw@)
+		0 GCNeedsDraw!
+
+		GConsoleDraw
+	end
+
+	if (GCEscape@) char@ GConsoleParseEscape return end
+
+	if (char@ 0x1b ==)
+		0 GCEV!
+		1 GCEscape!
+		GCEVT GCEVC 4 * 0 memset
+		return
+	end
+
+	GConsoleClearCur
+
+	char@ GConsolePutCharF
+
+	GConsoleDrawCur
+end
+
+fn GConsolePutCharF { char -- }
+	if (char@ '\n' ==)
+		GConsoleNewline
+		return
+	end elseif (char@ '\b' ==)
+		GConsoleBack
+		return
+	end elseif (char@ '\t' ==)
+		GConsoleTab
+		return
+	end elseif (char@ '\r' ==)
+		0 GCCurX!
+		return
+	end
+
+	GCCurX@ FontWidth * GConsoleX@ +
+	GCCurY@ FontHeight * GConsoleY@ +
+	char@
+	GCColorBG@
+	GCColorFG@
+	FontDrawChar
+
+	GCCurX@ 1 + GCCurX!
+
+	if (GCCurX@ GCWidth@ >=)
+		GConsoleNewline
+	end
+end
+
+asm "
+
+.section data
+
+Font:
+	.static omxvga.raw
+
+.section text
+
+"
+
+var FontBBP 0
+
+fn FontInit { gfx -- }
+	gfx@ GFX_BlitBits + @ FontBBP!
+end
+
+fn private FontBlitBits { bpr fg bg bitd bmp x y w h -- }
+	bpr@ fg@ bg@ bitd@ bmp@ x@ y@ w@ h@ GCGFX@ FontBBP@ GFXBlitBits
+end
+
+fn FontDrawChar { x y char bg color -- }
+	(* dont draw spaces *)
+	if (char@ ' ' ==)
+		return
+	end
+
+	auto bmp
+	char@ FontBytesPerRow FontHeight * * pointerof Font + bmp!
+
+	FontBytesPerRow color@ bg@ FontBitD bmp@ x@ y@ FontWidth FontHeight FontBlitBits
+end
+
+fn FontDrawString { x y str bg color -- }
+	auto sx
+	x@ sx!
+
+	auto c
+	str@ gb c!
+
+	while (c@ 0 ~=)
+		if (c@ '\n' ==)
+			y@ FontHeight + y!
+			sx@ x!
+		end else
+			x@ y@ c@ bg@ color@ FontDrawChar
+
+			x@ FontWidth + x!
+		end
+
+		1 str +=
+		str@ gb c!
+	end
+end

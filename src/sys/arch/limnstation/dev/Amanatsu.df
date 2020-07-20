@@ -1,0 +1,74 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/citron.h"
+#include "<inc>/dev/amtsu.h"
+
+var AmtsuFound 0
+public AmtsuFound
+
+fn DrvAmtsuFoundNode { node -- }
+	1 AmtsuFound!
+
+	AmanatsuReset
+end
+
+(* disabling and restoring interrupts is up to the user of these functions *)
+
+fn AmanatsuPoll { num -- mid }
+	num@ AmanatsuSelectDev AmanatsuReadMID mid!
+end
+
+fn AmanatsuSelectDev { num -- }
+	num@ AmaPortDev DCitronOutb
+end
+
+fn AmanatsuReadMID { -- mid }
+	AmaPortMID DCitronInl mid!
+end
+
+fn AmanatsuCommand { cmd -- }
+	cmd@ AmaPortCMD DCitronOutl
+
+	while (AmaPortCMD DCitronInl 0 ~=) end
+end
+
+fn AmanatsuCommandAsync { cmd -- }
+	cmd@ AmaPortCMD DCitronOutl
+end
+
+fn AmanatsuWriteA { long -- }
+	long@ AmaPortA DCitronOutl
+end
+
+fn AmanatsuWriteB { long -- }
+	long@ AmaPortB DCitronOutl
+end
+
+fn AmanatsuReadA { -- long }
+	AmaPortA DCitronInl long!
+end
+
+fn AmanatsuReadB { -- long }
+	AmaPortB DCitronInl long!
+end
+
+fn AmanatsuSetInterrupt { dev -- }
+	0 dev@ 1 AmanatsuSpecialCMD
+end
+
+fn AmanatsuClearInterrupt { dev -- }
+	0 dev@ 3 AmanatsuSpecialCMD
+end
+
+fn AmanatsuSpecialCMD { a b cmd -- }
+	0 AmanatsuSelectDev
+	a@ AmanatsuWriteA
+	b@ AmanatsuWriteB
+
+	cmd@ AmanatsuCommand
+end
+
+fn AmanatsuReset { -- }
+	0 0 2 AmanatsuSpecialCMD
+end

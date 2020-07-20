@@ -1,0 +1,88 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/dma.h"
+
+var DMABase 0
+
+var DMAFound 0
+public DMAFound
+
+struct DMA
+	4 Source
+	4 Dest
+	4 SInc
+	4 DInc
+	4 Count
+	4 Mode
+	4 Status
+	4 Lines
+	4 DestMod
+	4 SrcMod
+	4 BitMode
+	4 SetByte
+	4 ClearByte
+	4 Direction
+endstruct
+
+fn DrvDMAFoundNode { node -- }
+	"address" a3xDGetProperty DMABase!
+
+	DMABase@ "dma @ 0x%x" Printf
+
+	1 DMAFound!
+end
+
+fn DMAWaitUnbusy { -- }
+	auto db
+	DMABase@ db!
+
+	while (db@ DMA_Status + @ 1 &) end
+end
+
+fn DMADoOperation { -- }
+	auto db
+	DMABase@ db!
+
+	1 db@ DMA_Status + |=
+end
+
+fn private DMAFullTransfer { src dest srcinc destinc count mode lines destmod srcmod bitmode -- }
+	auto db
+	DMABase@ db!
+
+	src@ db@ DMA_Source + !
+	dest@ db@ DMA_Dest + !
+	srcinc@ db@ DMA_SInc + !
+	destinc@ db@ DMA_DInc + !
+	count@ db@ DMA_Count + !
+	mode@ db@ DMA_Mode + !
+	lines@ db@ DMA_Lines + !
+	destmod@ db@ DMA_DestMod + !
+	srcmod@ db@ DMA_SrcMod + !
+
+	bitmode@ db@ DMA_BitMode + !
+
+	auto rs
+	InterruptDisable rs!
+
+	DMADoOperation
+	DMAWaitUnbusy
+
+	rs@ InterruptRestore
+end
+
+fn DMABitTransfer { src dest srcinc destinc count mode lines destmod srcmod direction clearbyte setbyte -- }
+	auto db
+	DMABase@ db!
+
+	clearbyte@ db@ DMA_ClearByte + !
+	setbyte@ db@ DMA_SetByte + !
+	direction@ db@ DMA_Direction + !
+
+	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 1 DMAFullTransfer
+end
+
+fn DMATransfer { src dest srcinc destinc count mode lines destmod srcmod -- }
+	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 0 DMAFullTransfer
+end

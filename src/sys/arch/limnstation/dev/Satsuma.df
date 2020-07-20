@@ -85,7 +85,7 @@ fn DrvDKSFoundNode { node -- }
 		1 part!
 	end
 
-	name@ "  %s\n" Printf
+	name@ "%s" Printf
 
 	auto devn
 

@@ -7,14 +7,53 @@ public KLogWrite
 var KLogRead 0
 public KLogRead
 
+var Panicked 0
+public Panicked
+
+var EarlyLog 1
+public EarlyLog
+
+var EarlyLogBuf 0
+
+fn KLogInit { -- }
+	4096 AllocIOBuf EarlyLogBuf!
+
+	if (EarlyLogBuf@ iserr)
+		"couldn't allocate EarlyLogBuf\n" Panic
+	end
+
+	1 EarlyLogBuf@ IOBuffer_Overwrite + !
+end
+
 fn KLogAttach { read write -- }
 	read@ KLogRead!
 	write@ KLogWrite!
 end
 
+externptr ConsUseVid
+
+externptr VConsOBuffer
+
 fn Putc { c -- }
-	if (KLogWrite@)
+	if (EarlyLog@ EarlyLogBuf@ 0 ~= &&)
+		c@ EarlyLogBuf@ 0 IOBufPutc drop
+	end
+
+	if (Panicked@ ~~ ConsUseVid@ &&) (* write to vidcons output buf for synchronization *)
+		c@ VConsOBuffer@ 0 IOBufPutc drop
+	end elseif (KLogWrite@)
 		c@ KLogWrite@ KLogWriter
+	end
+end
+
+fn KLogDumpEarly { -- }
+	auto c
+	EarlyLogBuf@ 0 IOBufGetc c!
+
+	while (c@ IOBUFEMPTY ~=)
+		c@ Putc
+
+		EarlyLogBuf@ 0 IOBufGetc c!
 	end
 end
 
@@ -24,7 +63,7 @@ fn Getc { -- c }
 	end
 end
 
-fn Gets { s max -- }
+fn PolledGets { s max -- }
 	auto len
 	0 len!
 
@@ -59,6 +98,32 @@ fn Gets { s max -- }
 	0 s@ len@ + sb
 end
 
+extern ConsRead { buf len unit seek -- bytes }
+
+fn Readline { s max -- }
+	auto bytes
+	0 bytes!
+
+	while (bytes@ 0 ==)
+		s@ max@ 0 0 ConsRead bytes!
+	end
+
+	if (s@ bytes@ 1 - + gb '\n' ~=)
+		0 s@ sb
+		return
+	end
+
+	0 s@ bytes@ 1 - + sb
+end
+
+fn Gets { s max -- }
+	if (ConsIBuf@ ~~)
+		s@ max@ PolledGets
+	end else
+		s@ max@ Readline
+	end
+end
+
 fn Puts { s -- }
 	while (s@ gb 0 ~=)
 		s@ gb Putc
@@ -80,8 +145,14 @@ end
 
 extern PlatformPanic { -- }
 
+extern PlatformPrePanic { -- }
+
 fn Panic { ... fmt -- }
 	InterruptDisable drop
+
+	1 Panicked!
+
+	PlatformPrePanic
 
 	auto procn
 

@@ -2,6 +2,12 @@
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
 
+extern RestoreFWGFX { -- }
+
+fn PlatformPrePanic { -- }
+	RestoreFWGFX
+end
+
 fn PlatformPanic { -- }
 	-1 a3xReturn
 end

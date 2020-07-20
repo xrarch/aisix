@@ -12,6 +12,13 @@ public ConsIBuf
 var ConsOBuf 0
 public ConsOBuf
 
+var ConsUseVid 0
+public ConsUseVid
+
+externptr VConsOBuffer
+
+externptr EarlyLog
+
 table ConsDriver
 	"cons"
 	DEV_CHAR
@@ -57,6 +64,10 @@ fn GetConsOut { devname -- consobuf }
 	end
 end
 
+extern GConsolePutChar { char -- }
+
+extern KLogDumpEarly { -- }
+
 fn ConsInit { -- }
 	if (ConsInited@)
 		"ConsInit\n" Panic
@@ -65,48 +76,67 @@ fn ConsInit { -- }
 	auto consin
 	auto consout
 
-	auto ab
+	if (VConsOBuffer@)
+		"kbd0" GetConsIn consin!
 
-	"consin" ArgsValue ab!
+		if (consin@ iserr)
+			consin@ abs consin!
+			[consin@]ErrorNames@ "couldn't get consin: %s\n" Panic
+		end
 
-	if (ab@)
-		ab@ consin!
+		VConsOBuffer@ consout!
+
+		pointerof GConsolePutChar KLogWrite!
+
+		0 EarlyLog!
+
+		1 ConsUseVid!
+
+		KLogDumpEarly
 	end else
-		"serial0" consin!
-	end
+		auto ab
 
-	consin@ "consin=%s\n" Printf
+		"consin" ArgsValue ab!
 
-	consin@ GetConsIn consin!
+		if (ab@)
+			ab@ consin!
+		end else
+			"serial0" consin!
+		end
 
-	if (consin@ iserr)
-		consin@ abs consin!
-		[consin@]ErrorNames@ "couldn't get consin: %s\n" Panic
-	end
+		consin@ "consin=%s\n" Printf
 
-	if (ab@)
-		ab@ Free
-	end
+		consin@ GetConsIn consin!
 
-	"consout" ArgsValue ab!
+		if (consin@ iserr)
+			consin@ abs consin!
+			[consin@]ErrorNames@ "couldn't get consin: %s\n" Panic
+		end
 
-	if (ab@)
-		ab@ consout!
-	end else
-		"serial0" consout!
-	end
+		if (ab@)
+			ab@ Free
+		end
 
-	consout@ "consout=%s\n" Printf
+		"consout" ArgsValue ab!
 
-	consout@ GetConsOut consout!
+		if (ab@)
+			ab@ consout!
+		end else
+			"serial0" consout!
+		end
 
-	if (consout@ iserr)
-		consout@ abs consout!
-		[consout@]ErrorNames@ "couldn't get consout: %s\n" Panic
-	end
+		consout@ "consout=%s\n" Printf
 
-	if (ab@)
-		ab@ Free
+		consout@ GetConsOut consout!
+
+		if (consout@ iserr)
+			consout@ abs consout!
+			[consout@]ErrorNames@ "couldn't get consout: %s\n" Panic
+		end
+
+		if (ab@)
+			ab@ Free
+		end
 	end
 
 	consin@ ConsIBuf!
@@ -142,9 +172,19 @@ fn (DevIoctl) ConsIoctl { op1 op2 op3 op4 unit -- ok }
 end
 
 fn (DevRead) ConsRead { buf len unit seek -- bytes }
+	if (ConsIBuf@ ~~)
+		0 bytes!
+		return
+	end
+
 	buf@ len@ ConsTTY@ TTYRead bytes!
 end
 
 fn (DevWrite) ConsWrite { buf len unit seek -- bytes }
+	if (ConsOBuf@ ~~)
+		0 bytes!
+		return
+	end
+
 	buf@ len@ ConsTTY@ TTYWrite bytes!
 end
