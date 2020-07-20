@@ -309,8 +309,8 @@ end
 
 fn VConsoleDraw { -- }
 	if (GConsoleX@ GConsoleMargin >= GConsoleY@ GConsoleMargin >= &&) (* there is at least GConsoleMargin pixels around the edge, do a pretty box *)
-		GConsoleX@
-		GConsoleY@
+		0
+		0
 		GCGWidth@
 		GCGHeight@
 		0x39C0
