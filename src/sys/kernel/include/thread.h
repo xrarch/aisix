@@ -93,10 +93,6 @@ extern WaitQueue { evq -- killed }
 
 extern WakeQueue { evq -- }
 
-extern Sleep { channel -- killed }
-
-extern Wakeup { channel -- }
-
 extern ProcessExit { ret -- }
 
 extern ProcessKill { ret process -- }

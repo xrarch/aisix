@@ -60,5 +60,5 @@ fn AISIXInitialThread { -- }
 
 	ConsInit
 
-	while (1) Yield end
+	while (1) 3000 SleepFor drop end
 end

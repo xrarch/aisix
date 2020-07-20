@@ -43,6 +43,8 @@ fn DrvSerialFoundNode { node -- }
 		"couldn't allocate SerialIBuffer\n" Panic
 	end
 
+	1 SerialIBuffer@ IOBuffer_Overwrite + !
+
 	0 AllocIOBuf SerialOBuffer!
 
 	if (SerialOBuffer@ iserr)

@@ -78,6 +78,8 @@ fn PlatformInit { -- }
 	DeviceTree
 
 	LGFXExclude
+
+	'\n' Putc
 end
 
 fn PlatformPutc { c -- }
