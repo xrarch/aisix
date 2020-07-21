@@ -50,3 +50,8 @@ endif
 endif
 
 	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) f
+
+cleanup:
+	rm -f $(DISTIMAGE)
+	make -C src/stand cleanup
+	make -C $(KERNEL_DIR) cleanup

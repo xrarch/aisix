@@ -63,26 +63,31 @@ fn private DMAFullTransfer { src dest srcinc destinc count mode lines destmod sr
 
 	bitmode@ db@ DMA_BitMode + !
 
-	auto rs
-	InterruptDisable rs!
-
 	DMADoOperation
 	DMAWaitUnbusy
-
-	rs@ InterruptRestore
 end
 
 fn DMABitTransfer { src dest srcinc destinc count mode lines destmod srcmod direction clearbyte setbyte -- }
 	auto db
 	DMABase@ db!
 
+	auto rs
+	InterruptDisable rs!
+
 	clearbyte@ db@ DMA_ClearByte + !
 	setbyte@ db@ DMA_SetByte + !
 	direction@ db@ DMA_Direction + !
 
 	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 1 DMAFullTransfer
+
+	rs@ InterruptRestore
 end
 
 fn DMATransfer { src dest srcinc destinc count mode lines destmod srcmod -- }
+	auto rs
+	InterruptDisable rs!
+
 	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 0 DMAFullTransfer
+
+	rs@ InterruptRestore
 end

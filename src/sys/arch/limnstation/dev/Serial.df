@@ -68,7 +68,7 @@ fn DrvSerialFoundNode { node -- }
 
 	if ("-serialdebug" ArgsCheck)
 		1 SerialKDebug!
-		"  -serialdebug present\n" Printf
+		" -serialdebug present" Printf
 	end
 
 	pointerof SerialIntr intn@ InterruptRegister
