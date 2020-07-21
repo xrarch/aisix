@@ -18,6 +18,9 @@ table DevFSTab
 endtable
 public DevFSTab
 
+var RootDevice 0
+public RootDevice
+
 var DeviceListHead 0
 
 var Devices 0
@@ -126,6 +129,11 @@ fn DeviceSysctl { op1 op2 op3 op4 dev -- ok }
 end
 
 fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
+	if (vnode@ VNode_VNID + @ 0 ==)
+		-EPERM bytes!
+		return
+	end
+
 	auto dev
 
 	vnode@ VNode_FSData + @ dev!
@@ -178,9 +186,16 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 		m@ buf +=
 		m@ tot +=
 	end
+
+	len@ bytes!
 end
 
 fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
+	if (vnode@ VNode_VNID + @ 0 ==)
+		-EPERM bytes!
+		return
+	end
+
 	auto dev
 
 	vnode@ VNode_FSData + @ dev!
@@ -213,7 +228,6 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 		end
 
 		auto m
-		4096 len@ min m!
 
 		auto off
 		seek@ 0xFFF & off!
@@ -243,6 +257,8 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 		m@ buf +=
 		m@ tot +=
 	end
+
+	len@ bytes!
 end
 
 fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnode }
@@ -272,6 +288,8 @@ end
 fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	auto vnid
 	vnode@ VNode_VNID + @ vnid!
+
+	0 vnode@ VNode_Size + !
 
 	if (vnid@ 0 ==)
 		VNODE_DIR vnode@ VNode_Type + !

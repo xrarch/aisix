@@ -1,8 +1,13 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
+const Filesystems 2
+
+externptr AISIXFSTab
+
 table FilesystemTab
 	pointerof DevFSTab
+	pointerof AISIXFSTab
 endtable
 
 var MountListHead 0
@@ -62,6 +67,23 @@ fn VFSInit { -- }
 	end
 
 	syncw@ ThreadReady
+end
+
+var rn 0
+
+fn VFSMountRoot { -- }
+	if (RootDevice@ ~~)
+		"couldn't find root device!\n" Panic
+	end
+
+	auto rootmount
+
+	"root" "aisixfs" FSByName RootDevice@ VFSMount rootmount!
+
+	if (rootmount@ iserr)
+		rootmount@ abs rootmount!
+		[rootmount@]ErrorNames@ "couldn't mount root: %s\n" Panic
+	end
 end
 
 fn VRead { buf len seek vnode -- bytes }
@@ -149,6 +171,8 @@ fn VFSPath { path -- vnode }
 	mount@ dirent@ VDirent_Mount + !
 
 	while (path@ 0 ~=)
+		0 dirent@ VDirent_Cookie + !
+
 		vnode@ dirent@ VDirent_DirVNode + !
 
 		path@ pcomp@ '/' 255 strntok path!
@@ -194,6 +218,10 @@ fn VFSPath { path -- vnode }
 				1 found!
 				break
 			end
+		end
+
+		if (dirent@ VDirent_Cookie + @)
+			dirent@ VDirent_Cookie + @ Free
 		end
 
 		if (found@ 0 ==)
@@ -319,6 +347,8 @@ fn VFSMount { name fs dev -- mount }
 	fsdata@ mount@ Mount_FSData + !
 
 	root@ mount@ Mount_Root + !
+
+	root@ fs@ Filesystem_GetNode + @ FSGetNode drop
 
 	root@ VNodeUnlock 
 

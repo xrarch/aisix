@@ -14,7 +14,7 @@ table ErrorNames
 	"Out of memory"
 	"Permission denied"
 	"---"
-	"Not supported by device"
+	"Operation not supported"
 	"Device or resource busy"
 	"File or directory already exists"
 	"Cross-device link"

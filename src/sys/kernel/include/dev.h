@@ -54,5 +54,4 @@ extern DevByIndex { index -- dev }
 
 extern DeviceRegister { permissions ibuffer obuffer name driver unit -- device }
 
-const SYSCTL_SETINBUF 1
-const SYSCTL_SETOUTBUF 2
+externptr RootDevice

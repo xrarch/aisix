@@ -155,15 +155,17 @@ fn VNodeNew { vnid mount -- vnode }
 		return
 	end
 
-	UnlockVCache
-
 	auto r
 
 	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_GetNode + @ FSGetNode r!
 
 	if (r@ iserr)
-		"VNodeNew: GetNode\n" Panic
+		vnode@ Free
+		0 [ln@]VNodeCache!
+		r@ vnode!
 	end
+
+	UnlockVCache
 end
 
 fn VNodeLock { vnode -- killed }

@@ -142,14 +142,9 @@ fn Exception { badaddr ecause tf -- }
 
 		KDebug
 	end else
-		ecause@ "ECAUSE: %x\n" Printf
-		tf@ Context_epc + @ "EPC: %x\n" Printf
-		tf@ Context_ers + @ "ERS: %x\n" Printf
-		badaddr@ "BADADDR: %x\n" Printf
-
 		if (mode@ 0 ==)
 			(* kernel mode exception, panic *)
-			"unexpected kernel mode exception!\n" Panic
+			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end
 
 		-1 ProcessExit

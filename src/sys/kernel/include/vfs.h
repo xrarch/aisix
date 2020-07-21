@@ -1,7 +1,5 @@
 const MOUNTNAMELEN 32
 
-const Filesystems 1
-
 const VNCACHESIZE 128
 
 struct Filesystem
@@ -68,6 +66,7 @@ struct VNode
 	4 Type
 	4 UID
 	4 Permissions
+	4 Size
 endstruct
 
 const VNODE_FILE 1
@@ -93,6 +92,7 @@ struct VDirent
 	4 VNID
 	4 Name
 	4 Index
+	4 Cookie
 endstruct
 
 extern VRead { buf len seek vnode -- bytes }

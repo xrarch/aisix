@@ -98,8 +98,27 @@ fn DrvDKSFoundNode { node -- }
 			"aisix,dev" a3xDGetProperty part!
 		a3xDeviceExit
 
+		if (part@ ~~)
+			"no aisix,dev property in parent node\n" Panic
+		end
+
 		offset@ devn@ Device_Offset + !
 		part@ devn@ Device_RawDev + !
+	end
+
+	auto w
+
+	a3xMyDevice@ a3xDeviceSelectNode
+		"bootAlias" a3xDGetProperty w!
+	a3xDeviceExit
+
+	if (w@ ~~)
+		a3xMyDevice@ w!
+	end
+
+	if (node@ w@ ==)
+		" (root!)" Printf
+		devn@ RootDevice!
 	end
 
 	1 DKSLastUnit +=
