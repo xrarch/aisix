@@ -1,7 +1,7 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
-#include "<inc>/context.h"
+#include "<inc>/limnmmu.h"
 
 extern AISIX { ksz args -- ret }
 
@@ -104,4 +104,63 @@ fn PlatformAlertUser { -- }
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	a3xConsoleUserOut
+end
+
+fn PlatformSwitchSeg { proc -- }
+	auto base
+	MMUSEGBASE base!
+
+	auto flag
+
+	proc@ Process_TextPhysical + @ MMUPSHIFT >> flag!
+	MMUPBIT flag |=
+	flag@ base@ MMUSEG0FLAG + !
+	proc@ Process_TextPages + @ base@ MMUSEG0SIZE + !
+
+	proc@ Process_DataPhysical + @ MMUPSHIFT >> flag!
+	MMUPBIT flag |=
+	MMURWBIT flag |=
+	flag@ base@ MMUSEG1FLAG + !
+	proc@ Process_DataPages + @ base@ MMUSEG1SIZE + !
+
+	0 flag!
+	if (proc@ Process_UPhysical + @)
+		proc@ Process_UPhysical + @ MMUPSHIFT >> flag!
+		MMUPBIT flag |=
+		MMURWBIT flag |=
+	end
+	flag@ base@ MMUSEG2FLAG + !
+	proc@ Process_UPages + @ base@ MMUSEG2SIZE + !
+
+	0 base@ MMUSEG3FLAG + !
+end
+
+fn PlatformUserToPhys { len phys wr -- user valid }
+	auto seg
+	phys@ MMUSSHIFT >> seg!
+	auto off
+	phys@ MMUOFFMASK & off!
+
+	auto b
+	seg@ 8 * MMUSEGBASE + b!
+
+	auto flag
+	b@ MMUSEG0FLAG + @ flag!
+
+	auto sz
+	b@ MMUSEG1SIZE + @ sz!
+
+	if (flag@ MMUPBIT & ~~)
+		0 valid!
+		return
+	end elseif (off@ len@ + sz@ >=)
+		0 valid!
+		return
+	end elseif (flag@ MMURWBIT & ~~ wr@ &&)
+		0 valid!
+		return
+	end
+
+	flag@ MMUPHYMASK & MMUPSHIFT << off@ + user!
+	1 valid!
 end

@@ -44,6 +44,8 @@ exception_vector:
 
 	li     badaddr, 0        ; clear badaddr because the processor doesn't do it for us
 
+forkret:
+
 	lgpr  sp                    ; restore general purpose registers
 	lio.l ers, sp, Context_ers  ; restore interrupted thread's processor mode
 	lio.l epc, sp, Context_epc  ; restore interrupted thread's program counter
@@ -97,12 +99,16 @@ ExceptionInit:
 
 extern PlatformSetTimer { -- } (* it's actually in this file but this makes the df compiler happy *)
 
+extern forkret { -- }
+
 extern KDebug { -- }
 
 const EXCINTERRUPT 1
 const EXCSYS 2
 const EXCTIMER 5
 const EXCBREAK 6
+
+extern PlatformAlertUser { -- }
 
 fn Exception { badaddr ecause tf -- }
 	tf@ CurrentThread@ Thread_TrapFrame + !
@@ -147,7 +153,11 @@ fn Exception { badaddr ecause tf -- }
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end
 
-		-1 ProcessExit
+		badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected user mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Printf
+
+		1 CurrentThread@ Thread_Killed + !
+
+		while (1) end
 	end
 
 	if (mode@ RS_USER ==)
@@ -179,11 +189,22 @@ CPUKThreadEntry:
 
 "
 
-fn CPUContextPrepare { entry stack -- ctx }
+fn CPUContextPrepare { entry stack kern -- ctx }
 	stack@ Context_SIZEOF - ctx!
 
-	entry@ ctx@ Context_t0 + !
-	pointerof CPUKThreadEntry ctx@ Context_lr + !
+	if (kern@)
+		entry@ ctx@ Context_t0 + !
+		pointerof CPUKThreadEntry ctx@ Context_lr + !
+	end else
+		entry@ ctx@ Context_epc + !
+
+		RS_USER RS_INT | RS_MMU | RS_TIMER | ctx@ Context_ers + !
+
+		Context_SIZEOF ctx -=
+
+		pointerof forkret ctx@ Context_lr + !
+	end
+
 	CYCLESLICE ctx@ Context_timer + !
 end
 

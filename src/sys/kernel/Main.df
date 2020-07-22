@@ -64,66 +64,22 @@ fn AISIXInitialThread { -- }
 
 	VFSMountRoot
 
-	auto userin
-	256 Malloc userin!
+	auto vnode
+	"/etc/init" VFSPath vnode!
 
-	while (1)
-		auto seek
-		"seek: " Printf
-		userin@ 255 Gets
-		userin@ atoi seek!
-
-		auto len
-		"len: " Printf
-		userin@ 255 Gets
-		userin@ atoi len!
-
-		if (len@ ~~)
-			continue
-		end
-
-		auto qb
-		len@ Malloc qb!
-
-		"what: " Printf
-		qb@ len@ 1 - Gets
-
-		"path: " Printf
-		userin@ 255 Gets
-
-		auto vnode
-
-		userin@ VFSPath vnode!
-
-		auto bytes
-
-		if (vnode@ iserr)
-			vnode@ abs vnode!
-			[vnode@]ErrorNames@ "path: %s\n" Printf
-		end else
-			qb@ len@ seek@ vnode@ VRead bytes!
-
-			if (bytes@ iserr)
-				bytes@ abs bytes!
-				[bytes@]ErrorNames@ "read: %s\n" Printf
-			end else
-				bytes@ "%d bytes read:\n" Printf
-
-				auto i
-				0 i!
-
-				while (i@ bytes@ <)
-					qb@ i@ + gb Putc
-
-					1 i +=
-				end
-
-				'\n' Putc
-			end
-
-			vnode@ VNodePut
-		end
-
-		qb@ Free
+	if (vnode@ iserr)
+		vnode@ abs vnode!
+		[vnode@]ErrorNames@ "couldn't load /etc/init: %s\n" Panic
 	end
+
+	vnode@ "/etc/init" VSpawn InitProcess!
+
+	if (InitProcess@ iserr)
+		InitProcess@ abs InitProcess!
+		[InitProcess@]ErrorNames@ "couldn't exec /etc/init: %s\n" Printf
+	end
+
+	vnode@ VNodePut
+
+	while (1) end
 end

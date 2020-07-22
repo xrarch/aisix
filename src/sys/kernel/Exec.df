@@ -1,0 +1,271 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+#include "<inc>/loff.h"
+#include "<inc>/limnmmu.h"
+
+fn private GetEntry { header vnode -- entry }
+	auto entrysym
+	header@ LOFFHeader_EntrySymbol + @ entrysym!
+
+	if (entrysym@ 0xFFFFFFFF ==)
+		-ENOEXEC entry!
+		return
+	end
+
+	auto symoff
+	header@ LOFFHeader_SymbolTableOffset + @ symoff!
+
+	auto sym
+	LOFFSymbol_SIZEOF Malloc sym!
+
+	if (sym@ iserr)
+		-ENOMEM entry!
+		return
+	end
+
+	entrysym@ LOFFSymbol_SIZEOF * symoff +=
+
+	auto bytes
+
+	sym@ LOFFSymbol_SIZEOF symoff@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSymbol_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ entry!
+		end else
+			-ENOEXEC entry!
+		end
+		sym@ Free
+		return
+	end
+
+	sym@ LOFFSymbol_Value + @ entry!
+
+	if (sym@ LOFFSymbol_Type + @ LOFFGLOBAL ~=)
+		-ENOEXEC entry!
+		sym@ Free
+		return
+	end
+
+	sym@ Free
+end
+
+(* this is really long but 90% of it is just making sure the executable is sane *)
+fn VSpawn { vnode name -- process }
+	auto header
+	LOFFHeader_SIZEOF Malloc header!
+
+	if (header@ iserr)
+		-ENOMEM process!
+		return
+	end
+
+	auto bytes
+
+	header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+
+	if (bytes@ LOFFHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ process!
+		end else
+			-ENOEXEC process!
+		end
+		header@ Free
+		return
+	end
+
+	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
+		-ENOEXEC process!
+		header@ Free
+		return
+	end
+
+	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
+		-ENOEXEC process!
+		header@ Free
+		return
+	end
+
+	auto entry
+	header@ vnode@ GetEntry entry!
+	if (entry@ iserr)
+		entry@ process!
+		header@ Free
+		return
+	end
+
+	auto shdr
+	LOFFSectionHeader_SIZEOF Malloc shdr!
+
+	if (shdr@ iserr)
+		-ENOMEM process!
+		header@ Free
+		return
+	end
+
+	auto textoff
+	auto textsize
+
+	auto dataoff
+	auto datasize
+
+	auto bsssize
+
+	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_TextHeader + @ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ process!
+		end else
+			-ENOEXEC process!
+		end
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	if (shdr@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
+		-ENOEXEC process!
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	shdr@ LOFFSectionHeader_SectionOffset + @ textoff!
+	shdr@ LOFFSectionHeader_SectionSize + @ textsize!
+
+	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_DataHeader + @ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ process!
+		end else
+			-ENOEXEC process!
+		end
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	if (shdr@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
+		-ENOEXEC process!
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	shdr@ LOFFSectionHeader_SectionOffset + @ dataoff!
+	shdr@ LOFFSectionHeader_SectionSize + @ datasize!
+
+	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_BSSHeader + @ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ process!
+		end else
+			-ENOEXEC process!
+		end
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	(* BSS must be contiguous with DATA *)
+	if (shdr@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
+		-ENOEXEC process!
+		header@ Free
+		shdr@ Free
+		return
+	end
+
+	shdr@ LOFFSectionHeader_SectionSize + @ bsssize!
+
+	header@ Free
+	shdr@ Free
+
+	(* start trying to copy sections in and zero BSS *)
+
+	(* reusing shdr for text pages and header for data pages because
+	ive declared too many autos already in this ginormous function *)
+
+	textsize@ shdr!
+
+	if (shdr@ 0xFFF &)
+		0x1000 shdr +=
+	end
+
+	if (shdr@ ~~)
+		0x1000 shdr!
+	end
+
+	auto text
+	shdr@ 4096 / PMMAlloc text!
+
+	if (text@ iserr)
+		text@ process!
+		return
+	end
+
+	datasize@ bsssize@ + header!
+
+	if (header@ 0xFFF &)
+		0x1000 header +=
+	end
+
+	if (header@ ~~)
+		0x1000 header!
+	end
+
+	auto data
+	header@ 4096 / PMMAlloc data!
+
+	if (data@ iserr)
+		shdr@ 4096 / text@ PMMFree
+		data@ process!
+		return
+	end
+
+	text@ textsize@ textoff@ vnode@ VRead bytes!
+
+	if (bytes@ textsize@ <)
+		shdr@ 4096 / text@ PMMFree
+		header@ 4096 / data@ PMMFree
+		bytes@ process!
+		return
+	end
+
+	data@ datasize@ dataoff@ vnode@ VRead bytes!
+
+	if (bytes@ datasize@ <)
+		shdr@ 4096 / text@ PMMFree
+		header@ 4096 / data@ PMMFree
+		bytes@ process!
+		return
+	end
+
+	datasize@ bsssize@ + bytes!
+
+	while (datasize@ bytes@ <)
+		0 data@ datasize@ + !
+
+		4 datasize +=
+	end
+
+	entry@ name@ ProcessNew process!
+
+	if (process@ iserr)
+		shdr@ 4096 / text@ PMMFree
+		header@ 4096 / data@ PMMFree
+		return
+	end
+
+	text@ process@ Process_TextPhysical + !
+	shdr@ 4096 / process@ Process_TextPages + !
+
+	data@ process@ Process_DataPhysical + !
+	header@ 4096 / process@ Process_DataPages + !
+
+	1 process@ Process_Mapped + !
+
+	process@ Process_MainThread + @ ThreadReady
+end

@@ -15,6 +15,7 @@ var KernelProcess 0
 public KernelProcess
 
 var InitProcess 0
+public InitProcess
 
 const KERNELPID 1
 
@@ -133,6 +134,13 @@ fn ThreadKill { thread -- }
 		end else
 			1 process@ Process_Threads + -=
 		end
+
+		if (process@ Process_MainThread + @ thread@ ==)
+			0 process@ Process_MainThread + !
+			if (process@ Process_Exited + @ ~~)
+				0 ProcessExit
+			end
+		end
 	end else
 		if (thst@ TS_EVENT ==)
 			(* remove from whatever EventQueue its waiting in *)
@@ -186,6 +194,13 @@ fn ThreadExit { -- }
 			0 ProcessExit
 		end
 	end else
+		if (process@ Process_MainThread + @ thread@ ==)
+			0 process@ Process_MainThread + !
+			if (process@ Process_Exited + @ ~~)
+				0 ProcessExit
+			end
+		end
+
 		1 process@ Process_Threads + -=
 	end
 
@@ -198,7 +213,7 @@ fn ThreadExit { -- }
 	"exit returned\n" Panic
 end
 
-fn ThreadNew { process entry name -- thread }
+fn ThreadNew { process entry name kern -- thread }
 	ThreadAllocate thread!
 
 	if (thread@ iserr)
@@ -224,7 +239,7 @@ fn ThreadNew { process entry name -- thread }
 
 	KERNELSTACKPAGES 4096 * stack@ + dup thread@ Thread_KernelStackTop + ! uc!
 
-	entry@ uc@ CPUContextPrepare thread@ Thread_Context + !
+	entry@ uc@ kern@ CPUContextPrepare thread@ Thread_Context + !
 
 	thread@ Thread_Name + name@ THREADNAMELEN 1 - strncpy
 
@@ -236,7 +251,7 @@ fn ThreadReady { thread -- }
 end
 
 fn KernelThreadNew { entry name -- thread }
-	KernelProcess@ entry@ name@ ThreadNew thread!
+	KernelProcess@ entry@ name@ 1 ThreadNew thread!
 end
 
 extern CPUIdle { -- }
@@ -281,6 +296,13 @@ fn Scheduler { -- }
 			thread@ CurrentThread!
 
 			TS_RUNNING thread@ Thread_Status + !
+
+			auto proc
+			thread@ Thread_Process + @ proc!
+
+			if (proc@ Process_Mapped + @)
+				proc@ PlatformSwitchSeg
+			end
 
 			SchedulerContext thread@ Thread_Context + @ cswtch
 
@@ -514,7 +536,7 @@ fn ProcessNew { entry name -- process }
 
 	auto mthread
 
-	process@ entry@ "main" ThreadNew mthread!
+	process@ entry@ "main" kernel@ ThreadNew mthread!
 
 	mthread@ process@ Process_MainThread + !
 
@@ -526,22 +548,7 @@ fn ProcessNew { entry name -- process }
 
 	if (kernel@)
 		process@ KernelProcess!
-		1 kernel!
 	end
-end
-
-fn ProcessFreeResources { process -- }
-	if (process@ Process_Threads + @ 0 >)
-		"ProcessFreeResources: process still had extant threads\n" Panic
-	end
-
-	if (process@ Process_Mapped + @)
-		process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
-		process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
-		process@ Process_BSSPages + @ process@ Process_BSSPhysical + @ PMMFree
-	end
-
-	(* don't free slot now, will be needed later *)
 end
 
 fn ProcessExit { ret -- }
@@ -582,7 +589,7 @@ fn ProcessKill { ret process -- }
 	end
 
 	if (process@ Process_Threads + @ 0 ~=)
-		"threads weren't hard enough\n" Panic
+		"threads weren't killed hard enough\n" Panic
 	end
 
 	(* all of the userspace threads will never run again, and the kernel ones will exit
@@ -590,7 +597,6 @@ fn ProcessKill { ret process -- }
 	if (process@ Process_Mapped + @)
 		process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
 		process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
-		process@ Process_BSSPages + @ process@ Process_BSSPhysical + @ PMMFree
 	end
 
 	(* do wait syscall stuff here *)

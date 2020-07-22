@@ -26,7 +26,7 @@ aisix.a3x: $(OBJ)
 %.o: %.s
 	$(AS) $< $@
 
-%.o: %.df include/*.h
+%.o: %.df include/*.h $(PLATFORM_DIR)/include/*.h $(CPU_DIR)/include/*.h
 	$(DC) $(DCFLAGS) $< $@
 
 cleanup:

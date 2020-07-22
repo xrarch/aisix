@@ -42,17 +42,14 @@ struct Process
 
 	4 MainThread
 
-	4 TextVirtual
 	4 TextPhysical
 	4 TextPages
 
-	4 DataVirtual
 	4 DataPhysical
 	4 DataPages
 
-	4 BSSVirtual
-	4 BSSPhysical
-	4 BSSPages
+	4 UPhysical
+	4 UPages
 
 	4 CWDVNode
 
@@ -73,6 +70,8 @@ externptr Threads
 
 externptr KernelProcess
 
+externptr InitProcess
+
 const THREADMAX 128
 
 const PROCMAX 64
@@ -84,6 +83,10 @@ const TS_READY 1
 const TS_RUNNING 2
 const TS_TIMER 4
 const TS_EVENT 5
+
+extern PlatformSwitchSeg { proc -- }
+
+extern PlatformUserToPhys { len phys wr -- user valid }
 
 extern JumpIntoScheduler { -- }
 
@@ -112,3 +115,5 @@ extern WakeupTimer { uptime -- }
 extern ThreadFree { thread -- }
 
 extern cswtch { old new -- }
+
+extern ProcessNew { entry name -- process }
