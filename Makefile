@@ -14,16 +14,23 @@ else
 	OFFSET     := 0
 endif
 
-FILELOADER_DIR := ./src/stand/fileloader
-DIAG_DIR       := ./src/stand/diag
-LIMNVOL_DIR    := ./src/stand/limnvol
-KERNEL_DIR     := ./src/sys/kernel
+FILELOADER_DIR := src/stand/fileloader
+DIAG_DIR       := src/stand/diag
+LIMNVOL_DIR    := src/stand/limnvol
+INIT_DIR       := src/init
+KERNEL_DIR     := src/sys/kernel
 
-dist: $(DISTIMAGE) bootable stand kernel
+dist: $(DISTIMAGE) bootable stand kernel cmd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
 	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /kernel $(KERNEL_DIR)/aisix.a3x
+
+cmd: init
+
+init:
+	make --directory=$(INIT_DIR)
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /etc/init $(INIT_DIR)/init.LOFF
 
 stand: diag limnvol
 
@@ -50,6 +57,8 @@ endif
 endif
 
 	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) f
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /dev/ph.txt ./ph.txt
+	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) d /dev/ph.txt
 
 cleanup:
 	rm -f $(DISTIMAGE)

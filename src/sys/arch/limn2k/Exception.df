@@ -77,6 +77,11 @@ cswtch:
 
 	ret
 
+CPUHlt:
+.global CPUHlt
+	hlt
+	ret
+
 CPUIdle:
 .global CPUIdle 
 	mov t0, rs
@@ -153,11 +158,7 @@ fn Exception { badaddr ecause tf -- }
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end
 
-		badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected user mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Printf
-
 		1 CurrentThread@ Thread_Killed + !
-
-		while (1) end
 	end
 
 	if (mode@ RS_USER ==)

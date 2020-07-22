@@ -1,0 +1,224 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/aisix.h"
+
+(* ported from ancient AISIX *)
+
+var KHeapStart 0
+var KHeapSize 0
+var KHeapLast 0
+
+const MAGIC 0xCAFEBABE
+const BADMAGIC 0xACA7BABE
+
+struct KHeapHeader
+	4 magic
+	4 size
+	4 last
+	4 next
+	4 allocated
+endstruct
+
+externptr _HeapStart
+externptr _HeapSize
+
+fn _HeapInit { -- }
+	pointerof _HeapStart dup KHeapStart! KHeapLast!
+	pointerof _HeapSize KHeapSize!
+
+	KHeapSize@ KHeapStart@ KHeapHeader_size + !
+	0 KHeapStart@ KHeapHeader_last + !
+	0 KHeapStart@ KHeapHeader_allocated + !
+	0 KHeapStart@ KHeapHeader_next + !
+
+	MAGIC KHeapStart@ KHeapHeader_magic + !
+end
+
+(* first-fit *)
+
+fn private Malloc1 { endp startp sz -- ptr }
+	if (sz@ 0 ==)
+		"Malloc: sz = 0\n" Abort
+	end
+
+	if (endp@ 0 ==)
+		KHeapStart@ KHeapSize@ + endp!
+	end
+
+	if (startp@ 0 ==)
+		KHeapStart@ startp!
+	end
+
+	auto mysize
+	sz@ KHeapHeader_SIZEOF + mysize!
+
+	auto thissize
+
+	startp@ ptr!
+
+	while (ptr@ endp@ <)
+		if (ptr@ 0 ==)
+			-ENOMEM ptr!
+			break
+		end
+
+		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
+			ptr@ "Malloc: bad magic on %x\n" Abort
+		end
+
+		if (ptr@ KHeapHeader_allocated + @)
+			ptr@ KHeapHeader_next + @ ptr!
+			continue
+		end
+
+		ptr@ KHeapHeader_size + @ thissize!
+
+		if (thissize@ mysize@ >=)
+			auto be
+			0 be!
+
+			if (thissize@ mysize@ ==)
+				1 be!
+			end elseif (thissize@ mysize@ - KHeapHeader_SIZEOF <=)
+				1 be!
+			end
+
+			if (be@)
+				break
+			end
+
+			(* split the block *)
+
+			auto newsize
+			thissize@ mysize@ - newsize!
+
+			auto newblockp
+			ptr@ mysize@ + newblockp!
+
+			ptr@ KHeapHeader_next + @ newblockp@ KHeapHeader_next + !
+
+			mysize@ ptr@ KHeapHeader_size + !
+			newblockp@ ptr@ KHeapHeader_next + !
+
+			MAGIC newblockp@ KHeapHeader_magic + !
+			ptr@ newblockp@ KHeapHeader_last + !
+			newsize@ newblockp@ KHeapHeader_size + !
+			0 newblockp@ KHeapHeader_allocated + !
+
+			break
+		end
+
+		ptr@ KHeapHeader_next + @ ptr!
+	end
+
+	if (ptr@ iserr ~~)
+		ptr@ KHeapLast!
+
+		1 ptr@ KHeapHeader_allocated + !
+
+		KHeapHeader_SIZEOF ptr +=
+	end
+end
+
+fn Malloc { size -- ptr }
+	if (size@ 0x3 & 0 ~=)
+		size@ 0xFFFFFFFC & 4 + size!
+	end
+
+	0 KHeapLast@ size@ Malloc1 ptr!
+
+	if (ptr@ iserr ~~)
+		return
+	end
+
+	KHeapLast@ 0 size@ Malloc1 ptr!
+
+	if (ptr@ iserr ~~)
+		return
+	end
+
+	-ENOMEM ptr! return
+end
+
+fn Calloc { size -- ptr }
+	size@ Malloc ptr!
+
+	if (ptr@ iserr)
+		return
+	end
+
+	ptr@ size@ 0 memset
+end
+
+fn Free { ptr -- }
+	if (ptr@ 0 == ptr@ iserr ||)
+		ptr@ "tried to free 0x%x!\n" Abort
+	end
+
+	auto nptr
+	ptr@ KHeapHeader_SIZEOF - nptr!
+
+	if (nptr@ KHeapHeader_magic + @ MAGIC ~=)
+		ptr@ "Free: bad magic on block 0x%x\n" Abort
+	end
+
+	if (nptr@ KHeapHeader_allocated + @ 0 ==)
+		ptr@ "tried to free block that was not allocated\n" Abort
+	end
+
+	0 nptr@ KHeapHeader_allocated + !
+
+	auto link
+	nptr@ KHeapHeader_last + @ link!
+
+	auto tlink
+
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			link@ KHeapHeader_size + @
+			nptr@ KHeapHeader_size + @
+			+
+			link@ KHeapHeader_size + !
+
+			nptr@ KHeapHeader_next + @ link@ KHeapHeader_next + !
+
+			BADMAGIC nptr@ KHeapHeader_magic + !
+
+			nptr@ KHeapHeader_next + @ tlink!
+
+			if (tlink@)
+				link@ tlink@ KHeapHeader_last + !
+			end
+
+			if (nptr@ KHeapLast@ ==)
+				link@ KHeapLast!
+			end
+
+			link@ nptr!
+		end
+	end
+
+	nptr@ KHeapHeader_next + @ link!
+
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			link@ KHeapHeader_size + @
+			nptr@ KHeapHeader_size + @
+			+
+			nptr@ KHeapHeader_size + !
+
+			link@ KHeapHeader_next + @ nptr@ KHeapHeader_next + !
+
+			BADMAGIC link@ KHeapHeader_magic + !
+
+			if (link@ KHeapLast@ ==)
+				nptr@ KHeapLast!
+			end
+
+			link@ KHeapHeader_next + @ link!
+
+			if (link@)
+				nptr@ link@ KHeapHeader_last + !
+			end
+		end
+	end
+end

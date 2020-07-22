@@ -72,6 +72,7 @@ struct VNode
 	4 Permissions
 	4 Size
 	4 CoveredBy
+	4 DirParent
 endstruct
 
 const VNODE_FILE 1

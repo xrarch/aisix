@@ -211,6 +211,27 @@ fn VFSPath { path -- vnode }
 			break
 		end
 
+		if (pcomp@ "." strcmp)
+			continue
+		end
+
+		if (pcomp@ ".." strcmp)
+			if (mount@ Mount_Root + @ vnode@ ~=)
+				vnode@ VNode_DirParent + @ mount@ VNodeGet ok!
+
+				if (ok@ iserr)
+					vnode@ VNodePut
+					ok@ vnode!
+					break
+				end
+
+				vnode@ VNodePut
+				ok@ vnode!
+			end
+
+			continue
+		end
+
 		dirent@ rwd@ FSRewindDir ok!
 
 		if (ok@ iserr)
@@ -232,12 +253,21 @@ fn VFSPath { path -- vnode }
 			end
 
 			if (dirent@ VDirent_Name + @ pcomp@ strcmp)
+				auto vnid
+				vnode@ VNode_VNID + @ vnid!
 				vnode@ VNodePut
-				dirent@ VDirent_VNID + @ mount@ VNodeGet vnode!
+				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
-				if (vnode@ iserr)
+				if (ok@ iserr)
+					ok@ vnode!
 					break
 				end
+
+				if (ok@ VNode_Type + @ VNODE_DIR ==)
+					vnid@ ok@ VNode_DirParent + !
+				end
+
+				ok@ vnode!
 
 				1 found!
 				break

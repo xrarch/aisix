@@ -1,7 +1,5 @@
 DFILES := $(shell find ./src -type f -name "*.df")
-SFILES := $(shell find ./src -type f -name "*.s")
 OBJ    := $(DFILES:.df=.o)
-SOBJ   := $(SFILES:.s=.o)
 
 DC  =  ../../sdk/dragonc.sh
 AS  =  ../../sdk/asm.sh
@@ -9,8 +7,8 @@ LD  =  ../../sdk/link.sh link
 
 all: obj/rtaisix.o
 
-obj/rtaisix.o: $(OBJ) $(SOBJ)
-	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) $(SOBJ)
+obj/rtaisix.o: $(OBJ) _start.o end.o
+	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) ./src/_start.o ./src/end.o
 
 %.o: %.df
 	$(DC) $< $@ incdir=./headers/
@@ -18,5 +16,11 @@ obj/rtaisix.o: $(OBJ) $(SOBJ)
 %.o: %.s
 	$(AS) $< $@
 
+_start.o: ./src/_start.s
+	$(AS) ./src/_start.s ./src/_start.o
+
+end.o: ./src/end.s
+	$(AS) ./src/end.s ./src/end.o
+
 cleanup:
-	rm $(OBJ) $(SOBJ) obj/rtaisix.o
+	rm $(OBJ) ./src/_start.o ./src/end.o obj/rtaisix.o

@@ -1,0 +1,9 @@
+extern Main { -- ret }
+
+extern _HeapInit { -- }
+
+fn _Launch { -- }
+	_HeapInit
+
+	Main drop
+end

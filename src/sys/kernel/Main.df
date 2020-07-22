@@ -53,6 +53,8 @@ extern ConsInit { -- }
 
 extern VConsInit { -- }
 
+extern CPUHlt { -- }
+
 fn AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
 
@@ -81,5 +83,9 @@ fn AISIXInitialThread { -- }
 
 	vnode@ VNodePut
 
-	while (1) end
+	(* become an idle thread *)
+	while (1)
+		CPUHlt
+		Yield
+	end
 end

@@ -1,0 +1,16 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/aisix.h"
+
+fn Abort { ... fmt -- }
+	argv argc@ fmt@ VPrintf
+
+	while (1) end
+end
+
+fn Puts { s -- }
+
+end
+
+fn Putc { c -- }
+
+end

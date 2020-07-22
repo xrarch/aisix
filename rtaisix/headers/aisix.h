@@ -1,3 +1,9 @@
+extern Abort { ... fmt -- }
+
+const O_READ 1
+const O_WRITE 2
+const O_RW 3
+
 const	EPERM	1
 const	ENOENT	2
 const	ESRCH	3
@@ -64,38 +70,4 @@ const	-EMLINK	-31
 const	-EPIPE	-32
 const	-EFAULT	-33
 
-table aisix_errno
-	"Operation succeeded"
-	"Operation not permitted"
-	"No such file or directory"
-	"No such process"
-	"Interrupted system call"
-	"I/O error"
-	"Missing device"
-	"Argument list too long"
-	"Exec format error"
-	"Bad file number"
-	"No child processes"
-	"Try again"
-	"Out of memory"
-	"Permission denied"
-	"Not supported by device"
-	"Device or resource busy"
-	"File exists"
-	"Cross-device link"
-	"No such device"
-	"Not a directory"
-	"Is a directory"
-	"Invalid argument"
-	"File table overflow"
-	"Too many open files"
-	"Not a typewriter"
-	"Text file busy"
-	"File too large"
-	"No space left on device"
-	"Illegal seek"
-	"Read-only filesystem"
-	"Too many links"
-	"Broken pipe"
-	"Bad address"
-endtable
+externptr ErrorNames

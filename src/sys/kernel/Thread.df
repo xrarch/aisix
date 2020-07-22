@@ -102,8 +102,8 @@ fn ThreadKill { thread -- }
 		"tried to kill a kernel thread!\n" Panic
 	end
 
-	if (thread@ CurrentThread@ ==)
-		"tried to kill self\n" Panic
+	if (thread@ Thread_Killed + @)
+		return
 	end
 
 	auto rs
@@ -125,20 +125,19 @@ fn ThreadKill { thread -- }
 		auto process
 		thread@ Thread_Process + @ process!
 
-		if (process@ Process_Threads + @ 1 <=)
-			0 process@ Process_Threads + !
-			
-			if (process@ Process_Exited + @ ~~)
-				0 ProcessExit
-			end
-		end else
-			1 process@ Process_Threads + -=
-		end
+		1 process@ Process_Threads + -=
+
+		auto killproc
+		0 killproc!
 
 		if (process@ Process_MainThread + @ thread@ ==)
 			0 process@ Process_MainThread + !
 			if (process@ Process_Exited + @ ~~)
-				0 ProcessExit
+				0 process@ ProcessKill
+			end
+		end elseif (process@ Process_Threads + @ 0 ==)
+			if (process@ Process_Exited + @ ~~)
+				0 process@ ProcessKill
 			end
 		end
 	end else
@@ -187,9 +186,9 @@ fn ThreadExit { -- }
 	auto process
 	thread@ Thread_Process + @ process!
 
+	1 process@ Process_Threads + -=
+
 	if (process@ Process_Threads + @ 1 <=)
-		0 process@ Process_Threads + !
-		
 		if (process@ Process_Exited + @ ~~)
 			0 ProcessExit
 		end
@@ -200,8 +199,6 @@ fn ThreadExit { -- }
 				0 ProcessExit
 			end
 		end
-
-		1 process@ Process_Threads + -=
 	end
 
 	thread@ ThreadFree
@@ -262,36 +259,24 @@ var SchedulerContext 0
 fn Scheduler { -- }
 	"entering scheduler loop\n" Printf
 
-	auto rs
 	auto thread
-
-	InterruptEnable
 
 	while (1)
 		auto i
 		0 i!
 
-		auto ran
-		0 ran!
-
 		while (i@ THREADMAX <)
-			InterruptDisable rs!
-
 			[i@]Threads@ thread!
 
 			if (thread@ 0 ==)
 				1 i +=
-				rs@ InterruptRestore
 				continue
 			end
 
 			if (thread@ Thread_Status + @ TS_READY ~=)
 				1 i +=
-				rs@ InterruptRestore
 				continue
 			end
-
-			1 ran!
 
 			thread@ CurrentThread!
 
@@ -309,12 +294,6 @@ fn Scheduler { -- }
 			0 CurrentThread!
 
 			1 i +=
-
-			rs@ InterruptRestore
-		end
-
-		if (ran@ ~~)
-			CPUIdle
 		end
 	end
 end
@@ -580,16 +559,10 @@ fn ProcessKill { ret process -- }
 		if (thread@)
 			if (thread@ Thread_Process + @ process@ ==)
 				thread@ ThreadKill
-
-				1 process@ Process_Threads + -=
 			end
 		end
 
 		1 i +=
-	end
-
-	if (process@ Process_Threads + @ 0 ~=)
-		"threads weren't killed hard enough\n" Panic
 	end
 
 	(* all of the userspace threads will never run again, and the kernel ones will exit
