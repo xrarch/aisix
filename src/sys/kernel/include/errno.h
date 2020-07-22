@@ -62,4 +62,4 @@ const	-ESPIPE	-29
 const	-EROFS	-30
 const	-EMLINK	-31
 const	-EPIPE	-32
-const	-EFAULT	-33
+const	-EBADSYS	-33

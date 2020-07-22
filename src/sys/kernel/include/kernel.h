@@ -13,6 +13,7 @@
 #include "<inc>/tty.h"
 #include "<inc>/gfx.h"
 #include "<inc>/exec.h"
+#include "<inc>/sys.h"
 
 extern Panic { ... fmt -- }
 

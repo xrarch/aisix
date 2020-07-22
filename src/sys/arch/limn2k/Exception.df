@@ -142,12 +142,24 @@ fn Exception { badaddr ecause tf -- }
 			int@ Interrupt
 		end
 	end elseif (ecause@ EXCSYS ==)
-		InterruptEnable
+		auto sys
+		tf@ Context_a0 + @ sys!
 
-		(* handle syscall ... *)
-		"no syscalls rn\n" Panic
+		if (sys@ SYSMAX >)
+			-EBADSYS tf@ Context_v0 + !
+		end else
+			[sys@]Syscalls@ sys!
 
-		0 InterruptRestore
+			if (sys@ 0 ==)
+				-EBADSYS tf@ Context_v0 + !
+			end else
+				InterruptEnable
+
+				tf@ sys@ Syscall
+
+				0 InterruptRestore
+			end
+		end
 	end elseif (ecause@ EXCBREAK ==)
 		CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
 

@@ -32,6 +32,6 @@ table ErrorNames
 	"Read-only filesystem"
 	"Too many links"
 	"Broken pipe"
-	"Bad address"
+	"Bad syscall"
 endtable
 public ErrorNames

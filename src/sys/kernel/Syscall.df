@@ -1,0 +1,12 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table Syscalls
+	0
+	pointerof TestSyscall
+endtable
+public Syscalls
+
+fn (Syscall) TestSyscall { tf -- }
+	CurrentThread@ Thread_Process + @ Process_Name + "this is a test syscall from %s!!\n" Printf
+end
