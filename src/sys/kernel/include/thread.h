@@ -54,6 +54,8 @@ struct Process
 	4 BSSPhysical
 	4 BSSPages
 
+	4 CWDVNode
+
 	4 Exited
 
 	4 Index
@@ -68,6 +70,8 @@ externptr CurrentThread
 externptr Processes
 
 externptr Threads
+
+externptr KernelProcess
 
 const THREADMAX 128
 

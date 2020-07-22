@@ -15,6 +15,7 @@ table DevFSTab
 	pointerof DevFSCreate
 	pointerof DevFSRename
 	pointerof DevFSDelete
+	pointerof DevFSTrunc
 endtable
 public DevFSTab
 
@@ -24,6 +25,8 @@ public RootDevice
 var DeviceListHead 0
 
 var Devices 0
+
+var DevFSMounted 0
 
 fn DevByName { name -- dev }
 	DeviceListHead@ dev!
@@ -273,10 +276,28 @@ fn (FSDelete) DevFSDelete { vnode -- ok }
 	-EPERM ok!
 end
 
-fn (FSMount) DevFSMount { mount -- root fsdata }
+fn (FSTrunc) DevFSTrunc { vnode -- ok }
+	-EPERM ok!
+end
+
+fn (FSMount) DevFSMount { mount -- root }
+	if (DevFSMounted@)
+		-EPERM root!
+		return
+	end
+
+	1 DevFSMounted!
+
 	0 mount@ VNodeNew root!
 
-	0 fsdata!
+	auto ok
+	root@ DevFSGetNode ok!
+
+	if (ok@ iserr)
+		root@ VNodePut
+		ok@ root!
+		return
+	end
 end
 
 fn (FSUnmount) DevFSUnmount { mount -- ok }

@@ -1,4 +1,4 @@
-const MOUNTNAMELEN 32
+const MOUNTNAMELEN 64
 
 const VNCACHESIZE 128
 
@@ -16,9 +16,10 @@ struct Filesystem
 	4 Create
 	4 Rename
 	4 Delete
+	4 Trunc
 endstruct
 
-fnptr FSMount { mount -- root fsdata }
+fnptr FSMount { mount -- root }
 
 fnptr FSGetNode { vnode -- ok }
 
@@ -42,8 +43,10 @@ fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
 
 fnptr FSDelete { vnode -- ok }
 
+fnptr FSTrunc { vnode -- ok }
+
 struct Mount
-	MOUNTNAMELEN Name
+	MOUNTNAMELEN Path
 	4 Next
 	4 Prev
 	4 Device
@@ -54,6 +57,7 @@ struct Mount
 	4 Busy
 	4 VRefs
 	4 MRefs
+	4 Covering
 endstruct
 
 struct VNode
@@ -67,6 +71,7 @@ struct VNode
 	4 UID
 	4 Permissions
 	4 Size
+	4 CoveredBy
 endstruct
 
 const VNODE_FILE 1
@@ -95,6 +100,8 @@ struct VDirent
 	4 Cookie
 endstruct
 
+externptr RootVNode
+
 extern VRead { buf len seek vnode -- bytes }
 
 extern VWrite { buf len seek vnode -- bytes }
@@ -121,6 +128,6 @@ extern MountUnref { mount -- }
 
 extern SyncVNodes { mount remove -- res }
 
-extern VFSMount { name fs dev -- mount }
+extern VFSMount { path fs dev -- mount }
 
 extern VFSUnmount { mount -- ok }

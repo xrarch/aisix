@@ -15,6 +15,7 @@ table AISIXFSTab
 	pointerof AISIXFSCreate
 	pointerof AISIXFSRename
 	pointerof AISIXFSDelete
+	pointerof AISIXFSTrunc
 endtable
 public AISIXFSTab
 
@@ -32,6 +33,7 @@ endstruct
 
 struct AVData
 	4 Entry
+	4 Dirty
 endstruct
 
 struct Superblock
@@ -134,10 +136,14 @@ fn private BAlloc { link mount -- buf }
 
 	auto r
 
+	auto rs
+
 	while (i@ bs@ <)
+		InterruptDisable rs!
 		i@ mount@ GetBlockStatus bn! r!
 
 		if (r@ iserr)
+			rs@ InterruptRestore
 			r@ buf!
 			return
 		end
@@ -145,6 +151,7 @@ fn private BAlloc { link mount -- buf }
 		if (bn@ 0 ==)
 			(* allocate *)
 			link@ i@ mount@ SetBlockStatus r!
+			rs@ InterruptRestore
 
 			if (r@ iserr)
 				r@ buf!
@@ -170,7 +177,11 @@ fn private BAlloc { link mount -- buf }
 			end
 
 			return
+		end else
+			rs@ InterruptRestore
 		end
+
+		1 i +=
 	end
 
 	-ENOSPC buf!
@@ -178,6 +189,82 @@ end
 
 fn private BFree { block mount -- ok }
 	0 block@ mount@ SetBlockStatus ok!
+end
+
+fn private UpdateNode { vnode -- ok }
+	0 ok!
+
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	if (vd@ AVData_Dirty + @ ~~)
+		return
+	end
+
+	auto vnid
+
+	auto block
+	auto off
+
+	auto ent
+
+	vnode@ VNode_VNID + @ vnid!
+
+	vnid@ vnode@ "afs: update ptr=0x%x vnid=0x%x\n" Printf
+
+	if (vnid@ 0 ==)
+		(* root, info is stored in superblock *)
+
+		0 vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
+
+		if (buf@ iserr)
+			buf@ ok!
+			return
+		end
+
+		buf@ Buffer_Data + @ ent!
+
+		vnode@ VNode_Size + @ ent@ Superblock_RootSize + !
+		vd@ AVData_Entry + @ ent@ Superblock_Root + !
+
+		buf@ bwrite ok!
+
+		if (ok@ iserr)
+			buf@ brelse drop
+			return
+		end
+	end else
+		vnid@ VNIDToDir off! block!
+
+		auto buf
+		block@ vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
+
+		if (buf@ iserr)
+			buf@ ok!
+			return
+		end
+
+		buf@ Buffer_Data + @ off@ DirEnt_SIZEOF * + ent!
+
+		vnode@ VNode_Size + @ ent@ DirEnt_bytesize + !
+		vd@ AVData_Entry + @ ent@ DirEnt_startblock + !
+		vnode@ VNode_Permissions + @ ent@ DirEnt_permissions + !
+		vnode@ VNode_UID + @ ent@ DirEnt_uid + !
+
+		buf@ bwrite ok!
+
+		if (ok@ iserr)
+			buf@ brelse drop
+			return
+		end
+	end
+
+	0 vd@ AVData_Dirty + !
+
+	if (buf@ brelse)
+		-EINTR ok!
+		return
+	end
 end
 
 fn private BMap { bn reading vnode -- buf }
@@ -231,7 +318,7 @@ fn private BMap { bn reading vnode -- buf }
 			if (reading@)
 				"balloc on read\n" Panic
 			end
-			
+
 			0xFFFFFFFF mount@ BAlloc buf!
 
 			if (buf@ iserr)
@@ -260,7 +347,54 @@ fn private BMap { bn reading vnode -- buf }
 	b@ dev@ bread buf!
 end
 
+fn private TruncNode { vnode -- ok }
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	auto ent
+	vd@ AVData_Entry + @ ent!
+
+	auto mount
+	vnode@ VNode_Mount + @ mount!
+
+	auto le
+
+	while (ent@ 0xFFFFFFFF ~=)
+		ent@ le!
+
+		ent@ mount@ GetBlockStatus ent! ok!
+
+		if (ok@ iserr)
+			return
+		end
+
+		le@ mount@ BFree ok!
+
+		if (ok@ iserr)
+			return
+		end
+	end
+
+	0 vnode@ VNode_Size + !
+	0xFFFFFFFF vd@ AVData_Entry + !
+	1 vd@ AVData_Dirty + !
+end
+
+fn (FSTrunc) AISIXFSTrunc { vnode -- ok }
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		-EISDIR ok!
+		return
+	end
+
+	vnode@ TruncNode ok!
+end
+
 fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		-EISDIR bytes!
+		return
+	end
+
 	if (seek@ vnode@ VNode_Size + @ >=)
 		0 bytes!
 		return
@@ -310,7 +444,63 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 end
 
 fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
-	-ENOTBLK bytes!
+	if (seek@ vnode@ VNode_Size + @ >)
+		0 bytes!
+		return
+	end
+
+	if (len@ 0 ==)
+		0 bytes!
+		return
+	end
+
+	auto tot
+	0 tot!
+
+	auto r
+
+	while (tot@ len@ <)
+		auto bbuf
+		seek@ 4096 / 0 vnode@ BMap bbuf!
+
+		if (bbuf@ iserr)
+			bbuf@ bytes!
+			return
+		end
+
+		auto m
+		len@ tot@ -
+		4096 seek@ 4096 % -
+		min m!
+
+		bbuf@ Buffer_Data + @ seek@ 4096 % +
+		buf@
+		m@ memcpy
+
+		bbuf@ bwrite r!
+
+		if (r@ iserr)
+			bbuf@ brelse drop
+			r@ bytes!
+			return
+		end
+
+		if (bbuf@ brelse)
+			-EINTR bytes!
+			return
+		end
+
+		m@ buf +=
+		m@ seek +=
+		m@ tot +=
+	end
+
+	if (seek@ vnode@ VNode_Size + @ >)
+		seek@ vnode@ VNode_Size + !
+		1 vnode@ VNode_FSData + @ AVData_Dirty + !
+	end
+
+	len@ bytes!
 end
 
 fn (FSCreate) AISIXFSCreate { dirvnode name type uid permissions -- vnode }
@@ -325,7 +515,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	-EPERM ok!
 end
 
-fn (FSMount) AISIXFSMount { mount -- root fsdata }
+fn (FSMount) AISIXFSMount { mount -- root }
 	auto dev
 	mount@ Mount_Device + @ dev!
 
@@ -358,6 +548,7 @@ fn (FSMount) AISIXFSMount { mount -- root fsdata }
 		return
 	end
 
+	auto fsdata
 	AFSData_SIZEOF Malloc fsdata!
 
 	if (fsdata@ iserr)
@@ -377,7 +568,23 @@ fn (FSMount) AISIXFSMount { mount -- root fsdata }
 		return
 	end
 
+	fsdata@ mount@ Mount_FSData + !
+
 	0 mount@ VNodeNew root!
+
+	if (root@ iserr)
+		fsdata@ Free
+		return
+	end
+
+	root@ AISIXFSGetNode buf!
+
+	if (buf@ iserr)
+		root@ VNodePut
+		fsdata@ Free
+		buf@ root!
+		return
+	end
 end
 
 fn (FSUnmount) AISIXFSUnmount { mount -- ok }
@@ -406,6 +613,8 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 	end
 
 	vd@ vnode@ VNode_FSData + !
+
+	0 vd@ AVData_Dirty + !
 
 	if (vnid@ 0 ==)
 		VNODE_DIR vnode@ VNode_Type + !
@@ -551,5 +760,5 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 end
 
 fn (FSSync) AISIXFSSync { vnode -- ok }
-	0 ok!
+	vnode@ UpdateNode ok!
 end

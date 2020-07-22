@@ -73,7 +73,22 @@ fn AISIXInitialThread { -- }
 		userin@ 255 Gets
 		userin@ atoi seek!
 
-		"path to read: " Printf
+		auto len
+		"len: " Printf
+		userin@ 255 Gets
+		userin@ atoi len!
+
+		if (len@ ~~)
+			continue
+		end
+
+		auto qb
+		len@ Malloc qb!
+
+		"what: " Printf
+		qb@ len@ 1 - Gets
+
+		"path: " Printf
 		userin@ 255 Gets
 
 		auto vnode
@@ -86,7 +101,7 @@ fn AISIXInitialThread { -- }
 			vnode@ abs vnode!
 			[vnode@]ErrorNames@ "path: %s\n" Printf
 		end else
-			userin@ 255 seek@ vnode@ VRead bytes!
+			qb@ len@ seek@ vnode@ VRead bytes!
 
 			if (bytes@ iserr)
 				bytes@ abs bytes!
@@ -98,7 +113,7 @@ fn AISIXInitialThread { -- }
 				0 i!
 
 				while (i@ bytes@ <)
-					userin@ i@ + gb Putc
+					qb@ i@ + gb Putc
 
 					1 i +=
 				end
@@ -108,5 +123,7 @@ fn AISIXInitialThread { -- }
 
 			vnode@ VNodePut
 		end
+
+		qb@ Free
 	end
 end

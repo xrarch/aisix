@@ -16,6 +16,9 @@ var Mounted 0
 
 var DevMount 0
 
+var RootVNode 0
+public RootVNode
+
 buffer MountListMutex Mutex_SIZEOF
 
 fn LockMountList { -- killed }
@@ -49,13 +52,6 @@ fn MountUnref { mount -- }
 end
 
 fn VFSInit { -- }
-	"dev" "devfs" FSByName 0 VFSMount DevMount!
-
-	if (DevMount@ iserr)
-		DevMount@ abs@ DevMount!
-		[DevMount@]ErrorNames@ "couldn't mount devfs: %s\n" Panic
-	end
-
 	"mount list" MountListMutex InitMutex
 
 	auto syncw
@@ -78,11 +74,24 @@ fn VFSMountRoot { -- }
 
 	auto rootmount
 
-	"root" "aisixfs" FSByName RootDevice@ VFSMount rootmount!
+	0 "aisixfs" FSByName RootDevice@ VFSMount rootmount!
 
 	if (rootmount@ iserr)
 		rootmount@ abs rootmount!
 		[rootmount@]ErrorNames@ "couldn't mount root: %s\n" Panic
+	end
+
+	rootmount@ Mount_Root + @ RootVNode!
+
+	RootVNode@ VNodeRef
+
+	RootVNode@ KernelProcess@ Process_CWDVNode + !
+
+	"/dev" "devfs" FSByName 0 VFSMount DevMount!
+
+	if (DevMount@ iserr)
+		DevMount@ abs DevMount!
+		[DevMount@]ErrorNames@ "couldn't mount devfs: %s\n" Panic
 	end
 end
 
@@ -95,55 +104,35 @@ fn VWrite { buf len seek vnode -- bytes }
 end
 
 fn VFSPath { path -- vnode }
+	if (path@ gb '/' ==)
+		RootVNode@ vnode!
+	end else
+		CurrentThread@ Thread_Process + @ Process_CWDVNode + @ vnode!
+	end
+
 	auto pcomp
 	256 Calloc pcomp!
 
-	path@ pcomp@ '/' 255 strntok path!
-
-	if (LockMountList)
-		pcomp@ Free
-		-EINTR vnode!
-		return
-	end
-
 	auto mount
-	pcomp@ VFSMountByName mount!
+	vnode@ VNode_Mount + @ mount!
 
-	if (mount@ 0 ==)
-		pcomp@ Free
-		-ENOENT vnode!
-		UnlockMountList
-		return
-	end
-
-	if (mount@ iserr)
-		pcomp@ Free
-		mount@ vnode!
-		UnlockMountList
-		return
-	end
+	mount@ MountRef
 
 	if (mount@ Mount_Busy + @)
 		pcomp@ Free
 		mount@ MountUnref
 		-EBUSY vnode!
-		UnlockMountList
 		return
 	end
-
-	mount@ Mount_Root + @ vnode!
 
 	if (vnode@ VNodeLock)
 		pcomp@ Free
 		-EINTR vnode!
 		mount@ MountUnref
-		UnlockMountList
 		return
 	end
 
 	vnode@ VNodeRef
-
-	UnlockMountList
 
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
@@ -173,15 +162,50 @@ fn VFSPath { path -- vnode }
 	while (path@ 0 ~=)
 		0 dirent@ VDirent_Cookie + !
 
-		vnode@ dirent@ VDirent_DirVNode + !
-
-		path@ pcomp@ '/' 255 strntok path!
-
 		if (vnode@ VNode_Type + @ VNODE_DIR ~=)
 			vnode@ VNodePut
 			-ENOTDIR vnode!
 			break
 		end
+
+		auto newroot
+		vnode@ VNode_CoveredBy + @ newroot!
+
+		if (newroot@)
+			vnode@ VNodePut
+
+			newroot@ vnode!
+
+			vnode@ VNode_Mount + @ mount!
+
+			mount@ MountRef
+
+			if (mount@ Mount_Busy + @)
+				pcomp@ Free
+				dirent@ Free
+				mount@ MountUnref
+				-EBUSY vnode!
+				return
+			end
+
+			if (vnode@ VNodeLock)
+				pcomp@ Free
+				dirent@ Free
+				-EINTR vnode!
+				mount@ MountUnref
+				return
+			end
+
+			vnode@ VNodeRef
+
+			mount@ Mount_Filesystem + @ fs!
+			fs@ Filesystem_RewindDir + @ rwd!
+			fs@ Filesystem_ReadDir + @ rd!
+		end
+
+		vnode@ dirent@ VDirent_DirVNode + !
+
+		path@ pcomp@ '/' 255 strntok path!
 
 		if (pcomp@ strlen 0 ==)
 			break
@@ -249,37 +273,7 @@ fn FSByName { name -- fs }
 	0 fs!
 end
 
-fn VFSMountByName { name -- mount }
-	if (MountListMutex Mutex_OwnerThread + @ CurrentThread@ ~=)
-		"VFSMountByName\n" Panic
-	end
-
-	MountListHead@ mount!
-
-	while (mount@)
-		if (mount@ Mount_Name + name@ strcmp)
-			mount@ MountRef
-
-			return
-		end
-
-		mount@ Mount_Next + @ mount!
-	end
-
-	0 mount!
-end
-
-fn private MountSanitize { name -- }
-	while (name@ gb 0 ~=)
-		if (name@ gb '/' ==)
-			'_' name@ sb
-		end
-
-		1 name +=
-	end
-end
-
-fn VFSMount { name fs dev -- mount }
+fn VFSMount { path fs dev -- mount }
 	if (fs@ 0 ==)
 		"VFSMount: fs = 0\n" Panic
 	end
@@ -289,19 +283,44 @@ fn VFSMount { name fs dev -- mount }
 		return
 	end
 
-	name@ VFSMountByName mount!
+	auto covervn
+	0 covervn!
 
-	if (mount@)
-		UnlockMountList
-		mount@ MountUnref
-		-EEXIST mount!
-		return
+	if (path@)
+		path@ VFSPath covervn!
+
+		if (covervn@ iserr)
+			covervn@ mount!
+			return
+		end
+
+		if (covervn@ VNode_CoveredBy + @)
+			covervn@ VNodePut
+
+			-EBUSY mount!
+			return
+		end
+
+		if (covervn@ VNode_Type + @ VNODE_DIR ~=)
+			covervn@ VNodePut
+
+			-ENOTDIR mount!
+			return
+		end
+	end else
+		if (RootVNode@)
+			"mounting root twice?\n" Panic
+		end
 	end
 
 	Mount_SIZEOF Calloc mount!
 
 	if (mount@ iserr)
 		UnlockMountList
+		if (covervn@)
+			covervn@ VNodePut
+		end
+		-ENOMEM mount!
 		return
 	end
 
@@ -314,6 +333,9 @@ fn VFSMount { name fs dev -- mount }
 			rs@ InterruptRestore
 			UnlockMountList
 			mount@ Free
+			if (covervn@)
+				covervn@ VNodePut
+			end
 			-EBUSY mount!
 			return
 		end
@@ -330,25 +352,37 @@ fn VFSMount { name fs dev -- mount }
 
 	dev@ mount@ Mount_Device + !
 
-	name@ MountSanitize
+	auto pname
+	if (path@)
+		path@ pname!
+	end else
+		"/" pname!
+	end
 
-	mount@ Mount_Name + name@ MOUNTNAMELEN 1 - strncpy
+	mount@ Mount_Path + pname@ MOUNTNAMELEN 1 - strncpy
 
-	mount@ fs@ Filesystem_Mount + @ FSMount fsdata! root!
+	mount@ fs@ Filesystem_Mount + @ FSMount root!
 
 	if (root@ iserr)
 		mount@ Free
 		root@ mount!
 		0 dev@ Device_Mount + !
 		UnlockMountList
+		if (covervn@)
+			covervn@ VNodePut
+		end
 		return
 	end
 
-	fsdata@ mount@ Mount_FSData + !
-
 	root@ mount@ Mount_Root + !
 
-	root@ fs@ Filesystem_GetNode + @ FSGetNode drop
+	if (covervn@)
+		root@ covervn@ VNode_CoveredBy + !
+
+		covervn@ mount@ Mount_Covering + !
+
+		covervn@ VNodeUnlock
+	end
 
 	root@ VNodeUnlock 
 
@@ -370,7 +404,7 @@ fn VFSMount { name fs dev -- mount }
 		"(none)" devname!
 	end
 
-	fs@ Filesystem_Name + @ name@ devname@ "mounted %s on /%s as %s\n" Printf
+	fs@ Filesystem_Name + @ pname@ devname@ "mounted %s on %s as %s\n" Printf
 end
 
 fn VFSUnmount { mount -- ok }
@@ -410,6 +444,15 @@ fn VFSUnmount { mount -- ok }
 	end
 
 	root@ VNodeUnref
+
+	auto covering
+
+	mount@ Mount_Covering + @ covering!
+
+	if (covering@)
+		0 covering@ VNode_CoveredBy + !
+		covering@ VNodeUnref
+	end
 
 	mount@ 1 SyncVNodes ok!
 
@@ -486,8 +529,8 @@ fn VFSPrintMounts { -- }
 		auto dev
 		mount@ Mount_Device + @ dev!
 
-		auto name
-		mount@ Mount_Name + name!
+		auto path
+		mount@ Mount_Path + path!
 
 		auto fs
 		mount@ Mount_Filesystem + @ fs!
@@ -499,7 +542,7 @@ fn VFSPrintMounts { -- }
 			"(none)" devname!
 		end
 
-		fs@ Filesystem_Name + @ name@ devname@ "%s on /%s as %s\n" Printf
+		fs@ Filesystem_Name + @ path@ devname@ "%s on /%s as %s\n" Printf
 
 		mount@ Mount_Next + @ mount!
 	end
