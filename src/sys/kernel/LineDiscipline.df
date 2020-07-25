@@ -56,7 +56,7 @@ fn TTYRubout { ib ob -- ro }
 		return
 	end
 
-	if (c@ 4 ==)
+	if (c@ 4 == c@ 3 == ||)
 		0 ro!
 		c@ ib@ 0 IOBufPutc drop
 		return
@@ -84,11 +84,16 @@ fn TTYRubout { ib ob -- ro }
 	end
 end
 
+externptr TTYKill
+
 (* this is often called from interrupt context,
 so NEVER sleep on any IOBufPutc's *)
 fn (IOCharInput) TTYInput { c buf -- }
+	auto tty
+	buf@ IOBuffer_TTY + @ tty!
+
 	auto ob
-	buf@ IOBuffer_TTY + @ TTY_OBuffer + @ ob!
+	tty@ TTY_OBuffer + @ ob!
 
 	if (ob@ 0 ==)
 		return
@@ -112,6 +117,13 @@ fn (IOCharInput) TTYInput { c buf -- }
 			if (c@ 0x20 <)
 				'^' ob@ 0 IOBufPutc drop
 				[c@]TTYCtrl@ ob@ 0 IOBufPutc drop
+
+				if (c@ 3 ==)
+					(* defer to scheduler to avoid killing the process we might have interrupted *)
+					(* this should work because a human probably wont be typing ^C faster than the
+					scheduling frequency but you never know i guess *)
+					tty@ TTYKill!
+				end
 			end else
 				c@ ob@ 0 IOBufPutc drop
 			end

@@ -169,21 +169,11 @@ fn VNodeNew { vnid mount -- vnode }
 end
 
 fn VNodeLock { vnode -- killed }
-	auto rs
-	InterruptDisable rs!
-
 	vnode@ VNode_Mutex + LockMutex killed!
-
-	rs@ InterruptRestore
 end
 
 fn VNodeUnlock { vnode -- }
-	auto rs
-	InterruptDisable rs!
-
 	vnode@ VNode_Mutex + UnlockMutex
-
-	rs@ InterruptRestore
 end
 
 fn VNodePut { vnode -- }

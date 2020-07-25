@@ -1,5 +1,5 @@
-const SYSMAX 1
+const SYSMAX 8
 
 externptr Syscalls
 
-fnptr Syscall { tf -- }
+fnptr Syscall { tf -- ok }

@@ -2,7 +2,7 @@ FLATIMAGE  := no
 
 DISTIMAGE  := ./dist/dist.img
 DISTIMGSZ  := 256
-FSTOOL     := ../sdk/fstool.sh
+FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
 CPU        := limn2k
@@ -18,29 +18,38 @@ FILELOADER_DIR := src/stand/fileloader
 DIAG_DIR       := src/stand/diag
 LIMNVOL_DIR    := src/stand/limnvol
 INIT_DIR       := src/init
+SH_DIR         := src/sh
 KERNEL_DIR     := src/sys/kernel
+
+FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
 dist: $(DISTIMAGE) bootable stand kernel cmd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /kernel $(KERNEL_DIR)/aisix.a3x
+	$(FSTOOL) w /kernel $(KERNEL_DIR)/aisix.a3x
 
-cmd: init
+cmd: init sh
 
 init:
 	make --directory=$(INIT_DIR)
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /etc/init $(INIT_DIR)/init.LOFF
+	$(FSTOOL) w /etc/init $(INIT_DIR)/init.LOFF
+	$(FSTOOL) chmod /etc/init 73
+
+sh:
+	make --directory=$(SH_DIR)
+	$(FSTOOL) w /bin/sh $(SH_DIR)/sh.LOFF
+	$(FSTOOL) chmod /bin/sh 73
 
 stand: diag limnvol
 
 diag:
 	make --directory=$(DIAG_DIR)
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /stand/diag $(DIAG_DIR)/diag.a3x
+	$(FSTOOL) w /stand/diag $(DIAG_DIR)/diag.a3x
 
 limnvol:
 	make --directory=$(LIMNVOL_DIR)
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /stand/limnvol $(LIMNVOL_DIR)/limnvol.a3x
+	$(FSTOOL) w /stand/limnvol $(LIMNVOL_DIR)/limnvol.a3x
 
 bootable:
 	make --directory=$(FILELOADER_DIR)
@@ -56,11 +65,13 @@ ifneq ($(DISKLABEL),none)
 endif
 endif
 
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) f
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) w /dev/ph.txt ./ph.txt
-	$(FSTOOL) $(DISTIMAGE) offset=$(OFFSET) d /dev/ph.txt
+	$(FSTOOL) f
+	$(FSTOOL) w /dev/ph.txt ./ph.txt
+	$(FSTOOL) d /dev/ph.txt
 
 cleanup:
 	rm -f $(DISTIMAGE)
 	make -C src/stand cleanup
 	make -C $(KERNEL_DIR) cleanup
+	make -C $(SH_DIR) cleanup
+	make -C $(INIT_DIR) cleanup

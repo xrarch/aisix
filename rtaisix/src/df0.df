@@ -1,4 +1,4 @@
-extern Main { -- ret }
+#include "<inc>/aisix.h"
 
 extern _HeapInit { -- }
 
@@ -6,4 +6,6 @@ fn _Launch { -- }
 	_HeapInit
 
 	Main drop
+
+	0 Exit
 end

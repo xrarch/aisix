@@ -71,17 +71,17 @@ fn AISIXInitialThread { -- }
 
 	if (vnode@ iserr)
 		vnode@ abs vnode!
-		[vnode@]ErrorNames@ "couldn't load /etc/init: %s\n" Panic
+		[vnode@]ErrorNames@ "couldn't open /etc/init: %s\n" Printf
+	end else
+		vnode@ "/etc/init" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
+
+		if (InitProcess@ iserr)
+			InitProcess@ abs InitProcess!
+			[InitProcess@]ErrorNames@ "couldn't spawn /etc/init: %s\n" Printf
+		end
+
+		vnode@ VNodePut
 	end
-
-	vnode@ "/etc/init" VSpawn InitProcess!
-
-	if (InitProcess@ iserr)
-		InitProcess@ abs InitProcess!
-		[InitProcess@]ErrorNames@ "couldn't exec /etc/init: %s\n" Printf
-	end
-
-	vnode@ VNodePut
 
 	(* become an idle thread *)
 	while (1)

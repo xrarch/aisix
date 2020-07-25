@@ -113,6 +113,8 @@ const EXCSYS 2
 const EXCTIMER 5
 const EXCBREAK 6
 
+externptr DebugNextSched
+
 extern PlatformAlertUser { -- }
 
 fn Exception { badaddr ecause tf -- }
@@ -127,10 +129,6 @@ fn Exception { badaddr ecause tf -- }
 
 	auto mode
 	tf@ Context_ers + @ RS_USER & mode!
-
-	if (mode@ RS_USER ==)
-		1 CurrentThread@ Thread_InKernel + !
-	end
 
 	if (ecause@ EXCINTERRUPT ==)
 		if (InterruptGet@ 0 ==)
@@ -153,17 +151,28 @@ fn Exception { badaddr ecause tf -- }
 			if (sys@ 0 ==)
 				-EBADSYS tf@ Context_v0 + !
 			end else
-				InterruptEnable
+				if (LockMe ~~)
+					1 CurrentThread@ Thread_InKernel + !
 
-				tf@ sys@ Syscall
+					InterruptEnable
 
-				0 InterruptRestore
+					tf@ sys@ Syscall tf@ Context_v0 + !
+
+					0 InterruptRestore
+
+					UnlockMe
+
+					0 CurrentThread@ Thread_InKernel + !
+				end else
+					(* if we got killed waiting on that lock we should just have been destroyed *)
+					"exception: lockme\n" Panic
+				end
 			end
 		end
 	end elseif (ecause@ EXCBREAK ==)
 		CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
 
-		KDebug
+		1 DebugNextSched!
 	end else
 		if (mode@ 0 ==)
 			(* kernel mode exception, panic *)
@@ -171,10 +180,6 @@ fn Exception { badaddr ecause tf -- }
 		end
 
 		1 CurrentThread@ Thread_Killed + !
-	end
-
-	if (mode@ RS_USER ==)
-		0 CurrentThread@ Thread_InKernel + !
 	end
 
 	if (CurrentThread@ Thread_Killed + @)
@@ -202,7 +207,7 @@ CPUKThreadEntry:
 
 "
 
-fn CPUContextPrepare { entry stack kern -- ctx }
+fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 	stack@ Context_SIZEOF - ctx!
 
 	if (kern@)
@@ -212,6 +217,9 @@ fn CPUContextPrepare { entry stack kern -- ctx }
 		entry@ ctx@ Context_epc + !
 
 		RS_USER RS_INT | RS_MMU | RS_TIMER | ctx@ Context_ers + !
+
+		a0@ ctx@ Context_a0 + !
+		a1@ ctx@ Context_a1 + !
 
 		Context_SIZEOF ctx -=
 

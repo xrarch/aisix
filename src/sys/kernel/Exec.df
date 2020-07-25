@@ -51,195 +51,203 @@ fn private GetEntry { header vnode -- entry }
 end
 
 (* this is really long but 90% of it is just making sure the executable is sane *)
-fn VSpawn { vnode name -- process }
-	auto header
-	LOFFHeader_SIZEOF Malloc header!
 
-	if (header@ iserr)
-		-ENOMEM process!
+(* there's also a lot of reusing autos for things their name doesnt make sense for,
+because the DF compiler doesn't support overflowing autos to the stack frame yet,
+so i can't make any more than the registers have room for *)
+fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages datapages entry }
+	LOFFHeader_SIZEOF Malloc textpages!
+
+	if (textpages@ iserr)
+		-ENOMEM text!
 		return
 	end
 
 	auto bytes
 
-	header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+	textpages@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
 
 	if (bytes@ LOFFHeader_SIZEOF <)
 		if (bytes@ iserr)
-			bytes@ process!
+			bytes@ text!
 		end else
-			-ENOEXEC process!
+			-ENOEXEC text!
 		end
-		header@ Free
+		textpages@ Free
 		return
 	end
 
-	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
-		-ENOEXEC process!
-		header@ Free
+	if (textpages@ LOFFHeader_Magic + @ LOFFMagic ~=)
+		-ENOEXEC text!
+		textpages@ Free
 		return
 	end
 
-	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
-		-ENOEXEC process!
-		header@ Free
+	if (textpages@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
+		-ENOEXEC text!
+		textpages@ Free
 		return
 	end
 
-	auto entry
-	header@ vnode@ GetEntry entry!
+	textpages@ vnode@ GetEntry entry!
 	if (entry@ iserr)
-		entry@ process!
-		header@ Free
+		entry@ text!
+		textpages@ Free
 		return
 	end
 
-	auto shdr
-	LOFFSectionHeader_SIZEOF Malloc shdr!
+	textpages@ LOFFHeader_TextHeader + @ text!
+	textpages@ LOFFHeader_DataHeader + @ data!
+	textpages@ LOFFHeader_BSSHeader + @ udata!
 
-	if (shdr@ iserr)
-		-ENOMEM process!
-		header@ Free
+	textpages@ Free
+
+	LOFFSectionHeader_SIZEOF Malloc textpages!
+
+	if (textpages@ iserr)
+		-ENOMEM text!
 		return
 	end
 
-	auto textoff
 	auto textsize
+	auto textoff
 
-	auto dataoff
 	auto datasize
+	auto dataoff
 
 	auto bsssize
 
-	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_TextHeader + @ vnode@ VRead bytes!
+	textpages@ LOFFSectionHeader_SIZEOF text@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF <)
 		if (bytes@ iserr)
-			bytes@ process!
+			bytes@ text!
 		end else
-			-ENOEXEC process!
+			-ENOEXEC text!
 		end
-		header@ Free
-		shdr@ Free
+		textpages@ Free
 		return
 	end
 
-	if (shdr@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
-		-ENOEXEC process!
-		header@ Free
-		shdr@ Free
+	if (textpages@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
+		-ENOEXEC text!
+		textpages@ Free
 		return
 	end
 
-	shdr@ LOFFSectionHeader_SectionOffset + @ textoff!
-	shdr@ LOFFSectionHeader_SectionSize + @ textsize!
+	textpages@ LOFFSectionHeader_SectionOffset + @ textoff!
+	textpages@ LOFFSectionHeader_SectionSize + @ textsize!
 
-	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_DataHeader + @ vnode@ VRead bytes!
+	textpages@ LOFFSectionHeader_SIZEOF data@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF <)
 		if (bytes@ iserr)
-			bytes@ process!
+			bytes@ text!
 		end else
-			-ENOEXEC process!
+			-ENOEXEC text!
 		end
-		header@ Free
-		shdr@ Free
+		textpages@ Free
 		return
 	end
 
-	if (shdr@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
-		-ENOEXEC process!
-		header@ Free
-		shdr@ Free
+	if (textpages@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
+		-ENOEXEC text!
+		textpages@ Free
 		return
 	end
 
-	shdr@ LOFFSectionHeader_SectionOffset + @ dataoff!
-	shdr@ LOFFSectionHeader_SectionSize + @ datasize!
+	textpages@ LOFFSectionHeader_SectionOffset + @ dataoff!
+	textpages@ LOFFSectionHeader_SectionSize + @ datasize!
 
-	shdr@ LOFFSectionHeader_SIZEOF header@ LOFFHeader_BSSHeader + @ vnode@ VRead bytes!
+	textpages@ LOFFSectionHeader_SIZEOF udata@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF <)
 		if (bytes@ iserr)
-			bytes@ process!
+			bytes@ text!
 		end else
-			-ENOEXEC process!
+			-ENOEXEC text!
 		end
-		header@ Free
-		shdr@ Free
+		textpages@ Free
 		return
 	end
 
 	(* BSS must be contiguous with DATA *)
-	if (shdr@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
-		-ENOEXEC process!
-		header@ Free
-		shdr@ Free
+	if (textpages@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
+		-ENOEXEC text!
+		textpages@ Free
 		return
 	end
 
-	shdr@ LOFFSectionHeader_SectionSize + @ bsssize!
+	textpages@ LOFFSectionHeader_SectionSize + @ bsssize!
 
-	header@ Free
-	shdr@ Free
+	textpages@ Free
+
+	if (textsize@ 3 &)
+		-ENOEXEC text!
+		return
+	end
+
+	if (datasize@ 3 &)
+		-ENOEXEC text!
+		return
+	end
+
+	if (bsssize@ 3 &)
+		-ENOEXEC text!
+		return
+	end
 
 	(* start trying to copy sections in and zero BSS *)
 
-	(* reusing shdr for text pages and header for data pages because
-	ive declared too many autos already in this ginormous function *)
+	textsize@ textpages!
 
-	textsize@ shdr!
-
-	if (shdr@ 0xFFF &)
-		0x1000 shdr +=
+	if (textpages@ 0xFFF &)
+		0x1000 textpages +=
 	end
 
-	if (shdr@ ~~)
-		0x1000 shdr!
+	if (textpages@ ~~)
+		0x1000 textpages!
 	end
 
-	auto text
-	shdr@ 4096 / PMMAlloc text!
+	textpages@ 4096 / PMMAlloc text!
 
 	if (text@ iserr)
-		text@ process!
 		return
 	end
 
-	datasize@ bsssize@ + header!
+	datasize@ bsssize@ + udatasize@ + datapages!
 
-	if (header@ 0xFFF &)
-		0x1000 header +=
+	if (datapages@ 0xFFF &)
+		0x1000 datapages +=
 	end
 
-	if (header@ ~~)
-		0x1000 header!
+	if (datapages@ ~~)
+		0x1000 datapages!
 	end
 
-	auto data
-	header@ 4096 / PMMAlloc data!
+	datapages@ 4096 / PMMAlloc data!
 
 	if (data@ iserr)
-		shdr@ 4096 / text@ PMMFree
-		data@ process!
+		textpages@ 4096 / text@ PMMFree
+		data@ text!
 		return
 	end
 
 	text@ textsize@ textoff@ vnode@ VRead bytes!
 
 	if (bytes@ textsize@ <)
-		shdr@ 4096 / text@ PMMFree
-		header@ 4096 / data@ PMMFree
-		bytes@ process!
+		textpages@ 4096 / text@ PMMFree
+		datapages@ 4096 / data@ PMMFree
+		-ENOEXEC text!
 		return
 	end
 
 	data@ datasize@ dataoff@ vnode@ VRead bytes!
 
 	if (bytes@ datasize@ <)
-		shdr@ 4096 / text@ PMMFree
-		header@ 4096 / data@ PMMFree
-		bytes@ process!
+		textpages@ 4096 / text@ PMMFree
+		datapages@ 4096 / data@ PMMFree
+		-ENOEXEC text!
 		return
 	end
 
@@ -251,21 +259,129 @@ fn VSpawn { vnode name -- process }
 		4 datasize +=
 	end
 
-	entry@ name@ ProcessNew process!
+	if (udatasize@)
+		bytes@ DATA + udata!
+
+		udatasize@ bytes +=
+
+		while (datasize@ bytes@ <)
+			udataptr@@ data@ datasize@ + !
+
+			4 udataptr +=
+			4 datasize +=
+		end
+	end else
+		0 udata!
+	end
+end
+
+fn private VNewProcess1 { vnode name udataptr udatasize -- process }
+	auto text
+	auto data
+	auto textpages
+	auto datapages
+	auto entry
+	auto udata
+
+	vnode@ udataptr@ udatasize@ LoadLOFF entry! datapages! textpages! data! udata! text!
+
+	if (text@ iserr)
+		text@ process!
+		return
+	end
+
+	entry@ name@ udata@ udatasize@ ProcessNew process!
 
 	if (process@ iserr)
-		shdr@ 4096 / text@ PMMFree
-		header@ 4096 / data@ PMMFree
+		textpages@ 4096 / text@ PMMFree
+		datapages@ 4096 / data@ PMMFree
 		return
 	end
 
 	text@ process@ Process_TextPhysical + !
-	shdr@ 4096 / process@ Process_TextPages + !
+	textpages@ 4096 / process@ Process_TextPages + !
 
 	data@ process@ Process_DataPhysical + !
-	header@ 4096 / process@ Process_DataPages + !
+	datapages@ 4096 / process@ Process_DataPages + !
 
 	1 process@ Process_Mapped + !
+
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	p@ Process_TTY + @ process@ Process_TTY + !
+
+	p@ Process_UID + @ process@ Process_UID + !
+
+	if (vnode@ VNode_Permissions + @ SUID &)
+		vnode@ VNode_UID + @ process@ Process_EUID + !
+	end else
+		p@ Process_UID + @ process@ Process_EUID + !
+	end
+
+	p@ process@ Process_Parent + !
+
+	auto cwd
+
+	p@ Process_CWDVNode + @ cwd!
+
+	cwd@ VNodeRef
+
+	cwd@ process@ Process_CWDVNode + !
+end
+
+fn VNewProcess { vnode name filp0 filp1 filp2 mode udataptr udatasize -- process }
+	vnode@ WORLD_X CurrentThread@ Thread_Process + @ Process_UID + @ VForbidden process!
+
+	if (process@ iserr)
+		return
+	end
+
+	vnode@ name@ udataptr@ udatasize@ VNewProcess1 process!
+
+	if (process@ iserr)
+		return
+	end
+
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	auto ofilen
+	process@ Process_OFiles + ofilen!
+
+	if (mode@ NP_INHERIT ==)
+		auto i
+		0 i!
+
+		auto ofile
+		p@ Process_OFiles + ofile!
+
+		while (i@ OFILEMAX <)
+			if (ofile@@)
+				ofile@@ FDup
+				ofile@@ ofilen@!
+			end
+
+			4 ofile +=
+			4 ofilen +=
+			1 i +=
+		end
+	end elseif (mode@ NP_SPECIFY ==)
+		if (filp0@)
+			filp0@ FDup
+			filp0@ ofilen@ 0 + !
+		end
+
+		if (filp1@)
+			filp1@ FDup
+			filp1@ ofilen@ 4 + !
+		end
+
+		if (filp2@)
+			filp2@ FDup
+			filp2@ ofilen@ 8 + !
+		end
+	end
 
 	process@ Process_MainThread + @ ThreadReady
 end

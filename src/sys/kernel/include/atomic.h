@@ -1,3 +1,8 @@
+struct EventQueue
+	4 FirstWaiter
+	4 LastWaiter
+endstruct
+
 extern LockMutex { mutex -- killed }
 
 extern UnlockMutex { mutex -- }

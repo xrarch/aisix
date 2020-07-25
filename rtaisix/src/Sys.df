@@ -1,0 +1,141 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/aisix.h"
+
+const SYSOPEN 1
+const SYSWRITE 2
+const SYSCLOSE 3
+const SYSREAD 4
+const SYSNEWPROC 5
+const SYSEXIT 6
+const SYSDUP 7
+const SYSIGN 8
+
+asm "
+
+_open:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSOPEN
+	sys
+	ret
+
+_write:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSWRITE
+	sys
+	ret
+
+_close:
+	mov a1, a0
+	li a0, SYSCLOSE
+	sys
+	ret
+
+_read:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSREAD
+	sys
+	ret
+
+_newprocess:
+	lio.l t2, sp, 20
+	lio.l t1, sp, 16
+	lio.l t0, sp, 12
+	lio.l v1, sp, 8
+	mov v0, a3
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSNEWPROC
+	sys
+	ret
+
+_exit:
+	mov a1, a0
+	li a0, SYSEXIT
+	sys
+	ret
+
+_dup:
+	mov a1, a0
+	li a0, SYSDUP
+	sys
+	ret
+
+_ttyign:
+	mov a1, a0
+	li a0, SYSIGN
+	sys
+	ret
+
+; fd c --
+FPutc:
+.global FPutc
+	subi.i sp, 4
+	s.l sp, zero, a0
+	mov a3, sp
+	li a2, 1
+	;mov a1, a1 ;already in a1 due to ABI
+	li a0, SYSWRITE
+	sys
+	addi.i sp, 4
+	ret
+
+"
+
+extern _open { mode pathlen path -- fd }
+
+fn Open { path mode -- fd }
+	mode@ path@ strlen path@ _open fd!
+end
+
+extern _write { buf len fd -- bytes }
+
+fn Write { buf len fd -- bytes }
+	buf@ len@ fd@ _write bytes!
+end
+
+extern _read { buf len fd -- bytes }
+
+fn Read { buf len fd -- bytes }
+	buf@ len@ fd@ _read bytes!
+end
+
+extern _close { fd -- ok }
+
+fn Close { fd -- ok }
+	fd@ _close ok!
+end
+
+extern _newprocess { pathlen path fd0 fd1 fd2 mode udataptr udatasz -- pid }
+
+fn NewProcess { path fd0 fd1 fd2 mode udataptr udatasz -- pid }
+	path@ strlen path@ fd0@ fd1@ fd2@ mode@ udataptr@ udatasz@ _newprocess pid!
+end
+
+fn Spawn { path -- pid }
+	path@ 0 0 0 NP_INHERIT 0 0 NewProcess pid!
+end
+
+extern _exit { ret -- }
+
+fn Exit { ret -- }
+	ret@ _exit
+end
+
+extern _dup { fd1 -- fd2 }
+
+fn FDup { fd1 -- fd2 }
+	fd1@ _dup fd2!
+end
+
+extern _ttyign { ign -- ok }
+
+fn SetTTYIgnore { ign -- ok }
+	ign@ _ttyign ok!
+end

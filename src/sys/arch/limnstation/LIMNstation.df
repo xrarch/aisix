@@ -135,11 +135,11 @@ fn PlatformSwitchSeg { proc -- }
 	0 base@ MMUSEG3FLAG + !
 end
 
-fn PlatformUserToPhys { len phys wr -- user valid }
+fn PlatformUserToPhys { len user wr -- phys valid }
 	auto seg
-	phys@ MMUSSHIFT >> seg!
+	user@ MMUSSHIFT >> seg!
 	auto off
-	phys@ MMUOFFMASK & off!
+	user@ MMUOFFMASK & off!
 
 	auto b
 	seg@ 8 * MMUSEGBASE + b!
@@ -148,12 +148,12 @@ fn PlatformUserToPhys { len phys wr -- user valid }
 	b@ MMUSEG0FLAG + @ flag!
 
 	auto sz
-	b@ MMUSEG1SIZE + @ sz!
+	b@ MMUSEG0SIZE + @ sz!
 
 	if (flag@ MMUPBIT & ~~)
 		0 valid!
 		return
-	end elseif (off@ len@ + sz@ >=)
+	end elseif (off@ len@ + sz@ MMUPSHIFT << >=)
 		0 valid!
 		return
 	end elseif (flag@ MMURWBIT & ~~ wr@ &&)
@@ -161,6 +161,6 @@ fn PlatformUserToPhys { len phys wr -- user valid }
 		return
 	end
 
-	flag@ MMUPHYMASK & MMUPSHIFT << off@ + user!
+	flag@ MMUPHYMASK & MMUPSHIFT << off@ + phys!
 	1 valid!
 end

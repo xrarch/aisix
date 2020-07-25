@@ -15,4 +15,4 @@ limnvol.a3x: $(OBJ)
 	$(DC) $< $@
 
 cleanup:
-	rm *.o *.a3x
+	rm -f *.o *.a3x

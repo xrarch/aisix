@@ -66,11 +66,6 @@ fn DrvSerialFoundNode { node -- }
 
 	intn@ SerialDataPort@ SerialCmdPort@ "serial @ citron:%x,%x int:%d" Printf
 
-	if ("-serialdebug" ArgsCheck)
-		1 SerialKDebug!
-		" -serialdebug present" Printf
-	end
-
 	pointerof SerialIntr intn@ InterruptRegister
 
 	SerialIntrEnable

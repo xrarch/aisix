@@ -33,6 +33,7 @@ struct Device
 	4 Permissions
 	4 IBuffer
 	4 OBuffer
+	4 TTY
 	4 Next
 	4 Prev
 endstruct
@@ -47,6 +48,10 @@ extern DeviceSysctl { op1 op2 op3 op4 dev -- ok }
 extern DeviceRead { buf len seek dev -- bytes }
 
 extern DeviceWrite { buf len seek dev -- bytes }
+
+extern DeviceOpen { dev -- ok }
+
+extern DeviceClose { dev -- ok }
 
 extern DevByName { name -- dev }
 

@@ -128,7 +128,17 @@ fn DeviceSysctl { op1 op2 op3 op4 dev -- ok }
 	op3@
 	op4@
 	dev@ Device_Unit + @
-	dev@ Device_Driver + @ Driver_Write + @ DevSysctl ok!
+	dev@ Device_Driver + @ Driver_Sysctl + @ DevSysctl ok!
+end
+
+fn DeviceOpen { dev -- ok }
+	dev@ Device_Unit + @
+	dev@ Device_Driver + @ Driver_Open + @ DevOpen ok!
+end
+
+fn DeviceClose { dev -- ok }
+	dev@ Device_Unit + @
+	dev@ Device_Driver + @ Driver_Close + @ DevClose ok!
 end
 
 fn (FSRead) DevFSRead { buf len seek vnode -- bytes }

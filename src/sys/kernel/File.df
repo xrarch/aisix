@@ -1,0 +1,301 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+const FilePTabSZ (MAXFILEP FileP_SIZEOF *)
+
+buffer FilePTab FilePTabSZ
+
+table ModeBits
+	WORLD_R
+	WORLD_W
+	(WORLD_R WORLD_W |)
+endtable
+
+fn private OnlyFD { -- fd }
+	auto i
+	0 i!
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	-EMFILE fd!
+
+	while (i@ OFILEMAX <)
+		if (ofile@@ 0 ==)
+			i@ fd!
+			return
+		end
+
+		4 ofile +=
+		1 i +=
+	end
+end
+
+fn GetFD { bits -- fd filp }
+	OnlyFD fd!
+
+	if (fd@ iserr)
+		return
+	end
+
+	FilePTab filp!
+
+	auto m
+	FilePTab FilePTabSZ + m!
+
+	while (filp@ m@ <)
+		auto rs
+		InterruptDisable rs!
+
+		if (filp@ FileP_Count + @ 0 ==)
+			1 filp@ FileP_Count + !
+
+			rs@ InterruptRestore
+
+			0 filp@ FileP_Seek + !
+			bits@ filp@ FileP_RWX + !
+
+			return
+		end
+
+		rs@ InterruptRestore
+
+		FileP_SIZEOF filp +=
+	end
+
+	-ENFILE fd!
+end
+
+fn GetFilp { fd -- filp }
+	if (fd@ iserr fd@ OFILEMAX >= ||)
+		-EBADF filp!
+		return
+	end
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	fd@ 4 * ofile@ + @ filp!
+
+	if (filp@ 0 ==)
+		-EBADF filp!
+		return
+	end
+end
+
+fn RefFilp { filp -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 filp@ FileP_Count + +=
+
+	rs@ InterruptRestore
+end
+
+fn UnrefFilp { filp -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 filp@ FileP_Count + -=
+
+	rs@ InterruptRestore
+end
+
+fn FDup { filp -- }
+	filp@ RefFilp
+	filp@ FileP_VNode + @ VNodeRef
+end
+
+fn FilDup { fd1 -- fd2 }
+	fd1@ GetFilp fd1!
+
+	if (fd1@ iserr)
+		fd1@ fd2!
+	end
+
+	OnlyFD fd2!
+
+	if (fd2@ iserr)
+		return
+	end
+
+	fd1@ FDup
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	fd1@ fd2@ 4 * ofile@ + !
+end
+
+fn Open { path mode -- fd }
+	if (mode@ 3 >=)
+		-EINVAL fd!
+		return
+	end
+
+	auto bits
+	[mode@]ModeBits@ bits!
+
+	auto filp
+	bits@ GetFD filp! fd!
+
+	if (fd@ iserr)
+		return
+	end
+
+	auto r
+
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		filp@ UnrefFilp
+		vnode@ fd!
+		return
+	end
+
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	vnode@ bits@ p@ Process_EUID + @ VForbidden r!
+
+	if (r@ iserr)
+		filp@ UnrefFilp
+		vnode@ VNodePut
+		r@ fd!
+		return
+	end
+
+	auto type
+	vnode@ VNode_Type + @ type!
+
+	if (type@ VNODE_DIR ==)
+		if (bits@ WORLD_W &)
+			filp@ UnrefFilp
+			vnode@ VNodePut
+			-EISDIR fd!
+			return
+		end
+	end elseif (type@ VNODE_CHAR ==)
+		if (p@ Process_TTY + @ ~~)
+			(* devfs uses its vnodes' fsdata to store the dev pointer *)
+			(* no other fs driver should be giving nodes of VNODE_CHAR !!! *)
+			vnode@ VNode_FSData + @ Device_TTY + @ p@ Process_TTY + !
+		end
+
+		vnode@ VNode_FSData + @ DeviceOpen r!
+
+		if (r@ iserr)
+			filp@ UnrefFilp
+			vnode@ VNodePut
+			r@ fd!
+			return
+		end
+	end elseif (type@ VNODE_BLOCK ==)
+		vnode@ VNode_FSData + @ DeviceOpen r!
+
+		if (r@ iserr)
+			filp@ UnrefFilp
+			vnode@ VNodePut
+			r@ fd!
+			return
+		end
+	end
+
+	vnode@ filp@ FileP_VNode + !
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	filp@ fd@ 4 * ofile@ + !
+
+	vnode@ VNodeRef
+
+	vnode@ VNodePut
+end
+
+fn Close { fd -- ok }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vnode
+	filp@ FileP_VNode + @ vnode!
+
+	auto type
+	vnode@ VNode_Type + @ type!
+
+	if (type@ VNODE_CHAR == type@ VNODE_BLOCK == ||)
+		vnode@ VNode_FSData + @ DeviceClose ok!
+	end else
+		0 ok!
+	end
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	0 fd@ 4 * ofile@ + !
+
+	vnode@ VNodeUnref
+	filp@ UnrefFilp
+end
+
+fn Write { buf len fd -- bytes }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ bytes!
+		return
+	end
+
+	if (filp@ FileP_RWX + @ WORLD_W & ~~)
+		-EACCES bytes!
+		return
+	end
+
+	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VWrite bytes!
+
+	if (bytes@ iserr)
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	bytes@ filp@ FileP_Seek + +=
+
+	rs@ InterruptRestore
+end
+
+fn Read { buf len fd -- bytes }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ bytes!
+		return
+	end
+
+	if (filp@ FileP_RWX + @ WORLD_R & ~~)
+		-EACCES bytes!
+		return
+	end
+
+	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VRead bytes!
+
+	if (bytes@ iserr)
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	bytes@ filp@ FileP_Seek + +=
+
+	rs@ InterruptRestore
+end

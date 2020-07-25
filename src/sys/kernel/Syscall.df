@@ -1,12 +1,255 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
+#include "<inc>/context.h"
 
 table Syscalls
 	0
-	pointerof TestSyscall
+	pointerof SysOpen
+	pointerof SysWrite
+	pointerof SysClose
+	pointerof SysRead
+	pointerof SysNewProcess
+	pointerof SysExit
+	pointerof SysDup
+	pointerof SysSetTTYIgnore
 endtable
 public Syscalls
 
-fn (Syscall) TestSyscall { tf -- }
-	CurrentThread@ Thread_Process + @ Process_Name + "this is a test syscall from %s!!\n" Printf
+fn private GetString { user len -- str }
+	auto r
+	len@ user@ 0 PlatformUserToPhys r! user!
+
+	if (r@ ~~)
+		-EINVAL str!
+		return
+	end
+
+	len@ 1 + Calloc str!
+
+	if (str@ iserr)
+		return
+	end
+
+	str@ user@ len@ strncpy
+end
+
+fn (Syscall) SysOpen { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	auto mode
+	tf@ Context_a3 + @ mode!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ mode@ Open ok!
+
+	path@ Free
+end
+
+fn (Syscall) SysWrite { tf -- ok }
+	auto buf
+	tf@ Context_a3 + @ buf!
+
+	auto len
+	tf@ Context_a2 + @ len!
+
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto r
+	len@ buf@ 0 PlatformUserToPhys r! buf!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	buf@ len@ fd@ Write ok!
+end
+
+fn (Syscall) SysClose { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	fd@ Close ok!
+end
+
+fn (Syscall) SysRead { tf -- ok }
+	auto buf
+	tf@ Context_a3 + @ buf!
+
+	auto len
+	tf@ Context_a2 + @ len!
+
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto r
+	len@ buf@ 1 PlatformUserToPhys r! buf!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	buf@ len@ fd@ Read ok!
+end
+
+fn (Syscall) SysNewProcess { tf -- ok }
+	auto udsz
+	tf@ Context_a1 + @ udsz!
+
+	auto udp
+	tf@ Context_a2 + @ udp!
+
+	auto mode
+	tf@ Context_a3 + @ mode!
+
+	auto fd2
+	tf@ Context_v0 + @ fd2!
+
+	auto fd1
+	tf@ Context_v1 + @ fd1!
+
+	auto fd0
+	tf@ Context_t0 + @ fd0!
+
+	auto path
+	tf@ Context_t1 + @ path!
+
+	auto pathlen
+	tf@ Context_t2 + @ pathlen!
+
+	if (mode@ NP_SPECIFY >)
+		-EINVAL ok!
+		return
+	end
+
+	if (udp@ 3 &)
+		-EINVAL ok!
+		return
+	end
+
+	if (udsz@ 3 &)
+		-EINVAL ok!
+		return
+	end
+
+	if (udsz@)
+		auto r
+		udsz@ udp@ 1 PlatformUserToPhys r! udp!
+
+		if (r@ ~~)
+			-EINVAL ok!
+			return
+		end
+	end else
+		0 udp!
+	end
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		path@ Free
+		vnode@ ok!
+		return
+	end
+
+	if (mode@ NP_SPECIFY ==)
+		if (fd0@ -1 ==)
+			0 fd0!
+		end else
+			fd0@ GetFilp fd0!
+			if (fd0@ iserr)
+				fd0@ ok!
+				path@ Free
+				vnode@ VNodePut
+				return
+			end
+		end
+
+		if (fd1@ -1 ==)
+			0 fd1!
+		end else
+			fd1@ GetFilp fd1!
+			if (fd1@ iserr)
+				fd1@ ok!
+				path@ Free
+				vnode@ VNodePut
+				return
+			end
+		end
+
+		if (fd2@ -1 ==)
+			0 fd2!
+		end else
+			fd2@ GetFilp fd2!
+			if (fd2@ iserr)
+				fd2@ ok!
+				path@ Free
+				vnode@ VNodePut
+				return
+			end
+		end
+	end
+
+	auto proc
+
+	vnode@ path@ fd0@ fd1@ fd2@ mode@ udp@ udsz@ VNewProcess proc!
+
+	vnode@ VNodePut
+
+	path@ Free
+
+	if (proc@ iserr)
+		proc@ ok!
+		return
+	end
+
+	proc@ Process_PID + @ ok!
+end
+
+fn (Syscall) SysExit { tf -- ok }
+	auto ret
+	tf@ Context_a1 + @ ret!
+
+	ret@ ProcessExit
+
+	0 ok!
+end
+
+fn (Syscall) SysDup { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	fd@ FilDup ok!
+end
+
+fn (Syscall) SysSetTTYIgnore { tf -- ok }
+	auto ttyign
+	tf@ Context_a1 + @ ttyign!
+
+	if (ttyign@ 1 >)
+		-EINVAL ok!
+		return
+	end
+
+	ttyign@ CurrentThread@ Thread_Process + @ Process_IgnoreTTY + !
 end

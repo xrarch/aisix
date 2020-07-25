@@ -72,7 +72,6 @@ struct VNode
 	4 Permissions
 	4 Size
 	4 CoveredBy
-	4 DirParent
 endstruct
 
 const VNODE_FILE 1
@@ -91,6 +90,10 @@ const GROUP_R 32
 const OWNER_X 64
 const OWNER_W 128
 const OWNER_R 256
+
+const SUID 512
+
+const XMASK 73
 
 struct VDirent
 	4 Mount
@@ -132,3 +135,5 @@ extern SyncVNodes { mount remove -- res }
 extern VFSMount { path fs dev -- mount }
 
 extern VFSUnmount { mount -- ok }
+
+extern VForbidden { vnode rwx uid -- ok }

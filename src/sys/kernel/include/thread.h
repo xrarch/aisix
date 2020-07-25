@@ -1,8 +1,3 @@
-struct EventQueue
-	4 FirstWaiter
-	4 LastWaiter
-endstruct
-
 const THREADNAMELEN 32
 
 struct Thread
@@ -31,14 +26,16 @@ struct Thread
 	THREADNAMELEN Name
 endstruct
 
+const OFILEMAX 64
+
 const PROCNAMELEN 32
 
 struct Process
 	4 Threads
 	4 Mapped
 	4 Parent
-	4 UserID
-	4 EUserID
+	4 UID
+	4 EUID
 
 	4 MainThread
 
@@ -55,8 +52,15 @@ struct Process
 
 	4 Exited
 
+	4 TTY
+	4 IgnoreTTY
+
+	Mutex_SIZEOF Mutex
+
 	4 Index
 	4 PID
+
+	256 OFiles (* dragonfruit is dumb so we can't use a nice constant here, but this is OFILEMAX=64 * 4 *)
 
 	4 ReturnValue
 	PROCNAMELEN Name
@@ -86,7 +90,7 @@ const TS_EVENT 5
 
 extern PlatformSwitchSeg { proc -- }
 
-extern PlatformUserToPhys { len phys wr -- user valid }
+extern PlatformUserToPhys { len user wr -- phys valid }
 
 extern JumpIntoScheduler { -- }
 
@@ -116,4 +120,14 @@ extern ThreadFree { thread -- }
 
 extern cswtch { old new -- }
 
-extern ProcessNew { entry name -- process }
+extern ProcessNew { entry name udata udatasz -- process }
+
+extern ProcLock { proc -- killed }
+
+extern ProcUnlock { proc -- }
+
+extern LockMe { -- killed }
+
+extern UnlockMe { -- }
+
+extern KillTTY { tty -- }

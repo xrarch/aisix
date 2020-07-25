@@ -2,8 +2,8 @@
 #include "<inc>/args.h"
 #include "<inc>/minfo.h"
 #include "<inc>/interrupts.h"
-#include "<inc>/thread.h"
 #include "<inc>/atomic.h"
+#include "<inc>/thread.h"
 #include "<inc>/klog.h"
 #include "<inc>/vfs.h"
 #include "<inc>/dev.h"
@@ -14,6 +14,7 @@
 #include "<inc>/gfx.h"
 #include "<inc>/exec.h"
 #include "<inc>/sys.h"
+#include "<inc>/fd.h"
 
 extern Panic { ... fmt -- }
 

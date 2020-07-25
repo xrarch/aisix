@@ -8,9 +8,39 @@ fn Abort { ... fmt -- }
 end
 
 fn Puts { s -- }
-
+	s@ s@ strlen STDOUT Write drop
 end
 
 fn Putc { c -- }
+	STDOUT c@ FPutc
+end
 
+fn Readline { s max -- eof }
+	auto bytes
+	0 bytes!
+
+	0 eof!
+
+	s@ max@ STDIN Read bytes!
+
+	if (bytes@ 0 ==)
+		1 eof!
+		return
+	end
+
+	if (s@ bytes@ 1 - + gb '\n' ~=)
+		0 s@ sb
+		return
+	end
+
+	0 s@ bytes@ 1 - + sb
+end
+
+fn Gets { s max -- }
+	auto eof
+	1 eof!
+
+	while (eof@)
+		s@ max@ Readline eof!
+	end
 end

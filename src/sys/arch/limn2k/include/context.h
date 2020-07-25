@@ -30,4 +30,4 @@ const RS_INT 2
 const RS_MMU 4
 const RS_TIMER 8
 
-extern CPUContextPrepare { entry stack kern -- ctx }
+extern CPUContextPrepare { a0 a1 entry stack kern -- ctx }

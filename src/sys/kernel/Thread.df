@@ -25,7 +25,7 @@ fn ThreadInit { -- }
 	PROCMAX THREADMAX "max %d threads, %d processes\n" Printf
 
 	auto process
-	pointerof AISIXInitialThread "kernel" ProcessNew process!
+	pointerof AISIXInitialThread "kernel" 0 0 ProcessNew process!
 
 	if (process@ iserr KernelProcess@ process@ ~= ||)
 		"couldn't set up kernel process\n" Panic
@@ -127,18 +127,14 @@ fn ThreadKill { thread -- }
 
 		1 process@ Process_Threads + -=
 
-		auto killproc
-		0 killproc!
+		auto thr
+		process@ Process_Threads + @ thr!
 
 		if (process@ Process_MainThread + @ thread@ ==)
 			0 process@ Process_MainThread + !
-			if (process@ Process_Exited + @ ~~)
-				0 process@ ProcessKill
-			end
-		end elseif (process@ Process_Threads + @ 0 ==)
-			if (process@ Process_Exited + @ ~~)
-				0 process@ ProcessKill
-			end
+			0 process@ ProcessKill
+		end elseif (thr@ 0 ==)
+			0 process@ ProcessKill
 		end
 	end else
 		if (thst@ TS_EVENT ==)
@@ -188,29 +184,26 @@ fn ThreadExit { -- }
 
 	1 process@ Process_Threads + -=
 
-	if (process@ Process_Threads + @ 1 <=)
-		if (process@ Process_Exited + @ ~~)
-			0 ProcessExit
-		end
-	end else
-		if (process@ Process_MainThread + @ thread@ ==)
-			0 process@ Process_MainThread + !
-			if (process@ Process_Exited + @ ~~)
-				0 ProcessExit
-			end
-		end
+	auto thr
+	process@ Process_Threads + @ thr!
+	
+	if (process@ Process_MainThread + @ thread@ ==)
+		0 process@ Process_MainThread + !
+		0 ProcessExit
+	end	elseif (thr@ 0 ==)
+		0 ProcessExit
 	end
 
-	thread@ ThreadFree
-
 	0 thread@ Thread_Status + !
+
+	thread@ ThreadFree
 
 	JumpIntoScheduler
 
 	"exit returned\n" Panic
 end
 
-fn ThreadNew { process entry name kern -- thread }
+fn ThreadNew { process entry name kern pass0 pass1 -- thread }
 	ThreadAllocate thread!
 
 	if (thread@ iserr)
@@ -236,7 +229,7 @@ fn ThreadNew { process entry name kern -- thread }
 
 	KERNELSTACKPAGES 4096 * stack@ + dup thread@ Thread_KernelStackTop + ! uc!
 
-	entry@ uc@ kern@ CPUContextPrepare thread@ Thread_Context + !
+	pass0@ pass1@ entry@ uc@ kern@ CPUContextPrepare thread@ Thread_Context + !
 
 	thread@ Thread_Name + name@ THREADNAMELEN 1 - strncpy
 
@@ -248,10 +241,16 @@ fn ThreadReady { thread -- }
 end
 
 fn KernelThreadNew { entry name -- thread }
-	KernelProcess@ entry@ name@ 1 ThreadNew thread!
+	KernelProcess@ entry@ name@ 1 0 0 ThreadNew thread!
 end
 
 extern CPUIdle { -- }
+
+var DebugNextSched 0
+public DebugNextSched
+
+var TTYKill 0
+public TTYKill
 
 var SchedulerContext 0
 
@@ -266,6 +265,16 @@ fn Scheduler { -- }
 		0 i!
 
 		while (i@ THREADMAX <)
+			if (DebugNextSched@)
+				0 DebugNextSched!
+				KDebug
+			end
+
+			if (TTYKill@)
+				TTYKill@ KillTTY
+				0 TTYKill!
+			end
+
 			[i@]Threads@ thread!
 
 			if (thread@ 0 ==)
@@ -433,6 +442,22 @@ end
 
 (* =========== process management =========== *)
 
+fn ProcLock { proc -- killed }
+	proc@ Process_Mutex + LockMutex killed!
+end
+
+fn ProcUnlock { proc -- }
+	proc@ Process_Mutex + UnlockMutex
+end
+
+fn LockMe { -- killed }
+	CurrentThread@ Thread_Process + @ ProcLock killed!
+end
+
+fn UnlockMe { -- }
+	CurrentThread@ Thread_Process + @ ProcUnlock
+end
+
 var NextPID 1
 
 fn private ProcessAllocate { -- process }
@@ -483,10 +508,10 @@ fn private ProcessFreeSlot { process -- }
 
 	0 [index@]Processes!
 
-	[index@]Processes@ Free
+	process@ Free
 end
 
-fn ProcessNew { entry name -- process }
+fn ProcessNew { entry name udata udatasz -- process }
 	ProcessAllocate process!
 
 	if (process@ iserr)
@@ -502,20 +527,11 @@ fn ProcessNew { entry name -- process }
 		1 kernel!
 	end
 
-	if (CurrentThread@)
-		auto parent
-		CurrentThread@ Thread_Process + @ parent!
-
-		parent@ process@ Process_Parent + !
-
-		parent@ Process_UserID + @ dup
-		process@ Process_UserID + !
-		process@ Process_EUserID + !
-	end
+	"process" process@ Process_Mutex + InitMutex
 
 	auto mthread
 
-	process@ entry@ "main" kernel@ ThreadNew mthread!
+	process@ entry@ "main" kernel@ udata@ udatasz@ ThreadNew mthread!
 
 	mthread@ process@ Process_MainThread + !
 
@@ -530,6 +546,26 @@ fn ProcessNew { entry name -- process }
 	end
 end
 
+fn KillTTY { tty -- }
+	auto i
+	0 i!
+
+	while (i@ PROCMAX <)
+		auto proc
+		[i@]Processes@ proc!
+
+		if (proc@)
+			if (proc@ Process_IgnoreTTY + @ ~~)
+				if (proc@ Process_TTY + @ tty@ ==)
+					0 proc@ ProcessKill
+				end
+			end
+		end
+
+		1 i +=
+	end
+end
+
 fn ProcessExit { ret -- }
 	auto process
 	CurrentThread@ Thread_Process + @ process!
@@ -537,43 +573,8 @@ fn ProcessExit { ret -- }
 	ret@ process@ ProcessKill
 end
 
-fn ProcessKill { ret process -- }
-	if (process@ KernelProcess@ ==)
-		"kernel process killed!\n" Panic
-	end
-
-	auto rs
-	InterruptDisable rs!
-
-	1 process@ Process_Exited + !
-
-	ret@ process@ Process_ReturnValue + !
-
+fn private ReparentChildren { process -- }
 	auto i
-	0 i!
-
-	while (i@ THREADMAX <)
-		auto thread
-		[i@]Threads@ thread!
-
-		if (thread@)
-			if (thread@ Thread_Process + @ process@ ==)
-				thread@ ThreadKill
-			end
-		end
-
-		1 i +=
-	end
-
-	(* all of the userspace threads will never run again, and the kernel ones will exit
-	instead of returning home, so it's safe to free the process image now *)
-	if (process@ Process_Mapped + @)
-		process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
-		process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
-	end
-
-	(* do wait syscall stuff here *)
-
 	0 i!
 
 	while (i@ PROCMAX <)
@@ -590,6 +591,78 @@ fn ProcessKill { ret process -- }
 
 		1 i +=
 	end
+end
+
+fn ProcessKill { ret process -- }
+	if (process@ KernelProcess@ ==)
+		"kernel process killed!\n" Panic
+	end
+
+	if (process@ InitProcess@ ==)
+		"init process killed!\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	auto i
+	0 i!
+
+	if (process@ Process_Exited + @ ~~)
+		ret@ process@ Process_ReturnValue + !
+
+		1 process@ Process_Exited + !
+
+		while (i@ THREADMAX <)
+			auto thread
+			[i@]Threads@ thread!
+
+			if (thread@)
+				if (thread@ Thread_Process + @ process@ ==)
+					thread@ ThreadKill
+				end
+			end
+
+			1 i +=
+		end
+
+		(* all of the userspace threads will never run again, and the kernel ones will exit
+		instead of returning home, so it's safe to free the process image now *)
+		if (process@ Process_Mapped + @)
+			process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
+			process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
+			0 process@ Process_Mapped + !
+		end
+
+		(* do wait syscall stuff here *)
+	end
+
+	auto thleft
+	process@ Process_Threads + @ thleft!
 
 	rs@ InterruptRestore
+
+	(* do the stuff the last kernel thread would have done if there were any left, which there aren't *)
+	if (thleft@ 0 ==)
+		process@ Process_Name + "freed proc %s\n" Printf
+
+		process@ ReparentChildren
+
+		process@ ProcessFreeSlot
+
+		process@ Process_CWDVNode + @ VNodeUnref
+
+		auto ofile
+		process@ Process_OFiles + ofile!
+
+		while (i@ OFILEMAX <)
+			if (ofile@@)
+				ofile@@ FileP_VNode + @ VNodeUnref
+				ofile@@ UnrefFilp
+			end
+
+			4 ofile +=
+			1 i +=
+		end
+	end
 end

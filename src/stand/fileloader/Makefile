@@ -21,4 +21,4 @@ loader.a3x: $(OBJ)
 	$(DC) $< $@
 
 cleanup:
-	rm *.o *.bin *.LOFF
+	rm -f *.o *.bin *.LOFF

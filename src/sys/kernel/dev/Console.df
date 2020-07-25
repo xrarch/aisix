@@ -150,7 +150,10 @@ fn ConsInit { -- }
 		[ConsTTY@]ErrorNames@ "couldn't allocate ConsTTY: %s\n" Panic
 	end
 
-	OWNER_W OWNER_R | WORLD_W | WORLD_R | 0 0 "cons" ConsDriver 0 DeviceRegister drop
+	auto dev
+	OWNER_W OWNER_R | WORLD_W | WORLD_R | 0 0 "cons" ConsDriver 0 DeviceRegister dev!
+
+	ConsTTY@ dev@ Device_TTY + !
 
 	1 ConsInited!
 end

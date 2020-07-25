@@ -6,11 +6,11 @@ AS      = ../../../sdk/asm.sh
 OBJTOOL = ../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-all: init.LOFF
+all: sh.LOFF
 
-init.LOFF: $(OBJ)
-	$(LD) init.LOFF $(OBJ) L/rtaisix/rtaisix.o
-	$(OBJTOOL) move init.LOFF aisix
+sh.LOFF: $(OBJ)
+	$(LD) sh.LOFF $(OBJ) L/rtaisix/rtaisix.o
+	$(OBJTOOL) move sh.LOFF aisix
 
 %.o: %.df
 	$(DC) $< $@

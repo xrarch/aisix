@@ -30,4 +30,4 @@ aisix.a3x: $(OBJ)
 	$(DC) $(DCFLAGS) $< $@
 
 cleanup:
-	rm ${OBJ} *.a3x *.LOFF
+	rm -f ${OBJ} *.a3x *.LOFF

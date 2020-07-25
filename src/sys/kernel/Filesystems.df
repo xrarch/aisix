@@ -215,23 +215,6 @@ fn VFSPath { path -- vnode }
 			continue
 		end
 
-		if (pcomp@ ".." strcmp)
-			if (mount@ Mount_Root + @ vnode@ ~=)
-				vnode@ VNode_DirParent + @ mount@ VNodeGet ok!
-
-				if (ok@ iserr)
-					vnode@ VNodePut
-					ok@ vnode!
-					break
-				end
-
-				vnode@ VNodePut
-				ok@ vnode!
-			end
-
-			continue
-		end
-
 		dirent@ rwd@ FSRewindDir ok!
 
 		if (ok@ iserr)
@@ -261,10 +244,6 @@ fn VFSPath { path -- vnode }
 				if (ok@ iserr)
 					ok@ vnode!
 					break
-				end
-
-				if (ok@ VNode_Type + @ VNODE_DIR ==)
-					vnid@ ok@ VNode_DirParent + !
 				end
 
 				ok@ vnode!
@@ -519,6 +498,42 @@ fn VFSUnmount { mount -- ok }
 	mount@ fs@ Filesystem_Unmount + @ FSUnmount ok!
 
 	mount@ Free
+end
+
+fn VForbidden { vnode rwx uid -- ok }
+	auto bits
+	vnode@ VNode_Permissions + @ bits!
+
+	auto permbits
+
+	if (uid@ 0 ==) (* superuser *)
+		7 permbits!
+	end else
+		auto shift
+		if (vnode@ VNode_UID + @ uid@ ==)
+			6 shift! (* owner *)
+		end else (* world; groups NYI *)
+			0 shift!
+		end
+
+		bits@ shift@ >> 7 & permbits!
+	end
+
+	0 ok!
+
+	if (permbits@ rwx@ | permbits@ ~=)
+		-EACCES ok!
+	end
+
+	if (rwx@ WORLD_X & bits@ XMASK & 0 == &&)
+		-EACCES ok!
+	end
+
+	if (rwx@ WORLD_X &)
+		if (vnode@ VNode_Mount + @ Mount_ReadOnly + @)
+			-EROFS ok!
+		end
+	end
 end
 
 fn VFSSyncWorker { -- }
