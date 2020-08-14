@@ -41,7 +41,7 @@ fnptr FSCreate { dirvnode name type uid permissions -- vnode }
 
 fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
 
-fnptr FSDelete { vnode -- ok }
+fnptr FSDelete { dirvnode name -- ok }
 
 fnptr FSTrunc { vnode -- ok }
 

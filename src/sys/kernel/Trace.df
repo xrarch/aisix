@@ -1,0 +1,69 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+externptr SymbolTable
+externptr SymbolCount
+
+struct TabSym
+	4 Name
+	4 Value
+endstruct
+
+fn GetSym { pc -- symbase symname }
+	0 symbase!
+	0 symname!
+
+	auto i
+	0 i!
+
+	auto sym
+	SymbolTable sym!
+
+	auto symcount
+	SymbolCount symcount!
+
+	while (i@ symcount@ <)
+		if (pc@ sym@ TabSym_Value + @ >=)
+			sym@ TabSym_Value + @ symbase!
+			sym@ TabSym_Name + @ symname!
+		end elseif (pc@ sym@ TabSym_Value + @ <)
+			return
+		end
+
+		TabSym_SIZEOF sym +=
+		1 i +=
+	end
+end
+
+fn Trace { pc link -- }
+	auto links
+	0 links!
+
+	while (link@)
+		if (links@ 20 >=)
+			" maxtrace!\n" Printf
+			return
+		end
+
+		if (link@ 3 &)
+			" unaligned!\n" Printf
+			return
+		end
+
+		auto symbase
+		auto symname
+
+		pc@ GetSym symname! symbase!
+
+		if (symname@ ~~)
+			"UNKNOWN" symname!
+		end
+
+		pc@ symbase@ - symname@ link@ " (sp=0x%x) <%s+0x%x>\n" Printf
+
+		link@ 4 + @ pc!
+		link@@ link!
+
+		1 links +=
+	end
+end

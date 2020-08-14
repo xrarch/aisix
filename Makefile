@@ -27,29 +27,31 @@ dist: $(DISTIMAGE) bootable stand kernel cmd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
-	$(FSTOOL) w /kernel $(KERNEL_DIR)/aisix.a3x
+	$(FSTOOL) w /sys/aisix.A3X $(KERNEL_DIR)/aisix.a3x
 
 cmd: init sh
 
 init:
+	rm -f $(INIT_DIR)/*.o
 	make --directory=$(INIT_DIR)
-	$(FSTOOL) w /etc/init $(INIT_DIR)/init.LOFF
-	$(FSTOOL) chmod /etc/init 73
+	$(FSTOOL) w /sys/init.LOFF $(INIT_DIR)/init.LOFF
+	$(FSTOOL) chmod /sys/init.LOFF 73
 
 sh:
+	rm -f $(SH_DIR)/*.o
 	make --directory=$(SH_DIR)
-	$(FSTOOL) w /bin/sh $(SH_DIR)/sh.LOFF
-	$(FSTOOL) chmod /bin/sh 73
+	$(FSTOOL) w /cmd/sh.LOFF $(SH_DIR)/sh.LOFF
+	$(FSTOOL) chmod /cmd/sh.LOFF 73
 
 stand: diag limnvol
 
 diag:
 	make --directory=$(DIAG_DIR)
-	$(FSTOOL) w /stand/diag $(DIAG_DIR)/diag.a3x
+	$(FSTOOL) w /stand/diag.A3X $(DIAG_DIR)/diag.a3x
 
 limnvol:
 	make --directory=$(LIMNVOL_DIR)
-	$(FSTOOL) w /stand/limnvol $(LIMNVOL_DIR)/limnvol.a3x
+	$(FSTOOL) w /stand/limnvol.A3X $(LIMNVOL_DIR)/limnvol.a3x
 
 bootable:
 	make --directory=$(FILELOADER_DIR)

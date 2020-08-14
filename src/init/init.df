@@ -3,7 +3,7 @@
 
 fn Main { ... -- ret }
 	(* don't die when ^C hit on /dev/cons *)
-	1 SetTTYIgnore drop
+	TTYI_IGN SetTTYIgnore drop
 
 	auto stdin
 	auto stdout
@@ -24,11 +24,11 @@ fn Main { ... -- ret }
 	end
 
 	auto shpid
-	"/bin/sh" Spawn shpid!
+	"/cmd/sh.LOFF" Spawn shpid!
 
 	if (shpid@ iserr)
 		shpid@ abs shpid!
-		[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
+		[shpid@]ErrorNames@ "init: couldn't spawn /cmd/sh.LOFF: %s\n" Printf
 	end else
 		shpid@ "init: shpid = %d\n" Printf
 	end

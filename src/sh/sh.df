@@ -2,21 +2,83 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn Main { ... -- ret }
+	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
+
+	auto i
+	0 i!
+
+	while (i@ argc@ <)
+		[i@]argv@ "%s\n" Printf
+
+		1 i +=
+	end
+
 	auto prompt
 	256 Malloc prompt!
 
+	auto pname
+	256 Calloc pname!
+
+	auto pcomp
+	256 Calloc pcomp!
+
+	auto argvt
+	32 4 * Malloc argvt!
+	
 	while (1)
 		"# " Printf
 		if (prompt@ 255 Readline)
 			0 Exit
 		end
 
+		if (prompt@ strlen 0 ==)
+			continue
+		end
+
+		auto nt
+		prompt@ pname@ ' ' 255 strntok nt!
+
+		if (pname@ strlen 0 ==)
+			continue
+		end
+
+		auto abuf
+		nt@ strlen 1 + Malloc abuf!
+
+		auto argcn
+		0 argcn!
+
+		auto p
+		abuf@ p!
+
+		auto q
+		argvt@ q!
+
+		while (nt@ 0 ~=)
+			if (argcn@ 32 >=)
+				break
+			end
+
+			nt@ pcomp@ ' ' 255 strntok nt!
+
+			p@ pcomp@ strcpy
+
+			p@ q@ !
+
+			pcomp@ strlen 1 + p +=
+
+			1 argcn +=
+			4 q +=
+		end
+
 		auto r
-		prompt@ Spawn r!
+		argcn@ argvt@ pname@ VSpawn r!
+
+		abuf@ Free
 
 		if (r@ iserr)
 			r@ abs r!
-			[r@]ErrorNames@ "sh: couldn't spawn: %s\n" Printf
+			[r@]ErrorNames@ pname@ "sh: couldn't spawn %s: %s\n" Printf
 		end else
 			r@ "pid=%d\n" Printf
 		end

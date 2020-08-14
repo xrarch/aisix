@@ -35,9 +35,9 @@ fn GetBootFile { -- }
 			"load-file" "getVar" a3xDCallMethod drop drop drop ab!
 
 			if (ab@ 0 ==)
-				"/kernel" "load-file" "setVar" a3xDCallMethod drop drop drop drop
+				"/sys/aisix.A3X" "load-file" "setVar" a3xDCallMethod drop drop drop drop
 
-				"/kernel" ab!
+				"/sys/aisix.A3X" ab!
 			end
 		a3xDeviceExit
 	end else
@@ -69,14 +69,14 @@ fn GetBootDrive { -- }
 	BootFile@ word@ ')' 255 strntok nw!
 
 	if (word@ Select ~~)
-		"/kernel" BootFile!
+		"/sys/aisix.A3X" BootFile!
 
 		word@ Free
 		return
 	end
 
 	if (nw@ 0 ==)
-		"/kernel" BootFile!
+		"/sys/aisix.A3X" BootFile!
 	end else
 		nw@ 1 + BootFile!
 		word@ BFAlloc2!

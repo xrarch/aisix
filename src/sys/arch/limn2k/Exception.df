@@ -40,9 +40,15 @@ exception_vector:
 	mov    a2, badaddr
 	mov    a1, ecause
 	mov    a0, sp            ; give Exception our context
+
+	subi.i sp, 4
+	s.l    sp, zero, zero ; put a zero link
+
 	jal    Exception         ; call Exception, to handle the exception
 
 	li     badaddr, 0        ; clear badaddr because the processor doesn't do it for us
+
+	addi.i sp, 4
 
 forkret:
 
@@ -177,6 +183,8 @@ fn Exception { badaddr ecause tf -- }
 		if (mode@ 0 ==)
 			(* kernel mode exception, panic *)
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
+		end else
+			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "ecause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Printf
 		end
 
 		1 CurrentThread@ Thread_Killed + !

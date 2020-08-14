@@ -17,6 +17,8 @@ public KernelProcess
 var InitProcess 0
 public InitProcess
 
+var TryNextThread 0
+
 const KERNELPID 1
 
 extern AISIXInitialThread { -- }
@@ -555,7 +557,7 @@ fn KillTTY { tty -- }
 		[i@]Processes@ proc!
 
 		if (proc@)
-			if (proc@ Process_IgnoreTTY + @ ~~)
+			if (proc@ Process_IgnoreTTY + @ 0xFF & 0 ==)
 				if (proc@ Process_TTY + @ tty@ ==)
 					0 proc@ ProcessKill
 				end

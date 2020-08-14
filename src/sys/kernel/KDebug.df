@@ -147,6 +147,11 @@ fn MonitorCommandsInit { -- }
 	pointerof MonitorCommandKill
 	"kill"
 	MonitorAddCommand
+
+	"[tid] Perform stack trace from thread context."
+	pointerof MonitorCommandTraceThread
+	"thtrace"
+	MonitorAddCommand
 end
 
 fn CommandPanic { -- }
@@ -247,6 +252,31 @@ fn MonitorCommandKillThread { -- }
 	end
 
 	thread@ ThreadKill
+end
+
+extern Trace { pc link -- }
+
+fn MonitorCommandTraceThread { -- }
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ THREADMAX >=)
+		return
+	end
+
+	auto thread
+	[tid@]Threads@ thread!
+
+	if (thread@ 0 ==)
+		return
+	end
+
+	thread@ Thread_Context + @ Context_lr + @ thread@ Thread_Context + @ Context_SIZEOF + Trace
 end
 
 fn MonitorCommandKill { -- }
@@ -408,7 +438,7 @@ fn ListThreads { -- }
 				return
 			end
 
-			i@ "[%d]\t" Printf
+			thread@ i@ "[%d/0x%x]\t" Printf
 
 			auto parent
 			thread@ Thread_Process + @ parent!

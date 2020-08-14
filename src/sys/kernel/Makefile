@@ -18,9 +18,12 @@ DCFLAGS = incdir=./include/:$(PLATFORM_DIR)/include/:$(CPU_DIR)/include/ target=
 all: aisix.a3x
 
 aisix.a3x: $(OBJ)
-	$(LD) aisix.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/cia3x.o L/dfrt/dfrt.f.o
-	$(OBJTOOL) move aisix.a3x text=0x80000,data=text+text_size,bss=data+data_size
-	cp aisix.a3x aisix.LOFF
+	$(LD) -f aisix.f.LOFF L/rta3x/_boot.o $(OBJ) L/rta3x/cia3x.o L/dfrt/dfrt.f.o
+	$(OBJTOOL) symtab SYM.s_ aisix.f.LOFF 0x80000
+	$(AS) SYM.s_ SYM.o
+	$(LD) aisix.LOFF aisix.f.LOFF SYM.o
+	$(OBJTOOL) move aisix.LOFF text=0x80000,data=text+text_size,bss=data+data_size
+	cp aisix.LOFF aisix.a3x
 	$(OBJTOOL) binary -nobss aisix.a3x
 
 %.o: %.s

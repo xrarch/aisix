@@ -112,14 +112,50 @@ fn Close { fd -- ok }
 	fd@ _close ok!
 end
 
-extern _newprocess { pathlen path fd0 fd1 fd2 mode udataptr udatasz -- pid }
+extern _newprocess { pathlen path fd0 fd1 fd2 mode udatavec udatac -- pid }
 
-fn NewProcess { path fd0 fd1 fd2 mode udataptr udatasz -- pid }
-	path@ strlen path@ fd0@ fd1@ fd2@ mode@ udataptr@ udatasz@ _newprocess pid!
+fn NewProcess { path fd0 fd1 fd2 mode udatavec udatac -- pid }
+	path@ strlen path@ fd0@ fd1@ fd2@ mode@ udatavec@ udatac@ _newprocess pid!
 end
 
-fn Spawn { path -- pid }
-	path@ 0 0 0 NP_INHERIT 0 0 NewProcess pid!
+fn VSpawn { argcn argvt path -- pid }
+	auto uvec
+	argcn@ 2 + UDVec_SIZEOF * Malloc uvec!
+
+	(* some day soon [0]uvec will be envp, but for now make it zero *)
+	0 uvec@ UDVec_Size + !
+	0 uvec@ UDVec_Ptr + !
+
+	auto i
+	0 i!
+
+	auto p
+	uvec@ p!
+
+	UDVec_SIZEOF p +=
+
+	(* [1]uvec is the path we are calling the process by *)
+	path@ strlen 1 + p@ UDVec_Size + !
+	path@ p@ UDVec_Ptr + !
+
+	UDVec_SIZEOF p +=
+
+	while (i@ argcn@ <)
+		argvt@@ strlen 1 + p@ UDVec_Size + !
+		argvt@@ p@ UDVec_Ptr + !
+
+		4 argvt +=
+		UDVec_SIZEOF p +=
+		1 i +=
+	end
+
+	path@ 0 0 0 NP_INHERIT uvec@ argcn@ 2 + NewProcess pid!
+
+	uvec@ Free
+end
+
+fn Spawn { ... path -- pid }
+	argc@ argv path@ VSpawn pid!
 end
 
 extern _exit { ret -- }

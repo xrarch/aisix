@@ -23,7 +23,7 @@ externptr _HeapSize
 
 fn _HeapInit { -- }
 	pointerof _HeapStart dup KHeapStart! KHeapLast!
-	pointerof _HeapSize KHeapSize!
+	pointerof _HeapSize @ KHeapSize!
 
 	KHeapSize@ KHeapStart@ KHeapHeader_size + !
 	0 KHeapStart@ KHeapHeader_last + !

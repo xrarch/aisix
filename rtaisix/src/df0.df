@@ -1,11 +1,12 @@
+#include "<df>/dragonfruit.h"
 #include "<inc>/aisix.h"
 
 extern _HeapInit { -- }
 
-fn _Launch { -- }
+extern _MainTrampoline { udv udc -- }
+
+fn _Launch { udc udv -- }
 	_HeapInit
 
-	Main drop
-
-	0 Exit
+	udv@ udc@ _MainTrampoline
 end

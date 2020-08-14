@@ -13,7 +13,7 @@ fn LockMutex { mutex -- killed }
 
 	0 killed!
 
-	if (mutex@ Mutex_Locked + @)
+	while (mutex@ Mutex_Locked + @)
 		if (CurrentThread@ 0 ==)
 			"LockMutex: if we aren't in thread context, we can lock a mutex, but we can't wait on one!\n" Panic
 		end
@@ -21,7 +21,7 @@ fn LockMutex { mutex -- killed }
 		if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ==)
 			auto mn
 
-			"none" mn!
+			"unknown" mn!
 
 			if (mutex@ Mutex_Name + @)
 				mutex@ Mutex_Name + @ mn!
@@ -50,13 +50,13 @@ fn UnlockMutex { mutex -- }
 	if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ~=)
 		auto mn
 
-		"none" mn!
+		"unknown" mn!
 
 		if (mutex@ Mutex_Name + @)
 			mutex@ Mutex_Name + @ mn!
 		end
 
-		mn@ "UnlockMutex: never owned '%s'\n" Panic
+		mutex@ Mutex_OwnerThread + @ mn@ "UnlockMutex: never owned '%s', was owned by %x\n" Panic
 	end
 
 	0 mutex@ Mutex_Locked + !

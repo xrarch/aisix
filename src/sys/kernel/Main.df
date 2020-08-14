@@ -67,20 +67,22 @@ fn AISIXInitialThread { -- }
 	VFSMountRoot
 
 	auto vnode
-	"/etc/init" VFSPath vnode!
+	"/sys/init.LOFF" VFSPath vnode!
 
 	if (vnode@ iserr)
 		vnode@ abs vnode!
-		[vnode@]ErrorNames@ "couldn't open /etc/init: %s\n" Printf
+		[vnode@]ErrorNames@ "couldn't open /sys/init.LOFF: %s\n" Printf
 	end else
-		vnode@ "/etc/init" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
+		vnode@ VNodeUnlock
+
+		vnode@ "/sys/init.LOFF" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
+
+		vnode@ VNodeUnref
 
 		if (InitProcess@ iserr)
 			InitProcess@ abs InitProcess!
-			[InitProcess@]ErrorNames@ "couldn't spawn /etc/init: %s\n" Printf
+			[InitProcess@]ErrorNames@ "couldn't spawn /sys/init.LOFF: %s\n" Printf
 		end
-
-		vnode@ VNodePut
 	end
 
 	(* become an idle thread *)

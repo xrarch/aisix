@@ -504,6 +504,12 @@ fn VForbidden { vnode rwx uid -- ok }
 	auto bits
 	vnode@ VNode_Permissions + @ bits!
 
+	if (rwx@ WORLD_X & vnode@ VNode_Type + @ VNODE_DIR == &&)
+		(* first things first, check if executing a directory, and return with an appropriate error *)
+		-EISDIR ok!
+		return
+	end
+
 	auto permbits
 
 	if (uid@ 0 ==) (* superuser *)

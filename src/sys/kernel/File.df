@@ -258,6 +258,9 @@ fn Write { buf len fd -- bytes }
 		return
 	end
 
+	auto vnode
+	filp@ FileP_VNode + @ vnode!
+
 	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VWrite bytes!
 
 	if (bytes@ iserr)
@@ -285,6 +288,9 @@ fn Read { buf len fd -- bytes }
 		-EACCES bytes!
 		return
 	end
+
+	auto vnode
+	filp@ FileP_VNode + @ vnode!
 
 	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VRead bytes!
 

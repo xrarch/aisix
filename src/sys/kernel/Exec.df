@@ -50,65 +50,194 @@ fn private GetEntry { header vnode -- entry }
 	sym@ Free
 end
 
-(* this is really long but 90% of it is just making sure the executable is sane *)
+fn private ParseLOFF { vnode -- textsize textoff datasize dataoff bsssize entry }
+	auto header
+	LOFFHeader_SIZEOF Malloc header!
 
-(* there's also a lot of reusing autos for things their name doesnt make sense for,
-because the DF compiler doesn't support overflowing autos to the stack frame yet,
-so i can't make any more than the registers have room for *)
-fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages datapages entry }
-	LOFFHeader_SIZEOF Malloc textpages!
-
-	if (textpages@ iserr)
-		-ENOMEM text!
+	if (header@ iserr)
+		-ENOMEM textsize!
 		return
 	end
 
 	auto bytes
 
-	textpages@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+	header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
 
 	if (bytes@ LOFFHeader_SIZEOF <)
 		if (bytes@ iserr)
-			bytes@ text!
+			bytes@ textsize!
 		end else
-			-ENOEXEC text!
+			-ENOEXEC textsize!
 		end
-		textpages@ Free
+		header@ Free
 		return
 	end
 
-	if (textpages@ LOFFHeader_Magic + @ LOFFMagic ~=)
-		-ENOEXEC text!
-		textpages@ Free
+	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
+		-ENOEXEC textsize!
+		header@ Free
 		return
 	end
 
-	if (textpages@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
-		-ENOEXEC text!
-		textpages@ Free
+	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
+		-ENOEXEC textsize!
+		header@ Free
 		return
 	end
 
-	textpages@ vnode@ GetEntry entry!
+	header@ vnode@ GetEntry entry!
 	if (entry@ iserr)
-		entry@ text!
-		textpages@ Free
+		entry@ textsize!
+		header@ Free
 		return
 	end
 
-	textpages@ LOFFHeader_TextHeader + @ text!
-	textpages@ LOFFHeader_DataHeader + @ data!
-	textpages@ LOFFHeader_BSSHeader + @ udata!
+	auto th
+	header@ LOFFHeader_TextHeader + @ th!
 
-	textpages@ Free
+	auto dh
+	header@ LOFFHeader_DataHeader + @ dh!
 
-	LOFFSectionHeader_SIZEOF Malloc textpages!
+	auto bh
+	header@ LOFFHeader_BSSHeader + @ bh!
 
-	if (textpages@ iserr)
-		-ENOMEM text!
+	header@ Free
+
+	LOFFSectionHeader_SIZEOF Malloc header!
+
+	if (header@ iserr)
+		-ENOMEM textsize!
 		return
 	end
 
+	header@ LOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ textsize!
+		end else
+			-ENOEXEC textsize!
+		end
+		header@ Free
+		return
+	end
+
+	if (header@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
+		-ENOEXEC textsize!
+		header@ Free
+		return
+	end
+
+	header@ LOFFSectionHeader_SectionOffset + @ textoff!
+	header@ LOFFSectionHeader_SectionSize + @ textsize!
+
+	header@ LOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ textsize!
+		end else
+			-ENOEXEC textsize!
+		end
+		header@ Free
+		return
+	end
+
+	if (header@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
+		-ENOEXEC textsize!
+		header@ Free
+		return
+	end
+
+	header@ LOFFSectionHeader_SectionOffset + @ dataoff!
+	header@ LOFFSectionHeader_SectionSize + @ datasize!
+
+	header@ LOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF <)
+		if (bytes@ iserr)
+			bytes@ textsize!
+		end else
+			-ENOEXEC textsize!
+		end
+		header@ Free
+		return
+	end
+
+	(* BSS must be contiguous with DATA *)
+	if (header@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
+		-ENOEXEC textsize!
+		header@ Free
+		return
+	end
+
+	header@ LOFFSectionHeader_SectionSize + @ bsssize!
+
+	header@ Free
+
+	if (textsize@ 3 &)
+		-ENOEXEC textsize!
+		return
+	end
+
+	if (datasize@ 3 &)
+		-ENOEXEC textsize!
+		return
+	end
+
+	if (bsssize@ 3 &)
+		-ENOEXEC textsize!
+		return
+	end
+end
+
+(* look through udvec and calculate how much memory needs to be appended to the end of
+the process's data section in order to accomodate the udata *)
+fn private VecSize { udvec udcnt -- bytes }
+	udcnt@ UDVec_SIZEOF * bytes! (* make room for table *)
+
+	auto i
+	0 i!
+
+	while (i@ udcnt@ <)
+		udvec@ UDVec_Size + @ bytes +=
+
+		UDVec_SIZEOF udvec +=
+		1 i +=
+	end
+end
+
+fn private VecCopy { udvec udcnt base ubase -- }
+	auto i
+	0 i!
+
+	auto data
+	udcnt@ UDVec_SIZEOF * base@ + data!
+
+	auto udata
+	udcnt@ UDVec_SIZEOF * ubase@ + udata!
+
+	auto sz
+
+	while (i@ udcnt@ <)
+		udvec@ UDVec_Size + @ sz!
+
+		sz@ base@ UDVec_Size + !
+		udata@ base@ UDVec_Ptr + !
+
+		if (sz@ 0 ~=)
+			data@ udvec@ UDVec_Ptr + @ sz@ memcpy
+		end
+
+		sz@ data +=
+		sz@ udata +=
+		UDVec_SIZEOF base +=
+		UDVec_SIZEOF udvec +=
+		1 i +=
+	end
+end
+
+fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages entry }
 	auto textsize
 	auto textoff
 
@@ -117,84 +246,10 @@ fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages data
 
 	auto bsssize
 
-	textpages@ LOFFSectionHeader_SIZEOF text@ vnode@ VRead bytes!
+	vnode@ ParseLOFF entry! bsssize! dataoff! datasize! textoff! textsize!
 
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
-		if (bytes@ iserr)
-			bytes@ text!
-		end else
-			-ENOEXEC text!
-		end
-		textpages@ Free
-		return
-	end
-
-	if (textpages@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
-		-ENOEXEC text!
-		textpages@ Free
-		return
-	end
-
-	textpages@ LOFFSectionHeader_SectionOffset + @ textoff!
-	textpages@ LOFFSectionHeader_SectionSize + @ textsize!
-
-	textpages@ LOFFSectionHeader_SIZEOF data@ vnode@ VRead bytes!
-
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
-		if (bytes@ iserr)
-			bytes@ text!
-		end else
-			-ENOEXEC text!
-		end
-		textpages@ Free
-		return
-	end
-
-	if (textpages@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
-		-ENOEXEC text!
-		textpages@ Free
-		return
-	end
-
-	textpages@ LOFFSectionHeader_SectionOffset + @ dataoff!
-	textpages@ LOFFSectionHeader_SectionSize + @ datasize!
-
-	textpages@ LOFFSectionHeader_SIZEOF udata@ vnode@ VRead bytes!
-
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
-		if (bytes@ iserr)
-			bytes@ text!
-		end else
-			-ENOEXEC text!
-		end
-		textpages@ Free
-		return
-	end
-
-	(* BSS must be contiguous with DATA *)
-	if (textpages@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
-		-ENOEXEC text!
-		textpages@ Free
-		return
-	end
-
-	textpages@ LOFFSectionHeader_SectionSize + @ bsssize!
-
-	textpages@ Free
-
-	if (textsize@ 3 &)
-		-ENOEXEC text!
-		return
-	end
-
-	if (datasize@ 3 &)
-		-ENOEXEC text!
-		return
-	end
-
-	if (bsssize@ 3 &)
-		-ENOEXEC text!
-		return
+	if (textsize@ iserr)
+		textsize@ text!
 	end
 
 	(* start trying to copy sections in and zero BSS *)
@@ -205,7 +260,7 @@ fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages data
 		0x1000 textpages +=
 	end
 
-	if (textpages@ ~~)
+	if (textpages@ 0 ==)
 		0x1000 textpages!
 	end
 
@@ -215,13 +270,15 @@ fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages data
 		return
 	end
 
-	datasize@ bsssize@ + udatasize@ + datapages!
+	datasize@ bsssize@ + datapages!
+
+	udvec@ udcnt@ VecSize datapages +=
 
 	if (datapages@ 0xFFF &)
 		0x1000 datapages +=
 	end
 
-	if (datapages@ ~~)
+	if (datapages@ 0 ==)
 		0x1000 datapages!
 	end
 
@@ -232,6 +289,8 @@ fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages data
 		data@ text!
 		return
 	end
+
+	auto bytes
 
 	text@ textsize@ textoff@ vnode@ VRead bytes!
 
@@ -259,38 +318,30 @@ fn private LoadLOFF { vnode udataptr udatasize -- text udata data textpages data
 		4 datasize +=
 	end
 
-	if (udatasize@)
+	if (udcnt@)
 		bytes@ DATA + udata!
 
-		udatasize@ bytes +=
-
-		while (datasize@ bytes@ <)
-			udataptr@@ data@ datasize@ + !
-
-			4 udataptr +=
-			4 datasize +=
-		end
+		udvec@ udcnt@ data@ datasize@ + udata@ VecCopy
 	end else
 		0 udata!
 	end
 end
 
-fn private VNewProcess1 { vnode name udataptr udatasize -- process }
+fn private VNewProcess1 { vnode name udvec udcnt -- process }
 	auto text
 	auto data
 	auto textpages
 	auto datapages
 	auto entry
-	auto udata
 
-	vnode@ udataptr@ udatasize@ LoadLOFF entry! datapages! textpages! data! udata! text!
+	vnode@ udvec@ udcnt@ LoadLOFF entry! datapages! textpages! data! udvec! text!
 
 	if (text@ iserr)
 		text@ process!
 		return
 	end
 
-	entry@ name@ udata@ udatasize@ ProcessNew process!
+	entry@ name@ udvec@ udcnt@ ProcessNew process!
 
 	if (process@ iserr)
 		textpages@ 4096 / text@ PMMFree
@@ -330,14 +381,14 @@ fn private VNewProcess1 { vnode name udataptr udatasize -- process }
 	cwd@ process@ Process_CWDVNode + !
 end
 
-fn VNewProcess { vnode name filp0 filp1 filp2 mode udataptr udatasize -- process }
+fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 	vnode@ WORLD_X CurrentThread@ Thread_Process + @ Process_UID + @ VForbidden process!
 
 	if (process@ iserr)
 		return
 	end
 
-	vnode@ name@ udataptr@ udatasize@ VNewProcess1 process!
+	vnode@ name@ udvec@ udcnt@ VNewProcess1 process!
 
 	if (process@ iserr)
 		return
@@ -381,6 +432,17 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udataptr udatasize -- process
 			filp2@ FDup
 			filp2@ ofilen@ 8 + !
 		end
+	end
+
+	auto ity
+	p@ Process_IgnoreTTY + @ ity!
+
+	if (ity@ TTYI_CHILD_ALL &)
+		TTYI_ALL process@ Process_IgnoreTTY + !
+	end elseif (ity@ TTYI_CHILD_IGN &)
+		TTYI_IGN process@ Process_IgnoreTTY + !
+	end else
+		ity@ process@ Process_IgnoreTTY + !
 	end
 
 	process@ Process_MainThread + @ ThreadReady

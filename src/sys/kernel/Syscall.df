@@ -104,12 +104,68 @@ fn (Syscall) SysRead { tf -- ok }
 	buf@ len@ fd@ Read ok!
 end
 
-fn (Syscall) SysNewProcess { tf -- ok }
-	auto udsz
-	tf@ Context_a1 + @ udsz!
+fn private GetKVec { udc udv -- kdv }
+	0 kdv!
 
-	auto udp
-	tf@ Context_a2 + @ udp!
+	auto p1
+	auto p2
+	auto r
+
+	if (udc@)
+		udc@ UDVec_SIZEOF * udv@ 1 PlatformUserToPhys r! udv!
+
+		if (r@ ~~)
+			-EINVAL kdv!
+			return
+		end
+
+		udc@ UDVec_SIZEOF * Malloc kdv!
+
+		if (kdv@ iserr)
+			-ENOMEM kdv!
+			return
+		end
+
+		auto i
+		0 i!
+
+		kdv@ p1!
+
+		while (i@ udc@ <)
+			if (udv@ UDVec_Size + @ 0 ==)
+				0 p1@ UDVec_Size + !
+				0 p1@ UDVec_Ptr + !
+
+				1 i +=
+				UDVec_SIZEOF p1 +=
+				UDVec_SIZEOF udv +=
+				continue
+			end
+
+			udv@ UDVec_Size + @ udv@ UDVec_Ptr + @ 0 PlatformUserToPhys r! p2!
+
+			if (r@ ~~)
+				kdv@ Free
+				-EINVAL kdv!
+				return
+			end
+
+			udv@ UDVec_Size + @ p1@ UDVec_Size + !
+			p2@ p1@ UDVec_Ptr + !
+
+			UDVec_SIZEOF p1 +=
+			UDVec_SIZEOF udv +=
+			1 i +=
+		end
+	end
+end
+
+fn (Syscall) SysNewProcess { tf -- ok }
+	auto udc
+	tf@ Context_a1 + @ udc!
+
+	auto udv
+	tf@ Context_a2 + @ udv!
 
 	auto mode
 	tf@ Context_a3 + @ mode!
@@ -126,40 +182,31 @@ fn (Syscall) SysNewProcess { tf -- ok }
 	auto path
 	tf@ Context_t1 + @ path!
 
-	auto pathlen
-	tf@ Context_t2 + @ pathlen!
-
 	if (mode@ NP_SPECIFY >)
 		-EINVAL ok!
 		return
 	end
 
-	if (udp@ 3 &)
+	if (udv@ 3 &)
 		-EINVAL ok!
 		return
 	end
 
-	if (udsz@ 3 &)
-		-EINVAL ok!
+	auto kdv
+	udc@ udv@ GetKVec kdv!
+
+	if (kdv@ iserr)
+		kdv@ ok!
 		return
 	end
 
-	if (udsz@)
-		auto r
-		udsz@ udp@ 1 PlatformUserToPhys r! udp!
-
-		if (r@ ~~)
-			-EINVAL ok!
-			return
-		end
-	end else
-		0 udp!
-	end
-
-	path@ pathlen@ GetString path!
+	path@ tf@ Context_t2 + @ GetString path!
 
 	if (path@ iserr)
 		path@ ok!
+		if (kdv@)
+			kdv@ Free
+		end
 		return
 	end
 
@@ -168,6 +215,9 @@ fn (Syscall) SysNewProcess { tf -- ok }
 
 	if (vnode@ iserr)
 		path@ Free
+		if (kdv@)
+			kdv@ Free
+		end
 		vnode@ ok!
 		return
 	end
@@ -181,6 +231,9 @@ fn (Syscall) SysNewProcess { tf -- ok }
 				fd0@ ok!
 				path@ Free
 				vnode@ VNodePut
+				if (kdv@)
+					kdv@ Free
+				end
 				return
 			end
 		end
@@ -193,6 +246,9 @@ fn (Syscall) SysNewProcess { tf -- ok }
 				fd1@ ok!
 				path@ Free
 				vnode@ VNodePut
+				if (kdv@)
+					kdv@ Free
+				end
 				return
 			end
 		end
@@ -205,6 +261,9 @@ fn (Syscall) SysNewProcess { tf -- ok }
 				fd2@ ok!
 				path@ Free
 				vnode@ VNodePut
+				if (kdv@)
+					kdv@ Free
+				end
 				return
 			end
 		end
@@ -212,11 +271,17 @@ fn (Syscall) SysNewProcess { tf -- ok }
 
 	auto proc
 
-	vnode@ path@ fd0@ fd1@ fd2@ mode@ udp@ udsz@ VNewProcess proc!
+	vnode@ VNodeUnlock
 
-	vnode@ VNodePut
+	vnode@ path@ fd0@ fd1@ fd2@ mode@ kdv@ udc@ VNewProcess proc!
+
+	vnode@ VNodeUnref
 
 	path@ Free
+
+	if (kdv@)
+		kdv@ Free
+	end
 
 	if (proc@ iserr)
 		proc@ ok!
@@ -246,7 +311,12 @@ fn (Syscall) SysSetTTYIgnore { tf -- ok }
 	auto ttyign
 	tf@ Context_a1 + @ ttyign!
 
-	if (ttyign@ 1 >)
+	if (ttyign@ 0xFF & 1 >)
+		-EINVAL ok!
+		return
+	end
+
+	if (ttyign@ 8 >> 3 >=)
 		-EINVAL ok!
 		return
 	end

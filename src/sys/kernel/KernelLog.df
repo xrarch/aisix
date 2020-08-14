@@ -147,8 +147,25 @@ extern PlatformPanic { -- }
 
 extern PlatformPrePanic { -- }
 
+extern Trace { pc link -- }
+
+var PanicLink 0
+
+asm "
+
+GetLink:
+	la t0, PanicLink
+	s.l t0, zero, sp
+	ret
+
+"
+
+extern GetLink { -- }
+
 fn Panic { ... fmt -- }
 	InterruptDisable drop
+
+	GetLink
 
 	1 Panicked!
 
@@ -171,6 +188,8 @@ fn Panic { ... fmt -- }
 	end
 
 	PlatformAlertUser
+
+	pointerof Panic PanicLink@ Trace
 
 	CurrentThread@ thn@ procn@ "running process: %s (thread: %s [%x])\n" Printf
 

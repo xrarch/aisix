@@ -282,7 +282,7 @@ fn (FSRename) DevFSRename { srcdirvnode srcname destdirvnode destname -- ok }
 	-EPERM ok!
 end
 
-fn (FSDelete) DevFSDelete { vnode -- ok }
+fn (FSDelete) DevFSDelete { dirvnode name -- ok }
 	-EPERM ok!
 end
 
@@ -368,7 +368,7 @@ end
 fn (FSRewindDir) DevFSRewindDir { dirent -- ok }
 	0 ok!
 
-	1 dirent@ VDirent_Index + !
+	0 dirent@ VDirent_Index + !
 end
 
 fn (FSReadDir) DevFSReadDir { dirent -- ok }
@@ -383,6 +383,16 @@ fn (FSReadDir) DevFSReadDir { dirent -- ok }
 
 	auto index
 	dirent@ VDirent_Index + @ index!
+
+	if (index@ 0 ==)
+		0 dirent@ VDirent_VNID + !
+
+		1 dirent@ VDirent_Index + !
+
+		".." dirent@ VDirent_Name + !
+
+		return
+	end
 
 	if (index@ 1 - Devices@ >=)
 		-ENOENT ok!
