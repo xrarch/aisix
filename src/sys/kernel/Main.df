@@ -49,6 +49,8 @@ var Done 0
 
 var TestIOBuf 0
 
+extern VCacheInit { -- }
+
 extern ConsInit { -- }
 
 extern VConsInit { -- }
@@ -57,6 +59,8 @@ extern CPUHlt { -- }
 
 fn AISIXInitialThread { -- }
 	"initial thread was switched to successfully\n" Printf
+
+	VCacheInit
 
 	VFSInit
 
@@ -67,21 +71,21 @@ fn AISIXInitialThread { -- }
 	VFSMountRoot
 
 	auto vnode
-	"/sys/init.LOFF" VFSPath vnode!
+	"/sys/init" VFSPath vnode!
 
 	if (vnode@ iserr)
 		vnode@ abs vnode!
-		[vnode@]ErrorNames@ "couldn't open /sys/init.LOFF: %s\n" Printf
+		[vnode@]ErrorNames@ "couldn't open /sys/init: %s\n" Printf
 	end else
 		vnode@ VNodeUnlock
 
-		vnode@ "/sys/init.LOFF" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
+		vnode@ "/sys/init" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
 
 		vnode@ VNodeUnref
 
 		if (InitProcess@ iserr)
 			InitProcess@ abs InitProcess!
-			[InitProcess@]ErrorNames@ "couldn't spawn /sys/init.LOFF: %s\n" Printf
+			[InitProcess@]ErrorNames@ "couldn't spawn /sys/init: %s\n" Printf
 		end
 	end
 

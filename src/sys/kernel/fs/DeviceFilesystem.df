@@ -163,6 +163,11 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 
 	(* it must be a block device, be cleverer *)
 
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
 	auto tot
 	0 tot!
 
@@ -224,6 +229,11 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 	end
 
 	(* it must be a block device, be cleverer *)
+
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
 
 	auto tot
 	0 tot!

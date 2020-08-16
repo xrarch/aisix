@@ -6,6 +6,7 @@ const FilePTabSZ (MAXFILEP FileP_SIZEOF *)
 buffer FilePTab FilePTabSZ
 
 table ModeBits
+	0
 	WORLD_R
 	WORLD_W
 	(WORLD_R WORLD_W |)
@@ -128,13 +129,13 @@ fn FilDup { fd1 -- fd2 }
 end
 
 fn Open { path mode -- fd }
-	if (mode@ 3 >=)
+	if (mode@ 3 & 0 ==)
 		-EINVAL fd!
 		return
 	end
-
+	
 	auto bits
-	[mode@]ModeBits@ bits!
+	[mode@ 3 &]ModeBits@ bits!
 
 	auto filp
 	bits@ GetFD filp! fd!

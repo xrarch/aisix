@@ -124,6 +124,8 @@ fn IOBufPutc { c buf sleeponfull -- ok }
 			1 wake!
 		end elseif (c@ 4 ==)
 			1 wake!
+		end elseif (c@ 3 ==)
+			1 wake!
 		end
 	end else
 		1 wake!

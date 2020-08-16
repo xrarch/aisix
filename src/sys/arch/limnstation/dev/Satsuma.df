@@ -2,6 +2,7 @@
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
 #include "<inc>/dev/citron.h"
+#include "<inc>/dev/dma.h"
 
 const DKSCmdPort 0x19
 const DKSPortA 0x1A
@@ -199,7 +200,7 @@ fn (DevRead) DKSRead { buf len unit seek -- bytes }
 
 	rs@ InterruptRestore
 
-	buf@ DKSBuffer 4096 memcpy
+	DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
 
 	UnlockDKS
 

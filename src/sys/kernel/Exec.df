@@ -260,7 +260,7 @@ fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages e
 		0x1000 textpages +=
 	end
 
-	if (textpages@ 0 ==)
+	if (textpages@ 4096 / 0 ==)
 		0x1000 textpages!
 	end
 
@@ -278,7 +278,7 @@ fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages e
 		0x1000 datapages +=
 	end
 
-	if (datapages@ 0 ==)
+	if (datapages@ 4096 / 0 ==)
 		0x1000 datapages!
 	end
 

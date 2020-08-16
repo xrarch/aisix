@@ -94,26 +94,21 @@ fn (DevRead) GFXRead { buf len unit seek -- bytes }
 		return
 	end
 
-	if (seek@ sz@ >=)
-		-ENOSPC bytes!
+	if (len@ 0 s<=)
+		0 bytes!
 		return
+	end
+
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
 	end
 
 	auto fb
 	gfx@ GFX_FBAddr + @ fb!
 
-	0 bytes!
+	len@ bytes!
 
-	while (bytes@ len@ <)
-		if (seek@ sz@ >=)
-			return
-		end
-
-		fb@ seek@ + gb buf@ bytes@ + sb
-
-		1 bytes +=
-		1 seek +=
-	end
+	buf@ fb@ seek@ + len@ memcpy
 end
 
 fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
@@ -132,24 +127,24 @@ fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
 		return
 	end
 
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
 	if (seek@ sz@ >=)
 		-ENOSPC bytes!
 		return
 	end
 
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
+	end
+
 	auto fb
 	gfx@ GFX_FBAddr + @ fb!
 
-	0 bytes!
+	len@ bytes!
 
-	while (bytes@ len@ <)
-		if (seek@ sz@ >=)
-			return
-		end
-
-		buf@ bytes@ + gb fb@ seek@ + sb
-
-		1 bytes +=
-		1 seek +=
-	end
+	fb@ seek@ + buf@ len@ memcpy
 end

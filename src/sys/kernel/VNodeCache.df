@@ -5,6 +5,10 @@ table VNodeCache[VNCACHESIZE]
 
 buffer VNodeCacheMutex Mutex_SIZEOF
 
+fn VCacheInit { -- }
+	"vnode cache" VNodeCacheMutex InitMutex
+end
+
 fn LockVCache { -- killed }
 	VNodeCacheMutex LockMutex killed!
 end
@@ -261,12 +265,6 @@ fn SyncVNodes { mount remove -- res }
 		end
 	end
 
-	if (LockVCache)
-		rs@ InterruptRestore
-		-EINTR res!
-		return
-	end
-
 	mount@ MountRef
 
 	rs@ InterruptRestore
@@ -275,23 +273,27 @@ fn SyncVNodes { mount remove -- res }
 	mount@ Mount_Filesystem + @ fs!
 
 	while (i@ VNCACHESIZE <)
+		InterruptDisable rs!
+
 		auto vnode
 		[i@]VNodeCache@ vnode!
 
 		if (vnode@ 0 ==)
 			1 i +=
+			rs@ InterruptRestore
 			continue
 		end
 
-		if (vnode@ VNode_Mount + @ mount@ ==)
-			if (vnode@ VNodeLock)
-				-EINTR res!
-				mount@ MountUnref
-				UnlockVCache
-				return
-			end
+		vnode@ VNodeRef
 
+		rs@ InterruptRestore
+
+		if (vnode@ VNode_Mount + @ mount@ ==)
 			if (remove@)
+				(* assume this vnode isnt being touched by anybody else, because this code path
+				should only be reached by unmounting, which first ensures no vnodes on the volume
+				are ref'd *)
+
 				if (vnode@ VNodeRemove iserr)
 					"SyncVNodes: VNodeRemove\n" Panic
 				end
@@ -305,20 +307,18 @@ fn SyncVNodes { mount remove -- res }
 					res@ abs res!
 					[res@]ErrorNames@ vnode@ "(%x) sync error: %s\n" Printf
 				end
-
-				vnode@ VNodeUnlock
 			end
 
 			1 i +=
 			continue
 		end
 
+		vnode@ VNodeUnref
+
 		1 i +=
 	end
 
 	mount@ MountUnref
-
-	UnlockVCache
 
 	0 res!
 end

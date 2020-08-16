@@ -20,7 +20,7 @@ fn GetSym { pc -- symbase symname }
 	SymbolTable sym!
 
 	auto symcount
-	SymbolCount symcount!
+	SymbolCount@ symcount!
 
 	while (i@ symcount@ <)
 		if (pc@ sym@ TabSym_Value + @ >=)
@@ -40,7 +40,7 @@ fn Trace { pc link -- }
 	0 links!
 
 	while (link@)
-		if (links@ 20 >=)
+		if (links@ 32 >=)
 			" maxtrace!\n" Printf
 			return
 		end

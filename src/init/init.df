@@ -24,11 +24,11 @@ fn Main { ... -- ret }
 	end
 
 	auto shpid
-	"/cmd/sh.LOFF" Spawn shpid!
+	"/bin/sh" Spawn shpid!
 
 	if (shpid@ iserr)
 		shpid@ abs shpid!
-		[shpid@]ErrorNames@ "init: couldn't spawn /cmd/sh.LOFF: %s\n" Printf
+		[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
 	end else
 		shpid@ "init: shpid = %d\n" Printf
 	end

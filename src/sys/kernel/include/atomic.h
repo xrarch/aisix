@@ -1,4 +1,5 @@
 struct EventQueue
+	4 Mutex (* if applicable *)
 	4 FirstWaiter
 	4 LastWaiter
 endstruct

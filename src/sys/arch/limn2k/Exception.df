@@ -12,7 +12,8 @@ const CYCLESLICE 100000
 
 asm "
 
-exception_vector:
+limn2k_exception:
+.global limn2k_exception ; so that it shows up properly in stack traces
 	mov   k2, sp ; save old sp in k2,
 	             ; this could be a usermode sp, in which case it needs saving,
 	             ; or a kernel mode sp, in which case we'll keep using it,
@@ -42,7 +43,7 @@ exception_vector:
 	mov    a0, sp            ; give Exception our context
 
 	subi.i sp, 4
-	s.l    sp, zero, zero ; put a zero link
+	s.l    sp, zero, zero    ; put a zero link so that stacktraces dont freak out here
 
 	jal    Exception         ; call Exception, to handle the exception
 
@@ -103,7 +104,7 @@ PlatformSetTimer:
 
 ExceptionInit:
 .global ExceptionInit
-	la ev, exception_vector
+	la ev, limn2k_exception
 	ret
 
 "
@@ -198,6 +199,10 @@ end
 asm "
 
 CPUKThreadEntry:
+.global CPUKThreadEntry
+	subi.i sp, 4
+	s.l    sp, zero, zero ; put a zero link so that stacktraces dont freak out here
+
 	bseti rs, rs, 1
 	bseti rs, rs, 3
 
@@ -248,6 +253,7 @@ PreemptEnable:
 InterruptEnable:
 .global InterruptEnable
 	bseti rs, rs, 1
+	bseti rs, rs, 3
 	ret
 
 InterruptDisable:

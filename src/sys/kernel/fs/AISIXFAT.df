@@ -288,7 +288,7 @@ fn private BMap { bn reading vnode -- buf }
 
 		if (ent@ 0xFFFFFFFF ==)
 			if (reading@)
-				"balloc on read\n" Panic
+				i@ "balloc on read: %d\n" Panic
 			end
 
 			0xFFFFFFFF mount@ BAlloc buf!
@@ -307,6 +307,7 @@ fn private BMap { bn reading vnode -- buf }
 			ent@ b@ mount@ SetBlockStatus t!
 
 			if (t@ iserr)
+				t@ buf!
 				return
 			end
 		end
@@ -376,7 +377,7 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 		vnode@ VNode_Size + @ seek@ - len!
 	end
 
-	if (len@ 0 ==)
+	if (len@ 0 s<=)
 		0 bytes!
 		return
 	end
@@ -430,7 +431,7 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 		return
 	end
 
-	if (len@ 0 ==)
+	if (len@ 0 s<=)
 		0 bytes!
 		return
 	end

@@ -152,6 +152,16 @@ fn MonitorCommandsInit { -- }
 	pointerof MonitorCommandTraceThread
 	"thtrace"
 	MonitorAddCommand
+
+	"[evq ptr] List waiters on event queue."
+	pointerof MonitorCommandEvQ
+	"evq"
+	MonitorAddCommand
+
+	"[sp] Trace."
+	pointerof MonitorCommandTrace
+	"trace"
+	MonitorAddCommand
 end
 
 fn CommandPanic { -- }
@@ -175,7 +185,7 @@ fn DumpContext { con -- }
 		end
 
 		r@ 4 * con@ + @ dup
-		[r@]ContextNames@ "\[[33m%s\[[0m\t\t\[[94m0x%x / %d\[[0m\n" Printf
+		[r@]ContextNames@ "%s\t\t0x%x / %d\n" Printf
 
 		1 r +=
 	end
@@ -277,6 +287,18 @@ fn MonitorCommandTraceThread { -- }
 	end
 
 	thread@ Thread_Context + @ Context_lr + @ thread@ Thread_Context + @ Context_SIZEOF + Trace
+end
+
+fn MonitorCommandTrace { -- }
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	tid@ 4 + @ tid@ Trace
 end
 
 fn MonitorCommandKill { -- }
@@ -423,6 +445,50 @@ fn ListProcesses { -- }
 	end
 end
 
+fn DumpThread { thread -- }
+	thread@ thread@ Thread_TID + @ "[%d/0x%x]\t" Printf
+
+	auto parent
+	thread@ Thread_Process + @ parent!
+
+	parent@ Process_Name + "(%s)\t" Printf
+
+	thread@ Thread_Name + "%s\t" Printf
+
+	thread@ Thread_Status + @ "%d\t" Printf
+
+	thread@ Thread_EvQ + @ "%x\n" Printf
+end
+
+fn MonitorCommandEvQ { -- }
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto evq
+	tidw@ atoi evq!
+
+	tidw@ Free
+
+	auto mtx
+	evq@ EventQueue_Mutex + @ mtx!
+
+	if (mtx@)
+		mtx@ Mutex_Name + @ "associated mutex: '%s'\n" Printf
+		if (mtx@ Mutex_Locked + @)
+			"  locked by: " Printf
+			mtx@ Mutex_OwnerThread + @ DumpThread
+		end
+	end
+
+	auto w
+	evq@ EventQueue_FirstWaiter + @ w!
+
+	while (w@)
+		w@ DumpThread
+		w@ Thread_NextWaiter + @ w!
+	end
+end
+
 fn ListThreads { -- }
 	auto i
 	0 i!
@@ -438,18 +504,7 @@ fn ListThreads { -- }
 				return
 			end
 
-			thread@ i@ "[%d/0x%x]\t" Printf
-
-			auto parent
-			thread@ Thread_Process + @ parent!
-
-			parent@ Process_Name + "(%s)\t" Printf
-
-			thread@ Thread_Name + "%s\t" Printf
-
-			thread@ Thread_Status + @ "%d\t" Printf
-
-			thread@ Thread_WaitChan + @ "%x\n" Printf
+			thread@ DumpThread
 		end
 
 		1 i +=

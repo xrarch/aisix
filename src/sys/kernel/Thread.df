@@ -646,8 +646,6 @@ fn ProcessKill { ret process -- }
 
 	(* do the stuff the last kernel thread would have done if there were any left, which there aren't *)
 	if (thleft@ 0 ==)
-		process@ Process_Name + "freed proc %s\n" Printf
-
 		process@ ReparentChildren
 
 		process@ ProcessFreeSlot

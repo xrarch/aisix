@@ -1,7 +1,7 @@
 FLATIMAGE  := no
 
 DISTIMAGE  := ./dist/dist.img
-DISTIMGSZ  := 256
+DISTIMGSZ  := 1024
 FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
@@ -34,14 +34,14 @@ cmd: init sh
 init:
 	rm -f $(INIT_DIR)/*.o
 	make --directory=$(INIT_DIR)
-	$(FSTOOL) w /sys/init.LOFF $(INIT_DIR)/init.LOFF
-	$(FSTOOL) chmod /sys/init.LOFF 73
+	$(FSTOOL) w /sys/init $(INIT_DIR)/init.LOFF
+	$(FSTOOL) chmod /sys/init 73
 
 sh:
 	rm -f $(SH_DIR)/*.o
 	make --directory=$(SH_DIR)
-	$(FSTOOL) w /cmd/sh.LOFF $(SH_DIR)/sh.LOFF
-	$(FSTOOL) chmod /cmd/sh.LOFF 73
+	$(FSTOOL) w /bin/sh $(SH_DIR)/sh.LOFF
+	$(FSTOOL) chmod /bin/sh 73
 
 stand: diag limnvol
 
