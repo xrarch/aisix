@@ -10,7 +10,7 @@ A long-term goal is a tiled GUI, short(er) term goals are to finish the standalo
 
 As with all of our LIMNstation projects, the [sdk](http://github.com/limnarch/sdk) should be in a directory `../sdk` relative to this repository as your current directory.
 
-Running `make` will then place an AISIX distribution image at `dist/dist.img`.
+Running `make` should then place an AISIX distribution image at `dist/dist.img`. Windows users should use WSL as Cygwin seems to have problems with the SDK.
 
 ## Testing
 
