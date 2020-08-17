@@ -35,12 +35,16 @@ fn GFXRegister { gfx -- }
 
 	gfx@ GFX_Unit + @ name@ 3 + itoa
 
+	auto dev
+
 	OWNER_W OWNER_R |
 	0 0
 	name@
 	GFXDriver
 	gfx@ GFX_Unit + @
-	DeviceRegister drop
+	DeviceRegister dev!
+
+	gfx@ GFX_FBSize + @ dev@ Device_Size + !
 end
 
 fn GFXByUnit { unit -- gfx }
@@ -94,7 +98,17 @@ fn (DevRead) GFXRead { buf len unit seek -- bytes }
 		return
 	end
 
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
 	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ sz@ >=)
 		0 bytes!
 		return
 	end
@@ -124,6 +138,11 @@ fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
 
 	if (sz@ 0 ==)
 		-ENOTBLK bytes!
+		return
+	end
+
+	if (seek@ 0 s<)
+		0 bytes!
 		return
 	end
 

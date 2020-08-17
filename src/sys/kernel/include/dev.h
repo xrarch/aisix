@@ -36,6 +36,7 @@ struct Device
 	4 TTY
 	4 Next
 	4 Prev
+	4 Size
 endstruct
 
 const DEV_CHAR 1

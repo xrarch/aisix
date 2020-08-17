@@ -368,6 +368,16 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 		return
 	end
 
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
 	if (seek@ vnode@ VNode_Size + @ >=)
 		0 bytes!
 		return
@@ -375,11 +385,6 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 
 	if (seek@ len@ + vnode@ VNode_Size + @ >)
 		vnode@ VNode_Size + @ seek@ - len!
-	end
-
-	if (len@ 0 s<=)
-		0 bytes!
-		return
 	end
 
 	if (vnode@ VNodeLock)
@@ -426,12 +431,17 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 end
 
 fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
-	if (seek@ vnode@ VNode_Size + @ >)
+	if (seek@ 0 s<)
 		0 bytes!
 		return
 	end
 
 	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ vnode@ VNode_Size + @ >)
 		0 bytes!
 		return
 	end

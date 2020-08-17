@@ -92,6 +92,8 @@ fn DrvDKSFoundNode { node -- }
 
 	OWNER_W OWNER_R | 0 0 name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
 
+	dks@ DKS_Blocks + @ 4096 * devn@ Device_Size + !
+
 	devn@ "aisix,dev" a3xDSetProperty
 
 	if (part@)

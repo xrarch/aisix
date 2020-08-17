@@ -150,6 +150,11 @@ fn PlatformUserToPhys { len user wr -- phys valid }
 	auto sz
 	b@ MMUSEG0SIZE + @ sz!
 
+	if (len@ 0 s<)
+		0 valid!
+		return
+	end
+
 	if (flag@ MMUPBIT & ~~)
 		0 valid!
 		return

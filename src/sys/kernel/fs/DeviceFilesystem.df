@@ -90,6 +90,8 @@ fn DeviceRegister { permissions ibuffer obuffer name driver unit -- device }
 
 	0 device@ Device_RawDev + !
 
+	0 device@ Device_Size + !
+
 	device@ Device_Name + name@ DEVNAMELEN 1 - strncpy
 
 	InterruptDisable rs!
@@ -163,9 +165,26 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 
 	(* it must be a block device, be cleverer *)
 
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
 	if (len@ 0 s<=)
 		0 bytes!
 		return
+	end
+
+	auto sz
+	dev@ Device_Size + @ sz!
+
+	if (seek@ sz@ >=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
 	end
 
 	auto tot
@@ -230,9 +249,26 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 
 	(* it must be a block device, be cleverer *)
 
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
 	if (len@ 0 s<=)
 		0 bytes!
 		return
+	end
+
+	auto sz
+	dev@ Device_Size + @ sz!
+
+	if (seek@ sz@ >=)
+		-ENOSPC bytes!
+		return
+	end
+
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
 	end
 
 	auto tot
@@ -354,6 +390,8 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	0 vnode@ VNode_UID + !
 
 	dev@ Device_Permissions + @ vnode@ VNode_Permissions + !
+
+	dev@ Device_Size + @ vnode@ VNode_Size + !
 
 	if (type@ DEV_CHAR ==)
 		VNODE_CHAR type!
