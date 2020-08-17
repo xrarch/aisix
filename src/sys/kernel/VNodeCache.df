@@ -155,6 +155,7 @@ fn VNodeNew { vnid mount -- vnode }
 		0 [ln@]VNodeCache!
 
 		UnlockVCache
+
 		-EINTR vnode!
 		return
 	end
@@ -215,8 +216,12 @@ fn VNodeGet { vnid mount -- vnode }
 		if (vnode@)
 			if (vnode@ VNode_VNID + @ vnid@ ==)
 				if (vnode@ VNode_Mount + @ mount@ ==)
+					vnode@ VNodeRef
+
+					UnlockVCache
+
 					if (vnode@ VNodeLock)
-						UnlockVCache
+						vnode@ VNodeUnref
 						-EINTR vnode!
 						mount@ MountUnref
 						return
@@ -232,17 +237,15 @@ fn VNodeGet { vnid mount -- vnode }
 		1 i +=
 	end
 
-	UnlockVCache
-
 	if (vnode@ 0 ==)
+		UnlockVCache
+
 		vnid@ mount@ VNodeNew vnode!
 
 		if (vnode@ iserr)
 			mount@ MountUnref
 			return
 		end
-	end else
-		vnode@ VNodeRef
 	end
 
 	mount@ MountUnref
