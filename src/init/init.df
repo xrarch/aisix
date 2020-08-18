@@ -24,6 +24,8 @@ fn Main { ... -- ret }
 	end
 
 	while (1)
+		"init: spawning shell\n" Printf
+
 		auto shpid
 		"/bin/sh" Spawn shpid!
 
@@ -31,8 +33,6 @@ fn Main { ... -- ret }
 			shpid@ abs pid!
 			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
 			-1 Exit
-		end else
-			shpid@ "init: shpid = %d\n" Printf
 		end
 
 		auto pid
@@ -40,11 +40,7 @@ fn Main { ... -- ret }
 		while (1)
 			Wait ret! pid!
 
-			ret@ pid@ "init: cleaned up %d (%d)\n" Printf
-
 			if (pid@ shpid@ ==)
-				"init: restarting shell\n" Printf
-
 				break
 			end
 		end
