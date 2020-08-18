@@ -43,6 +43,7 @@ const STDERR 2
 const O_READ 1
 const O_WRITE 2
 const O_RW (O_READ O_WRITE |)
+const O_TRUNC 4
 
 const NP_INHERIT 0
 const NP_SPECIFY 1

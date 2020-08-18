@@ -18,30 +18,34 @@ FILELOADER_DIR := src/stand/fileloader
 DIAG_DIR       := src/stand/diag
 LIMNVOL_DIR    := src/stand/limnvol
 INIT_DIR       := src/init
-SH_DIR         := src/sh
+CMD_DIR        := src/cmd
 KERNEL_DIR     := src/sys/kernel
 
 FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
-dist: $(DISTIMAGE) bootable stand kernel cmd
+dist: $(DISTIMAGE) bootable stand kernel init cmd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
 	$(FSTOOL) w /sys/aisix.A3X $(KERNEL_DIR)/aisix.a3x
 
-cmd: init sh
+cmd:
+ifeq ($(REBUILD_CMD),yes)
+	rm -f $(CMD_DIR)/*.o
+endif
+	make --directory=$(CMD_DIR)
+	make writecmd
+
+writecmd:
+	$(foreach file, $(wildcard $(CMD_DIR)/*.LOFF), \
+		$(FSTOOL) w /bin/$(shell basename -s .LOFF $(file)) $(file) ; \
+		$(FSTOOL) chmod /bin/$(shell basename -s .LOFF $(file)) 73 ;)
 
 init:
 	rm -f $(INIT_DIR)/*.o
 	make --directory=$(INIT_DIR)
 	$(FSTOOL) w /sys/init $(INIT_DIR)/init.LOFF
 	$(FSTOOL) chmod /sys/init 73
-
-sh:
-	rm -f $(SH_DIR)/*.o
-	make --directory=$(SH_DIR)
-	$(FSTOOL) w /bin/sh $(SH_DIR)/sh.LOFF
-	$(FSTOOL) chmod /bin/sh 73
 
 stand: diag limnvol
 

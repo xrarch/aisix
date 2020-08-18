@@ -2,6 +2,12 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn Main { ... -- ret }
+	(* kernel process is pid 1 on AISIX *)
+	if (GetPID 2 ~=)
+		"must be first process!\n" Printf
+		1 Exit
+	end
+
 	(* don't die when ^C hit on /dev/cons *)
 	TTYI_IGN SetTTYIgnore drop
 
@@ -10,17 +16,17 @@ fn Main { ... -- ret }
 	auto stderr
 	"/dev/cons" O_READ Open stdin!
 	if (stdin@ iserr)
-		-1 Exit
+		1 Exit
 	end
 
 	"/dev/cons" O_WRITE Open stdout!
 	if (stdout@ iserr)
-		-1 Exit
+		1 Exit
 	end
 
 	"/dev/cons" O_WRITE Open stderr!
 	if (stderr@ iserr)
-		-1 Exit
+		1 Exit
 	end
 
 	while (1)
@@ -32,7 +38,7 @@ fn Main { ... -- ret }
 		if (shpid@ iserr)
 			shpid@ abs pid!
 			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
-			-1 Exit
+			1 Exit
 		end
 
 		auto pid

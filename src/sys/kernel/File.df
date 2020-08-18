@@ -137,6 +137,13 @@ fn Open { path mode -- fd }
 	auto bits
 	[mode@ 3 &]ModeBits@ bits!
 
+	if (mode@ O_TRUNC &)
+		if (bits@ WORLD_W & ~~)
+			-EINVAL fd!
+			return
+		end
+	end
+
 	auto filp
 	bits@ GetFD filp! fd!
 
@@ -177,6 +184,17 @@ fn Open { path mode -- fd }
 			-EISDIR fd!
 			return
 		end
+	end elseif (type@ VNODE_FILE ==)
+		if (mode@ O_TRUNC &)
+			vnode@ VTrunc r!
+
+			if (r@ iserr)
+				filp@ UnrefFilp
+				vnode@ VNodePut
+				r@ fd!
+				return
+			end
+		end
 	end elseif (type@ VNODE_CHAR ==)
 		if (p@ Process_TTY + @ ~~)
 			(* devfs uses its vnodes' fsdata to store the dev pointer *)
@@ -210,9 +228,7 @@ fn Open { path mode -- fd }
 
 	filp@ fd@ 4 * ofile@ + !
 
-	vnode@ VNodeRef
-
-	vnode@ VNodePut
+	vnode@ VNodeUnlock
 end
 
 fn Close { fd -- ok }

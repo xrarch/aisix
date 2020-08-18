@@ -110,6 +110,8 @@ extern VRead { buf len seek vnode -- bytes }
 
 extern VWrite { buf len seek vnode -- bytes }
 
+extern VTrunc { vnode -- ok }
+
 extern VFSPath  { path -- vnode }
 
 extern VNodeNew { vnid mount -- vnode }

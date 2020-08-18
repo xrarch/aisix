@@ -7,6 +7,12 @@ struct FileP
 	4 Seek
 endstruct
 
+const O_READ 1
+const O_WRITE 2
+const O_RW (O_READ O_WRITE |)
+
+const O_TRUNC 4
+
 extern GetFD { bits -- fd filp }
 
 extern GetFilp { fd -- filp }

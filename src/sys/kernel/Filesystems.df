@@ -103,6 +103,10 @@ fn VWrite { buf len seek vnode -- bytes }
 	buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Write + @ FSWrite bytes!
 end
 
+fn VTrunc { vnode -- ok }
+	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Trunc + @ FSTrunc ok!
+end
+
 fn VFSPath { path -- vnode }
 	if (path@ gb '/' ==)
 		RootVNode@ vnode!
