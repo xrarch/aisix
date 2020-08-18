@@ -158,9 +158,9 @@ fn Exception { badaddr ecause tf -- }
 			if (sys@ 0 ==)
 				-EBADSYS tf@ Context_v0 + !
 			end else
-				if (LockMe ~~)
-					1 CurrentThread@ Thread_InKernel + !
+				1 CurrentThread@ Thread_InKernel + !
 
+				if (LockMe ~~)
 					InterruptEnable
 
 					tf@ sys@ Syscall tf@ Context_v0 + !
@@ -168,12 +168,9 @@ fn Exception { badaddr ecause tf -- }
 					0 InterruptRestore
 
 					UnlockMe
-
-					0 CurrentThread@ Thread_InKernel + !
-				end else
-					(* if we got killed waiting on that lock we should just have been destroyed *)
-					"exception: lockme\n" Panic
 				end
+
+				0 CurrentThread@ Thread_InKernel + !
 			end
 		end
 	end elseif (ecause@ EXCBREAK ==)

@@ -122,7 +122,6 @@ fn (IOCharInput) TTYInput { c buf -- }
 					(* defer to scheduler to avoid killing the process we might have interrupted *)
 					(* this should work because a human probably wont be typing ^C faster than the
 					scheduling frequency but you never know i guess *)
-					'\n' ob@ 0 IOBufPutc drop
 					tty@ TTYKill!
 				end
 			end else
@@ -172,9 +171,7 @@ fn TTYRead { buf len tty -- bytes }
 		rs@ InterruptRestore
 
 		if (c@ 3 ==) (* ^C *)
-			'\n' buf@ sb
-			1 bytes +=
-			return
+			continue
 		end
 
 		c@ buf@ sb

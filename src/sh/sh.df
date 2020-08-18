@@ -1,8 +1,15 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
+buffer Prompt 256
+buffer PName 256
+buffer PComp 256
+buffer Argvt (32 4 *)
+
 fn Main { ... -- ret }
 	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
+
+	0 ret!
 
 	auto i
 	0 i!
@@ -12,33 +19,21 @@ fn Main { ... -- ret }
 
 		1 i +=
 	end
-
-	auto prompt
-	256 Malloc prompt!
-
-	auto pname
-	256 Calloc pname!
-
-	auto pcomp
-	256 Calloc pcomp!
-
-	auto argvt
-	32 4 * Malloc argvt!
 	
 	while (1)
 		"# " Printf
-		if (prompt@ 255 Readline)
+		if (Prompt 255 Readline)
 			0 Exit
 		end
 
-		if (prompt@ strlen 0 ==)
+		if (Prompt strlen 0 ==)
 			continue
 		end
 
 		auto nt
-		prompt@ pname@ ' ' 255 strntok nt!
+		Prompt PName ' ' 255 strntok nt!
 
-		if (pname@ strlen 0 ==)
+		if (PName strlen 0 ==)
 			continue
 		end
 
@@ -52,35 +47,41 @@ fn Main { ... -- ret }
 		abuf@ p!
 
 		auto q
-		argvt@ q!
+		Argvt q!
 
 		while (nt@ 0 ~=)
 			if (argcn@ 32 >=)
 				break
 			end
 
-			nt@ pcomp@ ' ' 255 strntok nt!
+			nt@ PComp ' ' 255 strntok nt!
 
-			p@ pcomp@ strcpy
+			p@ PComp strcpy
 
 			p@ q@ !
 
-			pcomp@ strlen 1 + p +=
+			PComp strlen 1 + p +=
 
 			1 argcn +=
 			4 q +=
 		end
 
-		auto r
-		argcn@ argvt@ pname@ VSpawn r!
+		auto pid
+		argcn@ Argvt PName VSpawn pid!
 
 		abuf@ Free
 
-		if (r@ iserr)
-			r@ abs r!
-			[r@]ErrorNames@ pname@ "sh: couldn't spawn %s: %s\n" Printf
+		if (pid@ iserr)
+			pid@ abs pid!
+			[pid@]ErrorNames@ PName "sh: couldn't spawn %s: %s\n" Printf
 		end else
-			r@ "pid=%d\n" Printf
+			pid@ "pid=%d\n" Printf
+
+			auto pret
+
+			Wait pret! pid!
+
+			pret@ pid@ "waited pid=%d\nwaited ret=%d\n" Printf
 		end
 	end
 end

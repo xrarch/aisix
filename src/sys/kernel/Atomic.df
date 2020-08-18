@@ -8,10 +8,12 @@ fn InitMutex { name mutex -- }
 	mutex@ mutex@ Mutex_LockQ + EventQueue_Mutex + !
 end
 
-fn LockMutex { mutex -- killed }
+fn private LockMutex1 { mutex uninterruptible -- killed }
 	if (CurrentThread@ Thread_Killed + @)
-		1 killed!
-		return
+		if (uninterruptible@ ~~)
+			1 killed!
+			return
+		end
 	end
 
 	auto rs
@@ -36,10 +38,14 @@ fn LockMutex { mutex -- killed }
 			mn@ "LockMutex: '%s' already owned\n" Panic
 		end
 
-		if (mutex@ Mutex_LockQ + WaitQueue)
-			1 killed!
-			rs@ InterruptRestore
-			return
+		if (uninterruptible@)
+			mutex@ Mutex_LockQ + WaitQueueUninterruptible
+		end else
+			if (mutex@ Mutex_LockQ + WaitQueue)
+				1 killed!
+				rs@ InterruptRestore
+				return
+			end
 		end
 	end
 
@@ -47,6 +53,14 @@ fn LockMutex { mutex -- killed }
 	CurrentThread@ mutex@ Mutex_OwnerThread + !
 
 	rs@ InterruptRestore
+end
+
+fn LockMutex { mutex -- killed }
+	mutex@ 0 LockMutex1 killed!
+end
+
+fn LockMutexUninterruptible { mutex -- }
+	mutex@ 1 LockMutex1 drop
 end
 
 fn UnlockMutex { mutex -- }

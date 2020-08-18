@@ -371,14 +371,16 @@ end
 
 extern KDebug { -- }
 
-fn WaitQueue { evq -- killed }
+fn private WaitQueue1 { evq status -- killed }
 	auto rs
 	InterruptDisable rs!
 
 	if (CurrentThread@ Thread_Killed + @)
-		rs@ InterruptRestore
-		1 killed!
-		return
+		if (status@ TS_EVENT_UNINTERRUPTIBLE ~=)
+			rs@ InterruptRestore
+			1 killed!
+			return
+		end
 	end
 
 	auto lw
@@ -394,7 +396,7 @@ fn WaitQueue { evq -- killed }
 
 	CurrentThread@ evq@ EventQueue_LastWaiter + !
 
-	TS_EVENT CurrentThread@ Thread_Status + !
+	status@ CurrentThread@ Thread_Status + !
 
 	evq@ CurrentThread@ Thread_EvQ + !
 
@@ -405,6 +407,14 @@ fn WaitQueue { evq -- killed }
 	CurrentThread@ Thread_Killed + @ killed!
 
 	rs@ InterruptRestore
+end
+
+fn WaitQueue { evq -- killed }
+	evq@ TS_EVENT WaitQueue1 killed!
+end
+
+fn WaitQueueUninterruptible { evq -- }
+	evq@ TS_EVENT_UNINTERRUPTIBLE WaitQueue1 drop
 end
 
 fn WakeQueue { evq -- }
@@ -458,6 +468,37 @@ end
 
 fn UnlockMe { -- }
 	CurrentThread@ Thread_Process + @ ProcUnlock
+end
+
+fn ProcessByPID { pid parent -- process }
+	auto i
+	0 i!
+
+	while (i@ PROCMAX <)
+		auto rs
+		InterruptDisable rs!
+
+		[i@]Processes@ process!
+
+		if (process@)
+			if (process@ Process_PID + @ pid@ ==)
+				if (process@ Process_Parent + @ parent@ ==)
+					rs@ InterruptRestore
+					return
+				end else
+					-EPERM process!
+					rs@ InterruptRestore
+					return
+				end
+			end
+		end
+
+		rs@ InterruptRestore
+
+		1 i +=
+	end
+
+	-ESRCH process!
 end
 
 var NextPID 1
@@ -531,6 +572,8 @@ fn ProcessNew { entry name udata udatasz -- process }
 
 	"process" process@ Process_Mutex + InitMutex
 
+	"proc parent" process@ Process_ParentLock + InitMutex
+
 	auto mthread
 
 	process@ entry@ "main" kernel@ udata@ udatasz@ ThreadNew mthread!
@@ -559,7 +602,7 @@ fn KillTTY { tty -- }
 		if (proc@)
 			if (proc@ Process_IgnoreTTY + @ 0xFF & 0 ==)
 				if (proc@ Process_TTY + @ tty@ ==)
-					0 proc@ ProcessKill
+					130 proc@ ProcessKill
 				end
 			end
 		end
@@ -575,24 +618,39 @@ fn ProcessExit { ret -- }
 	ret@ process@ ProcessKill
 end
 
+fn ParentLock { proc -- }
+	proc@ Process_ParentLock + LockMutexUninterruptible
+end
+
+fn ParentUnlock { proc -- }
+	proc@ Process_ParentLock + UnlockMutex
+end
+
 fn private ReparentChildren { process -- }
 	auto i
 	0 i!
 
+	process@ ParentLock
+
 	while (i@ PROCMAX <)
+		auto rs
+		InterruptDisable rs!
+
 		auto child
 		[i@]Processes@ child!
 
 		if (child@ 0 ~=)
 			if (child@ Process_Parent + @ process@ ==)
 				InitProcess@ child@ Process_Parent + !
-
-				(* additional bookkeeping is probably required *)
 			end
 		end
 
+		rs@ InterruptRestore
+
 		1 i +=
 	end
+
+	process@ ParentUnlock
 end
 
 fn ProcessKill { ret process -- }
@@ -635,20 +693,37 @@ fn ProcessKill { ret process -- }
 			process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
 			0 process@ Process_Mapped + !
 		end
-
-		(* do wait syscall stuff here *)
 	end
 
 	auto thleft
 	process@ Process_Threads + @ thleft!
 
-	rs@ InterruptRestore
-
 	(* do the stuff the last kernel thread would have done if there were any left, which there aren't *)
 	if (thleft@ 0 ==)
-		process@ ReparentChildren
+		if (process@ Process_Zombie + @)
+			process@ Process_Name + "%s already zombie\n" Panic
+		end
 
-		process@ ProcessFreeSlot
+		1 process@ Process_Zombie + !
+
+		auto parent
+
+		while (1)
+			process@ Process_Parent + @ parent!
+
+			parent@ ParentLock
+
+			if (process@ Process_Parent + @ parent@ ==)
+				(* we finally didn't get reparented and know for sure who our dad is *)
+				break
+			end
+
+			parent@ ParentUnlock
+		end
+
+		rs@ InterruptRestore
+
+		process@ ReparentChildren
 
 		process@ Process_CWDVNode + @ VNodeUnref
 
@@ -664,5 +739,72 @@ fn ProcessKill { ret process -- }
 			4 ofile +=
 			1 i +=
 		end
+
+		parent@ Process_WaitQ + WakeQueue
+
+		parent@ ParentUnlock
+	end else
+		rs@ InterruptRestore
+	end
+end
+
+fn Wait { -- pid ret }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	auto rs
+
+	while (1)
+		auto i
+		0 i!
+
+		auto havechild
+		0 havechild!
+
+		p@ ParentLock
+
+		while (i@ PROCMAX <)
+			InterruptDisable rs!
+
+			auto child
+			[i@]Processes@ child!
+
+			if (child@ 0 ~=)
+				if (child@ Process_Parent + @ p@ ==)
+					if (child@ Process_Zombie + @)
+						p@ ParentUnlock
+						rs@ InterruptRestore
+						child@ Process_PID + @ pid!
+						child@ Process_ReturnValue + @ ret!
+						child@ ProcessFreeSlot
+						return
+					end
+
+					1 havechild!
+				end
+			end
+
+			rs@ InterruptRestore
+
+			1 i +=
+		end
+
+		if (havechild@ ~~)
+			p@ ParentUnlock
+			-ESRCH pid!
+			return
+		end
+
+		InterruptDisable rs!
+
+		p@ ParentUnlock
+
+		if (p@ Process_WaitQ + WaitQueue)
+			rs@ InterruptRestore
+			-EINTR pid!
+			return
+		end
+
+		rs@ InterruptRestore
 	end
 end

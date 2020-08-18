@@ -9,6 +9,11 @@ const SYSNEWPROC 5
 const SYSEXIT 6
 const SYSDUP 7
 const SYSIGN 8
+const SYSWAIT 9
+const SYSSETUID 10
+const SYSGETPID 11
+const SYSGETUID 12
+const SYSGETEUID 13
 
 asm "
 
@@ -70,6 +75,32 @@ _dup:
 _ttyign:
 	mov a1, a0
 	li a0, SYSIGN
+	sys
+	ret
+
+_wait:
+	li a0, SYSWAIT
+	sys
+	ret
+
+_setuid:
+	mov a1, a0
+	li a0, SYSSETUID
+	sys
+	ret
+
+_getpid:
+	li a0, SYSGETPID
+	sys
+	ret
+
+_getuid:
+	li a0, SYSGETUID
+	sys
+	ret
+
+_geteuid:
+	li a0, SYSGETEUID
 	sys
 	ret
 
@@ -174,4 +205,34 @@ extern _ttyign { ign -- ok }
 
 fn SetTTYIgnore { ign -- ok }
 	ign@ _ttyign ok!
+end
+
+extern _wait { -- pid ret }
+
+fn Wait { -- pid ret }
+	_wait ret! pid!
+end
+
+extern _setuid { uid -- ok }
+
+fn SetUID { uid -- ok }
+	uid@ _setuid ok!
+end
+
+extern _getpid { -- pid }
+
+fn GetPID { -- pid }
+	_getpid pid!
+end
+
+extern _getuid { -- uid }
+
+fn GetUID { -- uid }
+	_getuid uid!
+end
+
+extern _geteuid { -- euid }
+
+fn GetEUID { -- euid }
+	_geteuid euid!
 end

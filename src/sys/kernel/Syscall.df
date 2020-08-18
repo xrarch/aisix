@@ -12,6 +12,11 @@ table Syscalls
 	pointerof SysExit
 	pointerof SysDup
 	pointerof SysSetTTYIgnore
+	pointerof SysWait
+	pointerof SysSetUID
+	pointerof SysGetPID
+	pointerof SysGetUID
+	pointerof SysGetEUID
 endtable
 public Syscalls
 
@@ -322,4 +327,51 @@ fn (Syscall) SysSetTTYIgnore { tf -- ok }
 	end
 
 	ttyign@ CurrentThread@ Thread_Process + @ Process_IgnoreTTY + !
+end
+
+(* ret ends up in v1, pid ends up in v0 *)
+fn (Syscall) SysWait { tf -- ok }
+	Wait tf@ Context_v1 + ! ok!
+end
+
+fn (Syscall) SysSetUID { tf -- ok }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	auto tuid
+	tf@ Context_a1 + @ tuid!
+
+	0 ok!
+
+	if (p@ Process_UID + @ tuid@ ==)
+		tuid@ p@ Process_EUID + !
+	end elseif (p@ Process_EUID + @ tuid@ ==)
+		tuid@ p@ Process_UID + !
+	end elseif (p@ Process_EUID + @ 0 ==) (* root can do whatever she wants *)
+		tuid@ p@ Process_UID + !
+		tuid@ p@ Process_EUID + !
+	end else
+		-EPERM ok!
+	end
+end
+
+fn (Syscall) SysGetPID { tf -- ok }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	p@ Process_PID + @ ok!
+end
+
+fn (Syscall) SysGetUID { tf -- ok }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	p@ Process_UID + @ ok!
+end
+
+fn (Syscall) SysGetEUID { tf -- ok }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	p@ Process_EUID + @ ok!
 end

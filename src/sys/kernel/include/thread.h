@@ -52,10 +52,16 @@ struct Process
 
 	4 Exited
 
+	4 Zombie
+
 	4 TTY
 	4 IgnoreTTY
 
 	Mutex_SIZEOF Mutex
+
+	Mutex_SIZEOF ParentLock
+
+	EventQueue_SIZEOF WaitQ
 
 	4 Index
 	4 PID
@@ -87,6 +93,7 @@ const TS_READY 1
 const TS_RUNNING 2
 const TS_TIMER 4
 const TS_EVENT 5
+const TS_EVENT_UNINTERRUPTIBLE 6
 
 extern PlatformSwitchSeg { proc -- }
 
@@ -101,6 +108,8 @@ extern ThreadReady { thread -- }
 extern Yield { -- }
 
 extern WaitQueue { evq -- killed }
+
+extern WaitQueueUninterruptible { evq -- }
 
 extern WakeQueue { evq -- }
 
@@ -131,3 +140,5 @@ extern LockMe { -- killed }
 extern UnlockMe { -- }
 
 extern KillTTY { tty -- }
+
+extern Wait { -- pid ret }

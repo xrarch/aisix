@@ -6,6 +6,8 @@ endstruct
 
 extern LockMutex { mutex -- killed }
 
+extern LockMutexUninterruptible { mutex -- }
+
 extern UnlockMutex { mutex -- }
 
 extern InitMutex { name mutex -- }

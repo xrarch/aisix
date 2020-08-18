@@ -1,10 +1,10 @@
 # aisix
 
-Extreme work-in-progress.
+Major work-in-progress.
 
 Attempt to build a unix-like OS for the LIMNstation fantasy computer.
 
-A long-term goal is a tiled GUI, short(er) term goals are to finish the standalone disk utilities, and to get a decent kernel.
+A long-term goal is a tiled GUI, short(er) term goal is to get a half-usable kernel.
 
 ## Building
 
