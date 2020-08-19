@@ -251,6 +251,8 @@ fn Command { -- done }
 	end
 
 	auto ename
+	0 ename!
+	
 	auto nq
 	0 nq!
 
@@ -302,6 +304,7 @@ fn Command { -- done }
 			end
 		end
 	end else
+		pname@ Free
 		1 done!
 	end
 
@@ -321,7 +324,9 @@ fn Command { -- done }
 		nq@ Free
 	end
 
-	ename@ Free
+	if (ename@)
+		ename@ Free
+	end
 end
 
 fn CommandLine { -- }
