@@ -72,7 +72,7 @@ fn Word { -- word }
 		return
 	end
 
-	if (LinePoint@ gb '"' == LinePoint@ gb 27 == ||)
+	if (LinePoint@ gb '"' == LinePoint@ gb 0x27 == ||)
 		LinePoint@ gb String word!
 		return
 	end
@@ -97,7 +97,7 @@ fn Word { -- word }
 
 		if (char@ '"' ==)
 			1 term!
-		end elseif (char@ 27 ==)
+		end elseif (char@ 0x27 ==)
 			1 term!
 		end elseif (char@ ' ' ==)
 			1 term!
