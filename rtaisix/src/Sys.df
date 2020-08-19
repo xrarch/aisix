@@ -14,6 +14,9 @@ const SYSSETUID 10
 const SYSGETPID 11
 const SYSGETUID 12
 const SYSGETEUID 13
+const SYSREADDIR 14
+const SYSPSTAT 15
+const SYSFSTAT 16
 
 asm "
 
@@ -101,6 +104,28 @@ _getuid:
 
 _geteuid:
 	li a0, SYSGETEUID
+	sys
+	ret
+
+_readdir:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSREADDIR
+	sys
+	ret
+
+_pstat:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSPSTAT
+	sys
+	ret
+
+_fstat:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSFSTAT
 	sys
 	ret
 
@@ -235,4 +260,22 @@ extern _geteuid { -- euid }
 
 fn GetEUID { -- euid }
 	_geteuid euid!
+end
+
+extern _readdir { dirent fd -- ok }
+
+fn ReadDir { dirent fd -- ok }
+	dirent@ fd@ _readdir ok!
+end
+
+extern _pstat { pathlen stat path -- ok }
+
+fn PStat { stat path -- ok }
+	path@ strlen stat@ path@ _pstat ok!
+end
+
+extern _fstat { stat fd -- ok }
+
+fn FStat { stat fd -- ok }
+	stat@ fd@ _fstat ok!
 end

@@ -10,15 +10,6 @@ fn Main { ... -- ret }
 	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
 
 	0 ret!
-
-	auto i
-	0 i!
-
-	while (i@ argc@ <)
-		[i@]argv@ "%s\n" Printf
-
-		1 i +=
-	end
 	
 	while (1)
 		"# " Printf
@@ -75,13 +66,9 @@ fn Main { ... -- ret }
 			pid@ abs pid!
 			[pid@]ErrorNames@ PName "sh: couldn't spawn %s: %s\n" Printf
 		end else
-			pid@ "pid=%d\n" Printf
-
 			auto pret
 
 			Wait pret! pid!
-
-			pret@ pid@ "waited pid=%d\nwaited ret=%d\n" Printf
 		end
 	end
 end

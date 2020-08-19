@@ -1,0 +1,8 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	"\[[c" Printf
+end

@@ -217,6 +217,8 @@ CPUKThreadEntry:
 
 "
 
+extern CPUKThreadEntry { -- }
+
 fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 	stack@ Context_SIZEOF - ctx!
 

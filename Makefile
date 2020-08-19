@@ -32,6 +32,7 @@ kernel:
 cmd:
 ifeq ($(REBUILD_CMD),yes)
 	rm -f $(CMD_DIR)/*.o
+	rm -f $(CMD_DIR)/*.LOFF
 endif
 	make --directory=$(CMD_DIR)
 	make writecmd

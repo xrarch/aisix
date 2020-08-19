@@ -45,10 +45,6 @@ extern VFSInit { -- }
 
 extern VFSMountRoot { -- }
 
-var Done 0
-
-var TestIOBuf 0
-
 extern VCacheInit { -- }
 
 extern ConsInit { -- }

@@ -17,6 +17,9 @@ table Syscalls
 	pointerof SysGetPID
 	pointerof SysGetUID
 	pointerof SysGetEUID
+	pointerof SysReadDir
+	pointerof SysPStat
+	pointerof SysFStat
 endtable
 public Syscalls
 
@@ -374,4 +377,71 @@ fn (Syscall) SysGetEUID { tf -- ok }
 	CurrentThread@ Thread_Process + @ p!
 
 	p@ Process_EUID + @ ok!
+end
+
+fn (Syscall) SysReadDir { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto dirent
+	tf@ Context_a2 + @ dirent!
+
+	auto r
+	Dirent_SIZEOF dirent@ 1 PlatformUserToPhys r! dirent!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	dirent@ fd@ ReadDir ok!
+end
+
+fn (Syscall) SysPStat { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto stat
+	tf@ Context_a2 + @ stat!
+
+	auto pathlen
+	tf@ Context_a3 + @ pathlen!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	auto r
+	Stat_SIZEOF stat@ 1 PlatformUserToPhys r! stat!
+
+	if (r@ ~~)
+		path@ Free
+		-EINVAL ok!
+		return
+	end
+
+	stat@ path@ PStat ok!
+
+	path@ Free
+end
+
+fn (Syscall) SysFStat { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto stat
+	tf@ Context_a2 + @ stat!
+
+	auto r
+	Stat_SIZEOF stat@ 1 PlatformUserToPhys r! stat!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	stat@ fd@ FStat ok!
 end

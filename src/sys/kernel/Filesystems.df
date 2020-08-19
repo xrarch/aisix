@@ -114,6 +114,9 @@ fn VFSPath { path -- vnode }
 		CurrentThread@ Thread_Process + @ Process_CWDVNode + @ vnode!
 	end
 
+	auto uid
+	CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
+
 	auto pcomp
 	256 Calloc pcomp!
 
@@ -161,8 +164,6 @@ fn VFSPath { path -- vnode }
 		return
 	end
 
-	mount@ dirent@ VDirent_Mount + !
-
 	while (path@ 0 ~=)
 		0 dirent@ VDirent_Cookie + !
 
@@ -170,41 +171,6 @@ fn VFSPath { path -- vnode }
 			vnode@ VNodePut
 			-ENOTDIR vnode!
 			break
-		end
-
-		auto newroot
-		vnode@ VNode_CoveredBy + @ newroot!
-
-		if (newroot@)
-			vnode@ VNodePut
-
-			newroot@ vnode!
-
-			vnode@ VNode_Mount + @ mount!
-
-			mount@ MountRef
-
-			if (mount@ Mount_Busy + @)
-				pcomp@ Free
-				dirent@ Free
-				mount@ MountUnref
-				-EBUSY vnode!
-				return
-			end
-
-			if (vnode@ VNodeLock)
-				pcomp@ Free
-				dirent@ Free
-				-EINTR vnode!
-				mount@ MountUnref
-				return
-			end
-
-			vnode@ VNodeRef
-
-			mount@ Mount_Filesystem + @ fs!
-			fs@ Filesystem_RewindDir + @ rwd!
-			fs@ Filesystem_ReadDir + @ rd!
 		end
 
 		vnode@ dirent@ VDirent_DirVNode + !
@@ -217,6 +183,14 @@ fn VFSPath { path -- vnode }
 
 		if (pcomp@ "." strcmp)
 			continue
+		end
+
+		vnode@ WORLD_R uid@ VForbidden ok!
+
+		if (ok@ iserr)
+			vnode@ VNodePut
+			ok@ vnode!
+			break
 		end
 
 		dirent@ rwd@ FSRewindDir ok!
@@ -263,6 +237,41 @@ fn VFSPath { path -- vnode }
 
 		if (found@ 0 ==)
 			break
+		end
+
+		auto newroot
+		vnode@ VNode_CoveredBy + @ newroot!
+
+		if (newroot@)
+			vnode@ VNodePut
+
+			newroot@ vnode!
+
+			vnode@ VNode_Mount + @ mount!
+
+			mount@ MountRef
+
+			if (mount@ Mount_Busy + @)
+				pcomp@ Free
+				dirent@ Free
+				mount@ MountUnref
+				-EBUSY vnode!
+				return
+			end
+
+			if (vnode@ VNodeLock)
+				pcomp@ Free
+				dirent@ Free
+				-EINTR vnode!
+				mount@ MountUnref
+				return
+			end
+
+			vnode@ VNodeRef
+
+			mount@ Mount_Filesystem + @ fs!
+			fs@ Filesystem_RewindDir + @ rwd!
+			fs@ Filesystem_ReadDir + @ rd!
 		end
 	end
 

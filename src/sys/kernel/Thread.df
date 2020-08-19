@@ -262,6 +262,8 @@ fn Scheduler { -- }
 
 	auto thread
 
+	auto rs
+
 	while (1)
 		auto i
 		0 i!
@@ -732,8 +734,7 @@ fn ProcessKill { ret process -- }
 
 		while (i@ OFILEMAX <)
 			if (ofile@@)
-				ofile@@ FileP_VNode + @ VNodeUnref
-				ofile@@ UnrefFilp
+				ofile@@ CloseP drop
 			end
 
 			4 ofile +=

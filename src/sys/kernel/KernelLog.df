@@ -131,6 +131,14 @@ fn Puts { s -- }
 	end
 end
 
+fn FPuts { fd s -- }
+	s@ Puts
+end
+
+fn FPutc { fd c -- }
+	c@ Putc
+end
+
 extern PlatformAlertUser { -- }
 
 fn AskUser { ... fmt anslen -- answer }
@@ -161,6 +169,8 @@ GetLink:
 "
 
 extern GetLink { -- }
+
+extern KDebug { -- }
 
 fn Panic { ... fmt -- }
 	InterruptDisable drop
@@ -195,6 +205,8 @@ fn Panic { ... fmt -- }
 
 	"panic: " Printf
 	argv argc@ fmt@ VPrintf
+
+	KDebug
 
 	PlatformPanic
 end

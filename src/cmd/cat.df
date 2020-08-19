@@ -1,0 +1,61 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto catfd
+
+	if (argc@ 2 >=)
+		auto i
+		1 i!
+
+		while (i@ argc@ <)
+			[i@]argv@ O_READ Open catfd!
+
+			if (catfd@ iserr)
+				catfd@ abs catfd!
+				[catfd@]ErrorNames@ [i@]argv@ "cat: couldn't open %s: %s\n" Abort
+			end
+
+			[i@]argv@ catfd@ Cat
+
+			catfd@ Close drop
+
+			1 i +=
+		end
+	end else
+		"stdin" 0 Cat 
+	end
+end
+
+buffer CatBuffer 4096
+
+fn Cat { name fd -- }
+	auto bytes
+
+	CatBuffer 4096 fd@ Read bytes!
+
+	if (bytes@ iserr)
+		bytes@ abs bytes!
+		[bytes@]ErrorNames@ name@ "cat: couldn't read %s: %s\n" Abort
+	end
+
+	auto r
+
+	while (bytes@)
+		CatBuffer bytes@ STDOUT Write r!
+
+		if (r@ iserr)
+			r@ abs r!
+			[r@]ErrorNames@ "cat: couldn't write: %s\n" Abort
+		end
+
+		CatBuffer 4096 fd@ Read bytes!
+
+		if (bytes@ iserr)
+			bytes@ abs bytes!
+			[bytes@]ErrorNames@ name@ "cat: couldn't read %s: %s\n" Abort
+		end
+	end
+end

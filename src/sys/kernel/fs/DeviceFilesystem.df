@@ -145,7 +145,7 @@ end
 
 fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 	if (vnode@ VNode_VNID + @ 0 ==)
-		-EPERM bytes!
+		-EISDIR bytes!
 		return
 	end
 
@@ -275,7 +275,7 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 	0 tot!
 
 	auto bbuf
-
+	
 	auto r
 
 	while (tot@ len@ <)
@@ -392,6 +392,9 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	dev@ Device_Permissions + @ vnode@ VNode_Permissions + !
 
 	dev@ Device_Size + @ vnode@ VNode_Size + !
+
+	0 vnode@ VNode_GID + !
+	0 vnode@ VNode_Timestamp + !
 
 	if (type@ DEV_CHAR ==)
 		VNODE_CHAR type!

@@ -55,6 +55,7 @@ fn GetFD { bits -- fd filp }
 
 			0 filp@ FileP_Seek + !
 			bits@ filp@ FileP_RWX + !
+			0 filp@ FileP_VDirent + !
 
 			return
 		end
@@ -82,6 +83,10 @@ fn GetFilp { fd -- filp }
 		-EBADF filp!
 		return
 	end
+
+	if (filp@ FileP_Count + @ 0 ==)
+		"filp count 0\n" Panic
+	end
 end
 
 fn RefFilp { filp -- }
@@ -94,6 +99,20 @@ fn RefFilp { filp -- }
 end
 
 fn UnrefFilp { filp -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 filp@ FileP_Count + -=
+
+	rs@ InterruptRestore
+end
+
+fn UnguardFilp { filp -- }
+	if (filp@ FileP_Count + @ 1 ==)
+		filp@ CloseP drop
+		return
+	end
+
 	auto rs
 	InterruptDisable rs!
 
@@ -150,6 +169,8 @@ fn Open { path mode -- fd }
 	if (fd@ iserr)
 		return
 	end
+
+	FD_FILE filp@ FileP_Type + !
 
 	auto r
 
@@ -240,6 +261,15 @@ fn Close { fd -- ok }
 		return
 	end
 
+	filp@ CloseP ok!
+
+	auto ofile
+	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
+
+	0 fd@ 4 * ofile@ + !
+end
+
+fn CloseP { filp -- ok }
 	auto vnode
 	filp@ FileP_VNode + @ vnode!
 
@@ -252,13 +282,29 @@ fn Close { fd -- ok }
 		0 ok!
 	end
 
-	auto ofile
-	CurrentThread@ Thread_Process + @ Process_OFiles + ofile!
-
-	0 fd@ 4 * ofile@ + !
-
 	vnode@ VNodeUnref
-	filp@ UnrefFilp
+
+	auto rs
+	InterruptDisable rs!
+
+	if (filp@ FileP_Count + @ 1 ==)
+		(* last holder, free resources associated with the filp *)
+
+		auto vd
+		filp@ FileP_VDirent + @ vd!
+
+		filp@ UnrefFilp
+
+		rs@ InterruptRestore
+
+		if (vd@)
+			vd@ Free
+		end
+	end else
+		filp@ UnrefFilp
+
+		rs@ InterruptRestore
+	end
 end
 
 fn Write { buf len fd -- bytes }
@@ -278,7 +324,12 @@ fn Write { buf len fd -- bytes }
 	auto vnode
 	filp@ FileP_VNode + @ vnode!
 
+	(* so it doesnt get closed by another thread and reallocated while we're using it *)
+	filp@ RefFilp
+
 	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VWrite bytes!
+
+	filp@ UnguardFilp
 
 	if (bytes@ iserr)
 		return
@@ -309,7 +360,12 @@ fn Read { buf len fd -- bytes }
 	auto vnode
 	filp@ FileP_VNode + @ vnode!
 
+	(* so it doesnt get closed by another thread and reallocated while we're using it *)
+	filp@ RefFilp
+
 	buf@ len@ filp@ FileP_Seek + @ filp@ FileP_VNode + @ VRead bytes!
+
+	filp@ UnguardFilp
 
 	if (bytes@ iserr)
 		return
@@ -321,4 +377,109 @@ fn Read { buf len fd -- bytes }
 	bytes@ filp@ FileP_Seek + +=
 
 	rs@ InterruptRestore
+end
+
+fn ReadDir { dirent fd -- ok }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vnode
+	filp@ FileP_VNode + @ vnode!
+
+	if (vnode@ VNode_Type + @ VNODE_DIR ~=)
+		-ENOTDIR ok!
+		return
+	end
+
+	if (filp@ FileP_RWX + @ WORLD_R & ~~)
+		-EACCES ok!
+		return
+	end
+
+	auto fs
+	vnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto vd
+	filp@ FileP_VDirent + @ vd!
+
+	if (vd@ ~~)
+		VDirent_SIZEOF Calloc vd!
+
+		vd@ filp@ FileP_VDirent + !
+
+		vnode@ vd@ VDirent_DirVNode + !
+
+		vd@ fs@ Filesystem_RewindDir + @ FSRewindDir ok!
+
+		rs@ InterruptRestore
+
+		if (ok@ iserr)
+			0 filp@ FileP_VDirent + !
+			vd@ Free
+			return
+		end
+	end else
+		rs@ InterruptRestore
+	end
+
+	vd@ fs@ Filesystem_ReadDir + @ FSReadDir ok!
+
+	if (ok@ iserr)
+		return
+	end
+
+	dirent@ Dirent_Name + vd@ VDirent_Name + @ 255 strncpy
+
+	if (vd@ VDirent_Cookie + @)
+		vd@ VDirent_Cookie + @ Free
+		0 vd@ VDirent_Cookie + !
+	end
+end
+
+fn VStat { stat vnode -- ok }
+	vnode@ VNode_Permissions + @ stat@ Stat_Mode + !
+	vnode@ VNode_UID + @ stat@ Stat_UID + !
+	vnode@ VNode_GID + @ stat@ Stat_GID + !
+	vnode@ VNode_Size + @ stat@ Stat_Size + !
+	vnode@ VNode_Type + @ stat@ Stat_Type + !
+	vnode@ VNode_Timestamp + @ stat@ Stat_CTime + !
+	vnode@ VNode_Timestamp + @ stat@ Stat_ATime + !
+	vnode@ VNode_Timestamp + @ stat@ Stat_MTime + !
+end
+
+fn PStat { stat path -- ok }
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	stat@ vnode@ VStat ok!
+
+	vnode@ VNodePut
+end
+
+fn FStat { stat fd -- ok }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vnode
+	filp@ FileP_VNode + @ vnode!
+
+	stat@ vnode@ VStat ok!
 end

@@ -69,6 +69,8 @@ struct VNode
 	4 Index
 	4 Type
 	4 UID
+	4 GID
+	4 Timestamp
 	4 Permissions
 	4 Size
 	4 CoveredBy
@@ -96,7 +98,6 @@ const SUID 512
 const XMASK 73
 
 struct VDirent
-	4 Mount
 	4 DirVNode
 	4 VNID
 	4 Name

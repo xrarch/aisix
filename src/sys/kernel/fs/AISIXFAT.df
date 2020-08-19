@@ -223,6 +223,7 @@ fn private UpdateNode { vnode -- ok }
 	vd@ AVData_IParent + @ inode@ INode_iparent + !
 	vnode@ VNode_Permissions + @ inode@ INode_permissions + !
 	vnode@ VNode_UID + @ inode@ INode_uid + !
+	vnode@ VNode_Timestamp + @ inode@ INode_timestamp + !
 
 	buf@ bwrite ok!
 
@@ -655,6 +656,8 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 	inode@ INode_iparent + @ vd@ AVData_IParent + !
 	inode@ INode_permissions + @ vnode@ VNode_Permissions + !
 	inode@ INode_uid + @ vnode@ VNode_UID + !
+	0 vnode@ VNode_GID + !
+	inode@ INode_timestamp + @ vnode@ VNode_Timestamp + !
 
 	if (buf@ brelse)
 		-EINTR ok!

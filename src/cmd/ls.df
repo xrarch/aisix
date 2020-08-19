@@ -1,0 +1,172 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+var AFlag 0
+var LFlag 0
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto i
+	1 i!
+
+	auto chk
+	2 chk!
+
+	if (argc@ 2 >=)
+		auto sw
+		[1]argv@ sw!
+
+		if (sw@ gb '-' ==)
+			2 i!
+			3 chk!
+
+			1 sw +=
+
+			while (sw@ gb 0 ~=)
+				if (sw@ gb 'a' ==)
+					1 AFlag!
+				end elseif (sw@ gb 'l' ==)
+					1 LFlag!
+				end
+
+				1 sw +=
+			end
+		end
+	end
+
+	if (argc@ chk@ <)
+		"." Ls
+	end else
+		while (i@ argc@ <)
+			[i@]argv@ Ls
+
+			1 i +=
+		end
+	end
+end
+
+buffer StatB Stat_SIZEOF
+
+fn Ls { path -- }
+	auto fd
+	path@ O_READ Open fd!
+
+	if (fd@ iserr)
+		fd@ abs fd!
+		[fd@]ErrorNames@ path@ "ls: couldn't open %s: %s\n" Abort
+	end
+
+	auto ok
+	StatB fd@ FStat ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ path@ "ls: couldn't stat %s: %s\n" Abort
+	end
+
+	if (StatB Stat_Type + @ VNODE_DIR ==)
+		path@ fd@ ListDir
+	end else
+		path@ EInfo
+	end
+
+	fd@ Close drop
+end
+
+buffer DirentB Dirent_SIZEOF
+
+fn ListDir { path fd -- }
+	auto ok
+
+	if (AFlag@)
+		"." EInfo	
+	end
+
+	auto pl
+	path@ strlen pl!
+
+	while (1)
+		DirentB fd@ ReadDir ok!
+
+		if (ok@ -ENOENT ==)
+			break
+		end elseif (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ path@ "ls: couldn't read %s: %s\n" Abort
+		end
+
+		if (DirentB Dirent_Name + gb '.' ~= AFlag@ ||)
+			auto buf
+			DirentB Dirent_Name + strlen pl@ + 2 + Malloc buf!
+
+			buf@ path@ strcpy
+
+			'/' buf@ pl@ + sb
+
+			buf@ pl@ + 1 + DirentB Dirent_Name + strcpy
+
+			StatB buf@ PStat ok!
+			if (ok@ iserr)
+				ok@ abs ok!
+				[ok@]ErrorNames@ buf@ "ls: couldn't stat %s: %s\n" STDERR FPrintf
+				buf@ Free
+				continue
+			end
+
+			DirentB Dirent_Name + EInfo
+
+			buf@ Free
+		end
+	end
+end
+
+table TypeNames
+	0
+	'-'
+	'd'
+	'c'
+	'b'
+endtable
+
+table ModeNames
+	"---"
+	"--x"
+	"-w-"
+	"-wx"
+	"r--"
+	"r-x"
+	"rw-"
+	"rwx"
+endtable
+
+fn EInfo { name -- }
+	if (LFlag@)
+		auto mode
+		StatB Stat_Mode + @ mode!
+
+		auto q
+		StatB Stat_Type + @ q!
+
+		if (mode@ SUID &)
+			's' Putc
+		end else
+			if (q@ VNODE_BLOCK >)
+				'?' Putc
+			end else
+				[q@]TypeNames@ Putc
+			end
+		end
+
+		[mode@ 6 >> 7 &]ModeNames@ Puts
+		[mode@ 3 >> 7 &]ModeNames@ Puts
+		[mode@ 7 &]ModeNames@ Puts
+
+		' ' Putc
+
+		StatB Stat_UID + @ "%4d " Printf
+		StatB Stat_Size + @ "%8d " Printf
+	end
+
+	name@ "%s\n" Printf
+end
