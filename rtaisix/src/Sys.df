@@ -17,6 +17,7 @@ const SYSGETEUID 13
 const SYSREADDIR 14
 const SYSPSTAT 15
 const SYSFSTAT 16
+const SYSCHDIR 17
 
 asm "
 
@@ -126,6 +127,13 @@ _fstat:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSFSTAT
+	sys
+	ret
+
+_chdir:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSCHDIR
 	sys
 	ret
 
@@ -278,4 +286,10 @@ extern _fstat { stat fd -- ok }
 
 fn FStat { stat fd -- ok }
 	stat@ fd@ _fstat ok!
+end
+
+extern _chdir { pathlen path -- ok }
+
+fn Chdir { path -- ok }
+	path@ strlen path@ _chdir ok!
 end

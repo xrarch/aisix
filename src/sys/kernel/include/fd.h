@@ -62,3 +62,5 @@ extern Read { buf len fd -- bytes }
 extern PStat { stat path -- ok }
 
 extern FStat { stat fd -- ok }
+
+extern Chdir { path -- ok }

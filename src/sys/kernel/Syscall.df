@@ -20,6 +20,7 @@ table Syscalls
 	pointerof SysReadDir
 	pointerof SysPStat
 	pointerof SysFStat
+	pointerof SysChdir
 endtable
 public Syscalls
 
@@ -444,4 +445,23 @@ fn (Syscall) SysFStat { tf -- ok }
 	end
 
 	stat@ fd@ FStat ok!
+end
+
+fn (Syscall) SysChdir { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ Chdir ok!
+
+	path@ Free
 end

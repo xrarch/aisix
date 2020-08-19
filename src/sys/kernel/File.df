@@ -483,3 +483,33 @@ fn FStat { stat fd -- ok }
 
 	stat@ vnode@ VStat ok!
 end
+
+fn Chdir { path -- ok }
+	0 ok!
+
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	vnode@ WORLD_R p@ Process_EUID + @ VForbidden ok!
+
+	if (ok@ iserr)
+		vnode@ VNodePut
+		return
+	end
+
+	vnode@ VNodeRef
+
+	p@ Process_CWDVNode + @ VNodeUnref
+
+	vnode@ p@ Process_CWDVNode + !
+
+	vnode@ VNodeUnlock
+end

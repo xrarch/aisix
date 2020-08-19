@@ -6,7 +6,357 @@ buffer PName 256
 buffer PComp 256
 buffer Argvt (32 4 *)
 
+var LinePoint 0
+
+var Jobs 0
+
+fn String { m -- word }
+	256 Calloc word!
+
+	auto q
+	word@ q!
+
+	auto chars
+	0 chars!
+
+	1 LinePoint +=
+
+	while (1)
+		auto char
+		LinePoint@ gb char!
+
+		if (char@ 0 ==)
+			"sh: unexpected end of line while looking for end of string\n" STDERR FPrintf
+			word@ Free
+			-1 word!
+			return
+		end
+
+		if (char@ '\\' ==)
+			1 LinePoint +=
+			LinePoint@ gb char!
+
+			if (char@ 0 ==)
+				"sh: unexpected end of line while looking for end of string A\n" STDERR FPrintf
+				word@ Free
+				-1 word!
+				return
+			end
+		end elseif (char@ m@ ==)
+			1 LinePoint +=
+			return
+		end
+
+		if (chars@ 255 <)
+			char@ q@ sb
+			1 q +=
+			1 chars +=
+		end
+
+		1 LinePoint +=
+	end
+end
+
+fn Word { -- word }
+	if (LinePoint@ ~~)
+		0 word!
+		return
+	end
+
+	while (LinePoint@ gb ' ' ==)
+		1 LinePoint +=
+	end
+
+	if (LinePoint@ gb 0 ==)
+		0 word!
+		return
+	end
+
+	if (LinePoint@ gb '"' == LinePoint@ gb 27 == ||)
+		LinePoint@ gb String word!
+		return
+	end
+
+	256 Calloc word!
+
+	auto q
+	word@ q!
+
+	auto i
+	0 i!
+
+	auto chars
+	0 chars!
+
+	while (1)
+		auto char
+		LinePoint@ gb char!
+
+		auto term
+		0 term!
+
+		if (char@ '"' ==)
+			1 term!
+		end elseif (char@ 27 ==)
+			1 term!
+		end elseif (char@ ' ' ==)
+			1 term!
+		end elseif (char@ 0 ==)
+			0 LinePoint!
+			1 term!
+		end elseif (chars@ 0 >)
+			if (char@ ';' ==)
+				1 term!
+			end elseif (char@ '|' ==)
+				1 term!
+			end elseif (char@ '>' ==)
+				if (chars@ 1 > word@ gb '>' ~= ||)
+					1 term!
+				end
+			end elseif (char@ '<' ==)
+				1 term!
+			end elseif (char@ '&' ==)
+				if (chars@ 1 > word@ gb '&' ~= ||)
+					1 term!
+				end
+			end
+		end
+
+		if (term@)
+			return
+		end
+
+		if (chars@ 255 <)
+			char@ q@ sb
+			1 q +=
+			1 chars +=
+		end
+
+		1 LinePoint +=
+
+		if (char@ ';' ==)
+			return
+		end elseif (char@ '|' ==)
+			return
+		end elseif (char@ '>' ==)
+			if (LinePoint@ gb '>' ~=)
+				return
+			end
+		end elseif (char@ '<' ==)
+			return
+		end elseif (char@ '&' ==)
+			if (LinePoint@ gb '&' ~=)
+				return
+			end
+		end
+	end
+end
+
+fn Builtin { argcn cmd -- builtin }
+	0 builtin!
+
+	if (cmd@ "cd" strcmp)
+		1 builtin!
+
+		if (argcn@ 1 <)
+			return
+		end
+
+		auto w
+		Argvt@ w!
+
+		auto ok
+
+		w@ Chdir ok!
+
+		if (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ w@ "sh: couldn't cd %s: %s\n" STDERR FPrintf
+		end
+	end
+end
+
+fn IsPath { cand -- ispath }
+	if (cand@ "." strcmp)
+		1 ispath!
+		return
+	end
+
+	0 ispath!
+
+	while (cand@ gb)
+		if (cand@ gb '/' ==)
+			1 ispath!
+			return
+		end
+
+		1 cand +=
+	end
+end
+
+fn Command { -- done }
+	auto pname
+	Word pname!
+
+	0 done!
+
+	if (pname@ ~~ pname@ -1 == ||)
+		1 done!
+		return
+	end
+
+	auto arg
+
+	auto argcn
+	0 argcn!
+
+	auto waitfor
+	1 waitfor!
+
+	auto q
+	Argvt q!
+
+	while (1)
+		Word arg!
+
+		if (arg@ ~~)
+			1 done!
+			break
+		end elseif (arg@ -1 ==)
+			-1 done!
+			break
+		end
+
+		if (arg@ ";" strcmp)
+			arg@ Free
+			break
+		end
+
+		if (arg@ "&&" strcmp)
+			arg@ Free
+			break
+		end
+
+		if (arg@ "&" strcmp)
+			0 waitfor!
+			arg@ Free
+			break
+		end
+
+		if (argcn@ 32 <)
+			arg@ q@ !
+			4 q +=
+			1 argcn +=
+		end
+	end
+
+	auto ename
+	auto nq
+	0 nq!
+
+	auto builtin
+	0 builtin!
+
+	if (done@ -1 ~=)
+		pname@ ename!
+
+		if (pname@ IsPath ~~)
+			argcn@ pname@ Builtin builtin!
+			
+			if (builtin@ ~~) (* prepend /bin/ *)
+				pname@ strlen 6 + Malloc nq!
+
+				nq@ "/bin/" strcpy
+
+				nq@ 5 + pname@ strcpy
+
+				nq@ pname!
+			end
+		end
+
+		if (builtin@ ~~)
+			auto pid
+			argcn@ Argvt pname@ VSpawn pid!
+
+			if (pid@ iserr)
+				pid@ abs pid!
+				[pid@]ErrorNames@ ename@ "sh: %s: %s\n" STDERR FPrintf
+			end else
+				if (waitfor@)
+					auto wpid
+					-1 wpid!
+
+					while (wpid@ pid@ ~=)
+						auto ret
+						Wait ret! wpid!
+
+						if (wpid@ pid@ ~=)
+							wpid@ "sh: done: %d\n" STDERR FPrintf
+						end
+					end
+				end else
+					1 Jobs +=
+
+					pid@ Jobs@ "sh: [%d] %d\n" STDERR FPrintf
+				end
+			end
+		end
+	end else
+		1 done!
+	end
+
+	auto i
+	0 i!
+
+	Argvt q!
+
+	while (i@ argcn@ <)
+		q@@ Free
+
+		4 q +=
+		1 i +=
+	end
+
+	if (nq@)
+		nq@ Free
+	end
+
+	ename@ Free
+end
+
+fn CommandLine { -- }
+	while (Command ~~) end
+end
+
 fn Main { ... -- ret }
+	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
+
+	0 ret!
+
+	auto prmpt
+	if (GetUID 0 ==)
+		"# " prmpt!
+	end else
+		"$ " prmpt!
+	end
+	
+	while (1)
+		prmpt@ Puts
+		if (Prompt 255 Readline)
+			0 Exit
+		end
+
+		if (Prompt strlen 0 ==)
+			continue
+		end
+
+		Prompt LinePoint!
+
+		CommandLine
+	end
+end
+
+fn OldMain { ... -- ret }
 	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
 
 	0 ret!
@@ -20,6 +370,8 @@ fn Main { ... -- ret }
 		if (Prompt strlen 0 ==)
 			continue
 		end
+
+		Prompt LinePoint!
 
 		auto nt
 		Prompt PName ' ' 255 strntok nt!
@@ -64,7 +416,7 @@ fn Main { ... -- ret }
 
 		if (pid@ iserr)
 			pid@ abs pid!
-			[pid@]ErrorNames@ PName "sh: couldn't spawn %s: %s\n" Printf
+			[pid@]ErrorNames@ PName "sh: couldn't spawn %s: %s\n" STDERR FPrintf
 		end else
 			auto pret
 

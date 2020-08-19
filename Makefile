@@ -40,13 +40,16 @@ endif
 writecmd:
 	$(foreach file, $(wildcard $(CMD_DIR)/*.LOFF), \
 		$(FSTOOL) w /bin/$(shell basename -s .LOFF $(file)) $(file) ; \
-		$(FSTOOL) chmod /bin/$(shell basename -s .LOFF $(file)) 73 ;)
+		$(FSTOOL) chmod /bin/$(shell basename -s .LOFF $(file)) 493 ;)
 
 init:
+ifeq ($(REBUILD_CMD),yes)
 	rm -f $(INIT_DIR)/*.o
+	rm -f $(INIT_DIR)/*.LOFF
+endif
 	make --directory=$(INIT_DIR)
 	$(FSTOOL) w /sys/init $(INIT_DIR)/init.LOFF
-	$(FSTOOL) chmod /sys/init 73
+	$(FSTOOL) chmod /sys/init 493
 
 stand: diag limnvol
 
