@@ -151,7 +151,7 @@ fn ConsInit { -- }
 	end
 
 	auto dev
-	OWNER_W OWNER_R | WORLD_W | WORLD_R | 0 0 "cons" ConsDriver 0 DeviceRegister dev!
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | 0 0 "cons" ConsDriver 0 DeviceRegister dev!
 
 	ConsTTY@ dev@ Device_TTY + !
 

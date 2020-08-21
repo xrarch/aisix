@@ -344,10 +344,10 @@ fn (FSMount) DevFSMount { mount -- root }
 		return
 	end
 
-	432 0 0 "mem" MemDriver 2 DeviceRegister drop
-	438 0 0 "null" MemDriver 0 DeviceRegister drop
-	438 0 0 "zero" MemDriver 1 DeviceRegister drop
-	(* 438 0 0 "full" MemDriver 3 DeviceRegister drop *)
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "mem" MemDriver 2 DeviceRegister drop
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | 0 0 "null" MemDriver 0 DeviceRegister drop
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | 0 0 "zero" MemDriver 1 DeviceRegister drop
+	(* OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | 0 0 "full" MemDriver 3 DeviceRegister drop *)
 
 	1 DevFSMounted!
 

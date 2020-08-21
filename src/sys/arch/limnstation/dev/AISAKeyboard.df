@@ -56,7 +56,7 @@ fn DrvKeybdFoundNode { node -- }
 
 	KeybdID@ AmanatsuSetInterrupt
 
-	OWNER_R WORLD_R | KeybdIBuffer@ 0 "kbd0" KeybdDriver 0 DeviceRegister drop
+	OWNER_R GROUP_R | WORLD_R | KeybdIBuffer@ 0 "kbd0" KeybdDriver 0 DeviceRegister drop
 end
 
 fn (DevSysctl) KeybdSysctl { op1 op2 op3 op4 unit -- ok }

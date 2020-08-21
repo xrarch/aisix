@@ -90,7 +90,7 @@ fn DrvDKSFoundNode { node -- }
 
 	auto devn
 
-	OWNER_W OWNER_R | 0 0 name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
 
 	dks@ DKS_Blocks + @ 4096 * devn@ Device_Size + !
 

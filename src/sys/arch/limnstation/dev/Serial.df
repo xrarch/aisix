@@ -70,7 +70,7 @@ fn DrvSerialFoundNode { node -- }
 
 	SerialIntrEnable
 
-	OWNER_W OWNER_R | WORLD_W | WORLD_R | SerialIBuffer@ SerialOBuffer@ "serial0" SerialDriver 0 DeviceRegister drop
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | SerialIBuffer@ SerialOBuffer@ "serial0" SerialDriver 0 DeviceRegister drop
 end
 
 fn (DevSysctl) SerialSysctl { op1 op2 op3 op4 unit -- ok }

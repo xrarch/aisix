@@ -37,7 +37,7 @@ fn GFXRegister { gfx -- }
 
 	auto dev
 
-	OWNER_W OWNER_R |
+	OWNER_W OWNER_R | GROUP_W | GROUP_R |
 	0 0
 	name@
 	GFXDriver
