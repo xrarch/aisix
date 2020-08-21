@@ -104,6 +104,19 @@ fn bget { blockno dev -- buf }
 
 	while (buf@ BufferHead ~=)
 		if (buf@ Buffer_Refs + @ 0 ==)
+			if (buf@ Buffer_Dirty + @)
+				auto r
+				buf@ bupdate r!
+
+				if (r@ iserr)
+					r@ buf!
+
+					UnlockBCache
+
+					return
+				end 
+			end
+
 			dev@ buf@ Buffer_Device + !
 			blockno@ buf@ Buffer_BlockNum + !
 			sdev@ buf@ Buffer_RawDev + !
@@ -164,10 +177,7 @@ fn bread { blockno dev -- buf }
 end
 
 fn bwrite { buf -- ok }
-	buf@ Buffer_Data + @
-	BLOCKSZ
-	buf@ Buffer_BlockNum + @ BLOCKSZ *
-	buf@ Buffer_Device + @ DeviceWrite ok!
+	1 buf@ Buffer_Dirty + !
 end
 
 fn brelse { buf -- ok }
@@ -193,4 +203,47 @@ fn brelse { buf -- ok }
 	UnlockBCache
 
 	0 ok!
+end
+
+fn bupdate { buf -- ok }
+	if (buf@ LockBuf)
+		UnlockBCache
+		-EINTR ok!
+		return
+	end
+
+	if (buf@ Buffer_Valid + @ buf@ Buffer_Dirty + @ &&)
+		buf@ Buffer_Data + @
+		BLOCKSZ
+		buf@ Buffer_BlockNum + @ BLOCKSZ *
+		buf@ Buffer_Device + @ DeviceWrite ok!
+
+		0 buf@ Buffer_Dirty + !
+	end
+
+	buf@ UnlockBuf
+end
+
+fn bsync { -- ok }
+	0 ok!
+
+	if (LockBCache)
+		-EINTR ok!
+		return
+	end
+
+	auto buf
+	BufferHead Buffer_Next + @ buf!
+
+	while (buf@ BufferHead ~=)
+		buf@ bupdate ok!
+
+		if (ok@ iserr)
+			return
+		end
+
+		buf@ Buffer_Next + @ buf!
+	end
+
+	UnlockBCache
 end

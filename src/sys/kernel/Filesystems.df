@@ -108,8 +108,12 @@ fn VTrunc { vnode -- ok }
 end
 
 fn VFSPath { path -- vnode }
+
 	if (path@ gb '/' ==)
 		RootVNode@ vnode!
+	end elseif (path@ gb 0 ==) (* null path is kind of scary *)
+		-ENOENT vnode!
+		return
 	end else
 		CurrentThread@ Thread_Process + @ Process_CWDVNode + @ vnode!
 	end
@@ -570,8 +574,6 @@ fn VFSSyncWorker { -- }
 		MountListHead@ mount!
 
 		while (mount@)
-			auto r
-
 			mount@ 0 SyncVNodes r!
 
 			if (r@ -EINTR ==)
@@ -582,6 +584,14 @@ fn VFSSyncWorker { -- }
 		end
 
 		UnlockMountList
+
+		auto r
+		bsync r!
+
+		if (r@ iserr)
+			r@ abs r!
+			[r@]ErrorNames@ "block cache sync error: %s\n" Printf
+		end
 	end
 end
 

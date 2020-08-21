@@ -194,6 +194,9 @@ fn IsPath { cand -- ispath }
 	end
 end
 
+const FTRUNC 1
+const FAPPEND 2
+
 fn Command { -- done }
 	auto pname
 	Word pname!
@@ -207,11 +210,22 @@ fn Command { -- done }
 
 	auto arg
 
+	auto fd
+
 	auto argcn
 	0 argcn!
 
 	auto waitfor
 	1 waitfor!
+
+	auto red
+	0 red!
+
+	auto fname
+	0 fname!
+
+	auto effect
+	0 effect!
 
 	auto q
 	Argvt q!
@@ -230,17 +244,47 @@ fn Command { -- done }
 		if (arg@ ";" strcmp)
 			arg@ Free
 			break
-		end
-
-		if (arg@ "&&" strcmp)
+		end elseif (arg@ "&&" strcmp)
 			arg@ Free
 			break
-		end
-
-		if (arg@ "&" strcmp)
+		end elseif (arg@ "&" strcmp)
 			0 waitfor!
 			arg@ Free
 			break
+		end
+
+		if (red@)
+			arg@ Free
+			"sh: syntax error\n" STDERR FPrintf
+			-1 done!
+			break
+		end
+
+		if (arg@ ">" strcmp)
+			1 red!
+		end elseif (arg@ ">>" strcmp)
+			1 red!
+		end
+
+		if (red@)
+			Word fname!
+
+			if (fname@ ~~ fname@ -1 == ||)
+				arg@ Free
+				"sh: syntax error\n" STDERR FPrintf
+				-1 done!
+				break
+			end
+
+			if (arg@ 1 + gb '>' ==)
+				FAPPEND effect!
+			end else
+				FTRUNC effect!
+			end
+
+			arg@ Free
+
+			continue
 		end
 
 		if (argcn@ 32 <)
@@ -256,16 +300,15 @@ fn Command { -- done }
 	auto nq
 	0 nq!
 
-	auto builtin
-	0 builtin!
+	0 red!
 
 	if (done@ -1 ~=)
 		pname@ ename!
 
 		if (pname@ IsPath ~~)
-			argcn@ pname@ Builtin builtin!
+			argcn@ pname@ Builtin red!
 			
-			if (builtin@ ~~) (* prepend /bin/ *)
+			if (red@ ~~) (* prepend /bin/ *)
 				pname@ strlen 6 + Malloc nq!
 
 				nq@ "/bin/" strcpy
@@ -276,9 +319,26 @@ fn Command { -- done }
 			end
 		end
 
-		if (builtin@ ~~)
+		if (red@ ~~)
 			auto pid
-			argcn@ Argvt pname@ VSpawn pid!
+
+			if (effect@ 0 ==)
+				argcn@ Argvt pname@ VSpawn pid!
+			end else
+				if (effect@ FTRUNC ==)
+					fname@ O_WRITE O_TRUNC | Open fd!
+				end elseif (effect@ FAPPEND ==)
+					"append NYI\n" Abort
+				end
+
+				if (fd@ iserr)
+					fd@ pid!
+					fd@ abs fd!
+					[fd@]ErrorNames@ fname@ "sh: couldn't open %s: %s\n" STDERR FPrintf
+				end else
+					STDIN fd@ STDERR argcn@ Argvt pname@ ASpawn pid!
+				end 
+			end
 
 			if (pid@ iserr)
 				pid@ abs pid!
@@ -289,8 +349,7 @@ fn Command { -- done }
 					-1 wpid!
 
 					while (wpid@ pid@ ~=)
-						auto ret
-						Wait ret! wpid!
+						Wait drop wpid!
 
 						if (wpid@ pid@ ~=)
 							wpid@ "sh: done: %d\n" STDERR FPrintf
@@ -308,24 +367,27 @@ fn Command { -- done }
 		1 done!
 	end
 
-	auto i
-	0 i!
-
-	Argvt q!
-
-	while (i@ argcn@ <)
-		q@@ Free
-
-		4 q +=
-		1 i +=
-	end
-
 	if (nq@)
 		nq@ Free
 	end
 
 	if (ename@)
 		ename@ Free
+	end
+
+	if (fname@)
+		fname@ Free
+	end
+
+	0 nq!
+
+	Argvt q!
+
+	while (nq@ argcn@ <)
+		q@@ Free
+
+		4 q +=
+		1 nq +=
 	end
 end
 

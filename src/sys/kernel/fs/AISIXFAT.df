@@ -194,7 +194,7 @@ fn private UpdateNode { vnode -- ok }
 
 	vnode@ VNode_VNID + @ vnid!
 
-	vnid@ vnode@ "afs: update ptr=0x%x vnid=0x%x\n" Printf
+	(* vnid@ vnode@ "afs: update ptr=0x%x vnid=0x%x\n" Printf *)
 
 	auto block
 	auto off
@@ -240,12 +240,15 @@ fn private UpdateNode { vnode -- ok }
 	end
 end
 
-fn private BMap { bn reading vnode -- buf }
+fn private BMap { i plink bn reading vnode -- qi ent buf }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	auto ent
-	vnode@ VNode_FSData + @ AVData_Entry + @ ent!
+	if (plink@ -1 ==)
+		vnode@ VNode_FSData + @ AVData_Entry + @ ent!
+	end else
+		plink@ ent!
+	end
 
 	auto dev
 	mount@ Mount_Device + @ dev!
@@ -276,8 +279,7 @@ fn private BMap { bn reading vnode -- buf }
 
 	auto t
 
-	auto i
-	0 i!
+	i@ qi!
 
 	while (i@ bn@ <)
 		b@ mount@ GetBlockStatus ent! t!
@@ -316,6 +318,7 @@ fn private BMap { bn reading vnode -- buf }
 		ent@ b!
 
 		1 i +=
+		1 qi +=
 	end
 
 	b@ dev@ bread buf!
@@ -396,9 +399,15 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 	auto tot
 	0 tot!
 
+	auto link
+	-1 link!
+
+	auto i
+	0 i!
+
 	while (tot@ len@ <)
 		auto bbuf
-		seek@ 4096 / 1 vnode@ BMap bbuf!
+		i@ link@ seek@ 4096 / 1 vnode@ BMap bbuf! link! i!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -457,9 +466,15 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 
 	auto r
 
+	auto link
+	-1 link!
+
+	auto i
+	0 i!
+
 	while (tot@ len@ <)
 		auto bbuf
-		seek@ 4096 / 0 vnode@ BMap bbuf!
+		i@ link@ seek@ 4096 / 0 vnode@ BMap bbuf! link! i!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -709,8 +724,14 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 	auto buf
 	0 buf!
 
+	auto link
+	-1 link!
+
+	auto i
+	0 i!
+
 	if (index@ 4096 %)
-		index@ 4096 / 0 dirvn@ BMap buf!
+		i@ link@ index@ 4096 / 0 dirvn@ BMap buf! link! i!
 
 		if (buf@ iserr)
 			buf@ ok!
@@ -727,7 +748,7 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 				end
 			end
 
-			index@ 4096 / 1 dirvn@ BMap buf!
+			i@ link@ index@ 4096 / 1 dirvn@ BMap buf! link! i!
 
 			if (buf@ iserr)
 				buf@ ok!

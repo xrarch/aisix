@@ -182,7 +182,7 @@ fn NewProcess { path fd0 fd1 fd2 mode udatavec udatac -- pid }
 	path@ strlen path@ fd0@ fd1@ fd2@ mode@ udatavec@ udatac@ _newprocess pid!
 end
 
-fn VSpawn { argcn argvt path -- pid }
+fn ASpawn { fd0 fd1 fd2 argcn argvt path -- pid }
 	auto uvec
 	argcn@ 2 + UDVec_SIZEOF * Malloc uvec!
 
@@ -213,9 +213,17 @@ fn VSpawn { argcn argvt path -- pid }
 		1 i +=
 	end
 
-	path@ 0 0 0 NP_INHERIT uvec@ argcn@ 2 + NewProcess pid!
+	if (fd0@ -1 ==)
+		path@ 0 0 0 NP_INHERIT uvec@ argcn@ 2 + NewProcess pid!
+	end else
+		path@ fd0@ fd1@ fd2@ NP_SPECIFY uvec@ argcn@ 2 + NewProcess pid!
+	end
 
 	uvec@ Free
+end
+
+fn VSpawn { argcn argvt path -- pid }
+	-1 0 0 argcn@ argvt@ path@ ASpawn pid!
 end
 
 fn Spawn { ... path -- pid }

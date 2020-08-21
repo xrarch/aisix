@@ -1,0 +1,21 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto i
+	1 i!
+
+	while (i@ argc@ <)
+		[i@]argv@ "%s" Printf
+
+		if (i@ argc@ 1 - ~=)
+			' ' Putc
+		end
+
+		1 i +=
+	end
+
+	'\n' Putc
+end

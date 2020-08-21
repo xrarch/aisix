@@ -29,12 +29,14 @@ fn Main { ... -- ret }
 	end
 end
 
-buffer CatBuffer 4096
+const CATUNIT 4096
+
+buffer CatBuffer CATUNIT
 
 fn Cat { name fd -- }
 	auto bytes
 
-	CatBuffer 4096 fd@ Read bytes!
+	CatBuffer CATUNIT fd@ Read bytes!
 
 	if (bytes@ iserr)
 		bytes@ abs bytes!
@@ -51,7 +53,7 @@ fn Cat { name fd -- }
 			[r@]ErrorNames@ "cat: couldn't write: %s\n" Abort
 		end
 
-		CatBuffer 4096 fd@ Read bytes!
+		CatBuffer CATUNIT fd@ Read bytes!
 
 		if (bytes@ iserr)
 			bytes@ abs bytes!
