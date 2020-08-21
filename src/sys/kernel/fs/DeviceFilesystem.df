@@ -336,11 +336,18 @@ fn (FSTrunc) DevFSTrunc { vnode -- ok }
 	-EPERM ok!
 end
 
+externptr MemDriver
+
 fn (FSMount) DevFSMount { mount -- root }
 	if (DevFSMounted@)
 		-EPERM root!
 		return
 	end
+
+	432 0 0 "mem" MemDriver 2 DeviceRegister drop
+	438 0 0 "null" MemDriver 0 DeviceRegister drop
+	438 0 0 "zero" MemDriver 1 DeviceRegister drop
+	(* 438 0 0 "full" MemDriver 3 DeviceRegister drop *)
 
 	1 DevFSMounted!
 

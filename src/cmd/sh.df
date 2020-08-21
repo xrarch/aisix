@@ -332,7 +332,7 @@ fn Command { -- done }
 				end
 
 				if (fd@ iserr)
-					fd@ pid!
+					0 pid!
 					fd@ abs fd!
 					[fd@]ErrorNames@ fname@ "sh: couldn't open %s: %s\n" STDERR FPrintf
 				end else
@@ -343,7 +343,7 @@ fn Command { -- done }
 			if (pid@ iserr)
 				pid@ abs pid!
 				[pid@]ErrorNames@ ename@ "sh: %s: %s\n" STDERR FPrintf
-			end else
+			end elseif (pid@)
 				if (waitfor@)
 					auto wpid
 					-1 wpid!

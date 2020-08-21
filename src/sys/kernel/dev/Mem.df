@@ -1,0 +1,65 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table MemDriver
+	"mem"
+	DEV_CHAR
+	pointerof MemOpen
+	pointerof MemClose
+	pointerof MemIoctl
+	pointerof MemRead
+	pointerof MemWrite
+	pointerof MemSysctl
+endtable
+public MemDriver
+
+fn (DevSysctl) MemSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) MemOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) MemClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) MemIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) MemRead { buf len unit seek -- bytes }
+	if (unit@ 0 ==) (* /dev/null *)
+		0 bytes!
+		return
+	end elseif (unit@ 1 ==) (* /dev/zero *)
+		buf@ len@ 0 memset
+		len@ bytes!
+		return
+	end elseif (unit@ 2 ==) (* /dev/mem *)
+		buf@ seek@ len@ memcpy
+		len@ bytes!
+		return
+	end elseif (unit@ 3 ==) (* /dev/full *)
+		0 bytes!
+		return
+	end
+end
+
+fn (DevWrite) MemWrite { buf len unit seek -- bytes }
+	if (unit@ 0 ==) (* /dev/null *)
+		0 bytes!
+		return
+	end elseif (unit@ 1 ==) (* /dev/zero *)
+		len@ bytes!
+		return
+	end elseif (unit@ 2 ==) (* /dev/mem *)
+		seek@ buf@ len@ memcpy
+		len@ bytes!
+		return
+	end elseif (unit@ 3 ==) (* /dev/full *)
+		-ENOSPC bytes!
+		return
+	end
+end
