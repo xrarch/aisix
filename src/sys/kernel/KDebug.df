@@ -85,6 +85,8 @@ extern VFSPrintMounts { -- }
 
 extern DevFSPrintDevs { -- }
 
+extern PrintVNodes { -- }
+
 fn MonitorCommandsInit { -- }
 	ListCreate MonitorCommandList!
 
@@ -161,6 +163,11 @@ fn MonitorCommandsInit { -- }
 	"[sp] Trace."
 	pointerof MonitorCommandTrace
 	"trace"
+	MonitorAddCommand
+
+	"Print cached vnodes."
+	pointerof PrintVNodes
+	"vnodes"
 	MonitorAddCommand
 end
 

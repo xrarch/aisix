@@ -108,180 +108,154 @@ fn VTrunc { vnode -- ok }
 end
 
 fn VFSPath { path -- vnode }
-
-	if (path@ gb '/' ==)
-		RootVNode@ vnode!
-	end elseif (path@ gb 0 ==) (* null path is kind of scary *)
+	if (path@ gb 0 ==)
 		-ENOENT vnode!
 		return
+	end elseif (path@ gb '/' ==)
+		RootVNode@ vnode!
 	end else
 		CurrentThread@ Thread_Process + @ Process_CWDVNode + @ vnode!
 	end
 
-	auto uid
-	CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
-
-	auto pcomp
-	256 Calloc pcomp!
-
-	auto mount
-	vnode@ VNode_Mount + @ mount!
-
-	mount@ MountRef
-
-	if (mount@ Mount_Busy + @)
-		pcomp@ Free
-		mount@ MountUnref
-		-EBUSY vnode!
-		return
-	end
-
 	if (vnode@ VNodeLock)
-		pcomp@ Free
 		-EINTR vnode!
-		mount@ MountUnref
 		return
 	end
 
 	vnode@ VNodeRef
 
+	auto pcomp
+	256 Malloc pcomp!
+
+	auto pr
+
+	auto dirent
+	VDirent_SIZEOF Calloc dirent!
+
+	auto mount
+	vnode@ VNode_Mount + @ mount!
+
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
 
-	auto rwd
-	fs@ Filesystem_RewindDir + @ rwd!
-
-	auto rd
-	fs@ Filesystem_ReadDir + @ rd!
-
 	auto ok
 
-	auto dirent
+	while (1)
+		vnode@ VNode_Type + @ ok!
 
-	VDirent_SIZEOF Calloc dirent!
+		if (path@ gb '/' ==)
+			if (ok@ VNODE_DIR ~=)
+				vnode@ VNodePut
+				pcomp@ Free
+				dirent@ Free
+				-ENOTDIR vnode!
+				return
+			end
 
-	if (dirent@ iserr)
-		pcomp@ Free
-		vnode@ VNodePut
-		dirent@ vnode!
-		mount@ MountUnref
-		return
-	end
-
-	while (path@ 0 ~=)
-		0 dirent@ VDirent_Cookie + !
-
-		if (vnode@ VNode_Type + @ VNODE_DIR ~=)
-			vnode@ VNodePut
-			-ENOTDIR vnode!
-			break
+			while (path@ gb '/' ==)
+				1 path +=
+			end
 		end
 
-		vnode@ dirent@ VDirent_DirVNode + !
-
-		path@ pcomp@ '/' 255 strntok path!
-
-		if (pcomp@ strlen 0 ==)
-			break
+		if (path@ gb 0 ==)
+			(* finished *)
+			pcomp@ Free
+			dirent@ Free
+			return
 		end
+
+		0 pr!
+
+		while (1)
+			if (path@ gb '/' == path@ gb 0 == ||)
+				break
+			end
+
+			if (pr@ 256 <)
+				path@ gb pcomp@ pr@ + sb
+				1 pr +=
+			end
+
+			1 path +=
+		end
+
+		0 pcomp@ pr@ + sb
 
 		if (pcomp@ "." strcmp)
 			continue
 		end
 
-		vnode@ WORLD_R uid@ VForbidden ok!
+		vnode@ dirent@ VDirent_DirVNode + !
+
+		dirent@ fs@ Filesystem_RewindDir + @ FSRewindDir ok!
 
 		if (ok@ iserr)
 			vnode@ VNodePut
+			pcomp@ Free
+			dirent@ Free
 			ok@ vnode!
-			break
+			return
 		end
-
-		dirent@ rwd@ FSRewindDir ok!
-
-		if (ok@ iserr)
-			vnode@ VNodePut
-			ok@ vnode!
-			break
-		end
-
-		auto found
-		0 found!
 
 		while (1)
-			dirent@ rd@ FSReadDir ok!
+			if (dirent@ VDirent_Cookie + @)
+				dirent@ VDirent_Cookie + @ Free
+				0 dirent@ VDirent_Cookie + !
+			end
+
+			dirent@ fs@ Filesystem_ReadDir + @ FSReadDir ok!
 
 			if (ok@ iserr)
 				vnode@ VNodePut
+				pcomp@ Free
+				dirent@ Free
 				ok@ vnode!
-				break
+				return
 			end
 
 			if (dirent@ VDirent_Name + @ pcomp@ strcmp)
-				auto vnid
-				vnode@ VNode_VNID + @ vnid!
 				vnode@ VNodePut
 				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
-				if (ok@ iserr)
-					ok@ vnode!
-					break
+				if (dirent@ VDirent_Cookie + @)
+					dirent@ VDirent_Cookie + @ Free
+					0 dirent@ VDirent_Cookie + !
 				end
 
 				ok@ vnode!
 
-				1 found!
+				if (ok@ iserr)
+					pcomp@ Free
+					dirent@ Free
+					return
+				end
+
 				break
 			end
 		end
 
 		if (dirent@ VDirent_Cookie + @)
 			dirent@ VDirent_Cookie + @ Free
+			0 dirent@ VDirent_Cookie + !
 		end
 
-		if (found@ 0 ==)
-			break
-		end
-
-		auto newroot
-		vnode@ VNode_CoveredBy + @ newroot!
-
-		if (newroot@)
+		if (vnode@ VNode_CoveredBy + @)
+			vnode@ VNode_CoveredBy + @ ok!
 			vnode@ VNodePut
-
-			newroot@ vnode!
-
+			ok@ vnode!
 			vnode@ VNode_Mount + @ mount!
-
-			mount@ MountRef
-
-			if (mount@ Mount_Busy + @)
-				pcomp@ Free
-				dirent@ Free
-				mount@ MountUnref
-				-EBUSY vnode!
-				return
-			end
+			mount@ Mount_Filesystem + @ fs!
 
 			if (vnode@ VNodeLock)
+				-EINTR vnode!
 				pcomp@ Free
 				dirent@ Free
-				-EINTR vnode!
-				mount@ MountUnref
 				return
 			end
 
 			vnode@ VNodeRef
-
-			mount@ Mount_Filesystem + @ fs!
-			fs@ Filesystem_RewindDir + @ rwd!
-			fs@ Filesystem_ReadDir + @ rd!
 		end
 	end
-
-	mount@ MountUnref
-	dirent@ Free
-	pcomp@ Free
 end
 
 fn FSByName { name -- fs }

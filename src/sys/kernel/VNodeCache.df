@@ -141,6 +141,8 @@ fn VNodeNew { vnid mount -- vnode }
 
 		vnode@ VNode_SIZEOF 0 memset
 
+		ln@ vnode@ VNode_Index + !
+
 		"vnode" vnode@ VNode_Mutex + InitMutex
 	end
 
@@ -251,6 +253,28 @@ fn VNodeGet { vnid mount -- vnode }
 	mount@ MountUnref
 end
 
+fn PrintVNodes { -- }
+	auto i
+	0 i!
+
+	auto vnode
+
+	while (i@ VNCACHESIZE <)
+		[i@]VNodeCache@ vnode!
+
+		if (vnode@)
+			i@ "%d: " Printf
+			vnode@ VNode_VNID + @ "vnid=%d " Printf
+			vnode@ VNode_Refs + @ "refs=%d " Printf
+			vnode@ VNode_Index + @ "index=%d\n" Printf
+		end
+
+		0 vnode!
+
+		1 i +=
+	end
+end
+
 fn SyncVNodes { mount remove -- res }
 	auto i
 	0 i!
@@ -311,6 +335,8 @@ fn SyncVNodes { mount remove -- res }
 					[res@]ErrorNames@ vnode@ "(%x) sync error: %s\n" Printf
 				end
 			end
+
+			vnode@ VNodeUnref
 
 			1 i +=
 			continue

@@ -505,8 +505,6 @@ fn Chdir { path -- ok }
 		return
 	end
 
-	vnode@ VNodeRef
-
 	p@ Process_CWDVNode + @ VNodeUnref
 
 	vnode@ p@ Process_CWDVNode + !

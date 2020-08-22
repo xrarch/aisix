@@ -732,6 +732,8 @@ fn ProcessKill { ret process -- }
 		auto ofile
 		process@ Process_OFiles + ofile!
 
+		0 i!
+
 		while (i@ OFILEMAX <)
 			if (ofile@@)
 				ofile@@ CloseP drop
