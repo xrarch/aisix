@@ -17,14 +17,10 @@ fn Main { ksz args -- ret }
 
 	auto ptr
 	pointerof _bss ptr!
-	
-	auto max
-	pointerof _bss_end max!
 
-	while (ptr@ max@ <)
-		0 ptr@ !
-		4 ptr +=
-	end
+	ptr@
+	pointerof _bss_end ptr@ -
+	0 memset
 
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
