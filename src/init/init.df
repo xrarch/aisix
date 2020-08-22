@@ -36,7 +36,7 @@ fn Main { ... -- ret }
 		"/bin/sh" Spawn shpid!
 
 		if (shpid@ iserr)
-			shpid@ abs pid!
+			shpid@ abs shpid!
 			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
 			1 Exit
 		end
