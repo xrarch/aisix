@@ -25,11 +25,11 @@ fn Main { ... -- ret }
 			1 i +=
 		end
 	end else
-		"stdin" 0 Cat 
+		"<stdin>" 0 Cat 
 	end
 end
 
-const CATUNIT 4096
+const CATUNIT 16384
 
 buffer CatBuffer CATUNIT
 

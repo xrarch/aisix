@@ -29,12 +29,16 @@ struct AFSData
 	4 IStart
 	4 ICount
 	4 VolSize
+	4 LastFreeBlock
 endstruct
 
 struct AVData
 	4 Entry
 	4 Dirty
 	4 IParent
+	4 BNCache
+	4 FirstBN
+	4 NextBN
 endstruct
 
 struct Superblock
@@ -115,11 +119,17 @@ fn private SetBlockStatus { status block mount -- ok }
 end
 
 fn private BAlloc { link mount -- buf }
-	auto bs
-	mount@ Mount_FSData + @ AFSData_VolSize + @ bs!
+	auto fsd
+	mount@ Mount_FSData + @ fsd!
+
+	auto lfb
+	fsd@ AFSData_LastFreeBlock + @ lfb!
 
 	auto i
-	0 i!
+	lfb@ i!
+
+	auto top
+	fsd@ AFSData_VolSize + @ top!
 
 	auto bn
 
@@ -127,7 +137,20 @@ fn private BAlloc { link mount -- buf }
 
 	auto rs
 
-	while (i@ bs@ <)
+	auto search
+	0 search!
+
+	while (1)
+		if (i@ top@ ==)
+			if (search@)
+				break
+			end else
+				1 search!
+				lfb@ top!
+				0 i!
+			end
+		end
+
 		InterruptDisable rs!
 		i@ mount@ GetBlockStatus bn! r!
 
@@ -164,6 +187,8 @@ fn private BAlloc { link mount -- buf }
 				r@ buf!
 				return
 			end
+
+			i@ fsd@ AFSData_LastFreeBlock + !
 
 			return
 		end else
@@ -240,15 +265,20 @@ fn private UpdateNode { vnode -- ok }
 	end
 end
 
-fn private BMap { i plink bn reading vnode -- qi ent buf }
+fn private WalkFAT { ent count reading vnode cache -- b }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	if (plink@ -1 ==)
-		vnode@ VNode_FSData + @ AVData_Entry + @ ent!
-	end else
-		plink@ ent!
-	end
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	auto fb
+	vd@ AVData_FirstBN + @ fb!
+
+	auto bm
+	vd@ AVData_BNCache + @ vd@ AVData_NextBN + @ fb@ - 4 * + bm!
+
+	auto buf
 
 	auto dev
 	mount@ Mount_Device + @ dev!
@@ -258,34 +288,43 @@ fn private BMap { i plink bn reading vnode -- qi ent buf }
 			"balloc entry on read\n" Panic
 		end
 
-		0xFFFFFFFF mount@ BAlloc buf!
+		0xFFFFFFFF mount@ BAlloc b!
 
-		if (buf@ iserr)
+		if (b@ iserr)
 			return
 		end
 
-		buf@ Buffer_BlockNum + @ ent! 
+		b@ Buffer_BlockNum + @ ent! 
 
-		if (buf@ brelse)
+		if (b@ brelse)
 			-EINTR buf!
 			return
 		end
 
 		ent@ vnode@ VNode_FSData + @ AVData_Entry + !
+
+		if (cache@)
+			if (fb@ 0 ==)
+				ent@ bm@ !
+				4 bm +=
+			end else
+				"balloc fb != 0\n" Panic
+			end
+		end
 	end
 
-	auto b
 	ent@ b!
 
 	auto t
 
-	i@ qi!
+	auto i
+	0 i!
 
-	while (i@ bn@ <)
+	while (i@ count@ <)
 		b@ mount@ GetBlockStatus ent! t!
 
 		if (t@ iserr)
-			t@ buf!
+			t@ b!
 			return
 		end
 
@@ -297,31 +336,97 @@ fn private BMap { i plink bn reading vnode -- qi ent buf }
 			0xFFFFFFFF mount@ BAlloc buf!
 
 			if (buf@ iserr)
+				buf@ b!
 				return
 			end
 
 			buf@ Buffer_BlockNum + @ ent!
 
 			if (buf@ brelse)
-				-EINTR buf!
+				-EINTR b!
 				return
 			end
 
 			ent@ b@ mount@ SetBlockStatus t!
 
 			if (t@ iserr)
-				t@ buf!
+				t@ b!
 				return
 			end
+		end
+
+		if (cache@)
+			ent@ bm@ !
+			4 bm +=
 		end
 
 		ent@ b!
 
 		1 i +=
-		1 qi +=
+	end
+end
+
+fn private BMap { bn reading vnode -- buf }
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	auto fb
+	vd@ AVData_FirstBN + @ fb!
+
+	auto nb
+	vd@ AVData_NextBN + @ nb!
+
+	auto bm
+	vd@ AVData_BNCache + @ bm!
+
+	auto bno
+	auto cnt
+	auto cache
+
+	if (bn@ fb@ >= bn@ nb@ < &&)
+		bn@ fb@ - 4 * bm@ + @ bno!
+	end else
+		if (bn@ fb@ < nb@ 0 == ||)
+			vd@ AVData_Entry + @ bno!
+			bn@ cnt!
+			0 cache!
+		end elseif (bn@ nb@ >=)
+			nb@ 1 - fb@ - 4 * bm@ + @ bno!
+			bn@ nb@ - 1 + cnt!
+
+			if (bn@ fb@ - 1024 <)
+				bn@ 1 + nb!
+				1 cache!
+			end else
+				0 cache!
+			end
+		end else
+			"BMap: im bad at math\n" Panic
+		end
+
+		bno@ cnt@ reading@ vnode@ cache@ WalkFAT bno!
+
+		if (bno@ iserr)
+			0 vd@ AVData_FirstBN + !
+			0 vd@ AVData_NextBN + !
+
+			bno@ buf!
+			return
+		end
+
+		if (cache@)
+			nb@ vd@ AVData_NextBN + !
+		end else
+			bn@ fb!
+			bn@ 1 + nb!
+			fb@ vd@ AVData_FirstBN + !
+			nb@ vd@ AVData_NextBN + !
+
+			bno@ bm@ !
+		end
 	end
 
-	b@ dev@ bread buf!
+	bno@ vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
 end
 
 fn private TruncNode { vnode -- ok }
@@ -351,6 +456,9 @@ fn private TruncNode { vnode -- ok }
 			return
 		end
 	end
+
+	0 vd@ AVData_FirstBN + !
+	0 vd@ AVData_NextBN + !
 
 	0 vnode@ VNode_Size + !
 	0xFFFFFFFF vd@ AVData_Entry + !
@@ -382,7 +490,13 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 		return
 	end
 
+	if (vnode@ VNodeLock)
+		-EINTR bytes!
+		return
+	end
+
 	if (seek@ vnode@ VNode_Size + @ >=)
+		vnode@ VNodeUnlock
 		0 bytes!
 		return
 	end
@@ -391,23 +505,12 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 		vnode@ VNode_Size + @ seek@ - len!
 	end
 
-	if (vnode@ VNodeLock)
-		-EINTR bytes!
-		return
-	end
-
 	auto tot
 	0 tot!
 
-	auto link
-	-1 link!
-
-	auto i
-	0 i!
-
 	while (tot@ len@ <)
 		auto bbuf
-		i@ link@ seek@ 4096 / 1 vnode@ BMap bbuf! link! i!
+		seek@ 4096 / 1 vnode@ BMap bbuf!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -451,13 +554,14 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 		return
 	end
 
-	if (seek@ vnode@ VNode_Size + @ >)
-		0 bytes!
+	if (vnode@ VNodeLock)
+		-EINTR bytes!
 		return
 	end
 
-	if (vnode@ VNodeLock)
-		-EINTR bytes!
+	if (seek@ vnode@ VNode_Size + @ >)
+		vnode@ VNodeUnlock
+		0 bytes!
 		return
 	end
 
@@ -466,15 +570,9 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 
 	auto r
 
-	auto link
-	-1 link!
-
-	auto i
-	0 i!
-
 	while (tot@ len@ <)
 		auto bbuf
-		i@ link@ seek@ 4096 / 0 vnode@ BMap bbuf! link! i!
+		seek@ 4096 / 0 vnode@ BMap bbuf!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -580,6 +678,7 @@ fn (FSMount) AISIXFSMount { mount -- root }
 	sblock@ Superblock_IStart + @ fsdata@ AFSData_IStart + !
 	sblock@ Superblock_ICount + @ fsdata@ AFSData_ICount + !
 	sblock@ Superblock_VolSize + @ fsdata@ AFSData_VolSize + !
+	0 fsdata@ AFSData_LastFreeBlock + !
 
 	if (buf@ brelse)
 		fsdata@ Free
@@ -648,6 +747,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 	block@ mount@ Mount_Device + @ bread buf!
 
 	if (buf@ iserr)
+		vd@ Free
 		buf@ ok!
 		return
 	end
@@ -675,9 +775,24 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 	inode@ INode_timestamp + @ vnode@ VNode_Timestamp + !
 
 	if (buf@ brelse)
+		vd@ Free
 		-EINTR ok!
 		return
 	end
+
+	1 PMMAlloc buf!
+
+	if (buf@ iserr)
+		vd@ Free
+		buf@ ok!
+		return
+	end
+
+	inode@ INode_startblock + @ buf@ !
+
+	buf@ vd@ AVData_BNCache + !
+	0 vd@ AVData_FirstBN + !
+	0 vd@ AVData_NextBN + !
 
 	0 ok!
 end
@@ -685,9 +800,8 @@ end
 fn (FSPutNode) AISIXFSPutNode { vnode -- ok }
 	vnode@ UpdateNode ok!
 
-	if (ok@ iserr ~~)
-		vnode@ VNode_FSData + @ Free
-	end
+	1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+	vnode@ VNode_FSData + @ Free
 end
 
 fn (FSRewindDir) AISIXFSRewindDir { dirent -- ok }
@@ -724,14 +838,8 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 	auto buf
 	0 buf!
 
-	auto link
-	-1 link!
-
-	auto i
-	0 i!
-
 	if (index@ 4096 %)
-		i@ link@ index@ 4096 / 0 dirvn@ BMap buf! link! i!
+		index@ 4096 / 0 dirvn@ BMap buf!
 
 		if (buf@ iserr)
 			buf@ ok!
@@ -748,7 +856,7 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 				end
 			end
 
-			i@ link@ index@ 4096 / 1 dirvn@ BMap buf! link! i!
+			index@ 4096 / 1 dirvn@ BMap buf!
 
 			if (buf@ iserr)
 				buf@ ok!

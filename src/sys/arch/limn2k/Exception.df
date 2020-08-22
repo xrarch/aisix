@@ -183,6 +183,7 @@ fn Exception { badaddr ecause tf -- }
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end else
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "ecause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Printf
+			KDebug
 		end
 
 		1 CurrentThread@ Thread_Killed + !
