@@ -23,7 +23,7 @@ KERNEL_DIR     := src/sys/kernel
 
 FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
-dist: $(DISTIMAGE) bootable stand kernel init cmd
+dist: $(DISTIMAGE) motd bootable stand kernel init cmd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
@@ -65,6 +65,9 @@ bootable:
 	make --directory=$(FILELOADER_DIR)
 	dd if=$(FILELOADER_DIR)/BootSector.bin of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
 	dd if=$(FILELOADER_DIR)/loader.a3x of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((2 + $(OFFSET))) 2>/dev/null
+
+motd:
+	$(FSTOOL) w /sys/motd.txt ./src/sys/motd.txt
 
 $(DISTIMAGE):
 	dd if=/dev/zero of=$(DISTIMAGE) bs=4096 count=$(DISTIMGSZ) 2>/dev/null

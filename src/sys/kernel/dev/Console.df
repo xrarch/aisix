@@ -76,7 +76,10 @@ fn ConsInit { -- }
 	auto consin
 	auto consout
 
-	if (VConsOBuffer@)
+	auto s
+	"-novcon" ArgsCheck s!
+
+	if (VConsOBuffer@ s@ ~~ &&)
 		"kbd0" GetConsIn consin!
 
 		if (consin@ iserr)

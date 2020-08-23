@@ -55,6 +55,7 @@ fn DrvLGFXFoundNode { node -- }
 	pointerof LGFXBlitBits gfx@ GFX_BlitBits + !
 	pointerof LGFXBlit gfx@ GFX_Blit + !
 	pointerof LGFXScroll gfx@ GFX_Scroll + !
+	pointerof LGFXInvert gfx@ GFX_Invert + !
 
 	auto rs
 	InterruptDisable rs!
@@ -153,6 +154,21 @@ fn private Put { cmd gfx -- }
 	cmd@ nwp@ 64 % 4 * sbe@ LGCommandOffset + + !
 
 	1 WriteDelta +=
+end
+
+fn (GFXInvert) LGFXInvert { x y w h gfx -- }
+	auto rs
+	InterruptDisable rs!
+
+	gfx@ GFX_Height + @ 20 << gfx@ GFX_Width + @ 8 << | TEXDESTDIM | gfx@ Put
+	0 TEXDESTVRAM | gfx@ Put
+	h@ 20 << w@ 8 << | ORDESTDIM | gfx@ Put
+	y@ 20 << x@ 8 << | ORDESTPOS | gfx@ Put
+	0x7FFF 12 << MODEXOR | OPRECT | gfx@ Put
+
+	gfx@ Go
+
+	rs@ InterruptRestore
 end
 
 fn (GFXRect) LGFXRectangle { x y w h color gfx -- }

@@ -445,6 +445,13 @@ fn ReadDir { dirent fd -- ok }
 end
 
 fn VStat { stat vnode -- ok }
+	if (stat@ 3 &)
+		-EINVAL ok!
+		return
+	end
+
+	0 ok!
+
 	vnode@ VNode_Permissions + @ stat@ Stat_Mode + !
 	vnode@ VNode_UID + @ stat@ Stat_UID + !
 	vnode@ VNode_GID + @ stat@ Stat_GID + !

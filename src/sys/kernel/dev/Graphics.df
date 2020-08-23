@@ -31,9 +31,9 @@ fn GFXRegister { gfx -- }
 	auto name
 	16 Calloc name!
 
-	name@ "gfx" strcpy
+	name@ "fb" strcpy
 
-	gfx@ GFX_Unit + @ name@ 3 + itoa
+	gfx@ GFX_Unit + @ name@ 2 + itoa
 
 	auto dev
 

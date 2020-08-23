@@ -16,14 +16,14 @@ var GCCurY 0
 var GCWidth 0
 var GCHeight 0
 
-const GConsoleBG 0x6B5A
-const GConsoleFG 0x0000
+const GConsoleBG 0x394C
+const GConsoleFG 0x7FFF
 
 const FontWidth 8
 const FontWidthA (FontWidth 1 -)
 
 const FontBytesPerRow 1
-const FontHeight 19
+const FontHeight 16
 
 const FontBitD 1
 
@@ -45,6 +45,7 @@ var GCLineLenBuf 0
 
 var GCRectP 0
 var GCScrollP 0
+var GCInvertP 0
 
 var GConsoleX 0
 var GConsoleY 0
@@ -127,6 +128,7 @@ fn VConsInit { -- }
 
 	gfx@ GFX_Rect + @ GCRectP!
 	gfx@ GFX_Scroll + @ GCScrollP!
+	gfx@ GFX_Invert + @ GCInvertP!
 
 	gfx@ FontInit
 
@@ -198,6 +200,10 @@ fn GConsoleRect { x y w h color -- }
 	GCGFX@ GCRectP@ GFXRect
 end
 
+fn GConsoleInvert { x y w h -- }
+	x@ GConsoleX@ + y@ GConsoleY@ + w@ h@ GCGFX@ GCInvertP@ GFXInvert
+end
+
 fn GConsoleScroll { rows -- }
 	GConsoleX@ GConsoleY@
 	GConsoleLongestLine FontWidth *
@@ -232,16 +238,16 @@ fn GConsoleScroll { rows -- }
 	end
 end
 
-fn GConsoleDoCur { color -- }
-	GCCurX@ FontWidth * GCCurY@ FontHeight * FontWidth FontHeight color@ GConsoleRect
+fn GConsoleDoCur { -- }
+	GCCurX@ FontWidth * GCCurY@ FontHeight * FontWidth FontHeight GConsoleInvert
 end
 
 fn GConsoleClearCur { -- }
-	GCColorBG@ GConsoleDoCur
+	GConsoleDoCur
 end
 
 fn GConsoleDrawCur { -- }
-	GCColorFG@ GConsoleDoCur
+	GConsoleDoCur
 end
 
 fn GConsoleNewline { -- }
@@ -308,30 +314,10 @@ fn GConsoleBox { x y w h color -- }
 end
 
 fn VConsoleDraw { -- }
-	if (GConsoleX@ GConsoleMargin >= GConsoleY@ GConsoleMargin >= &&) (* there is at least GConsoleMargin pixels around the edge, do a pretty box *)
-		0
-		0
-		GCGWidth@
-		GCGHeight@
-		0x39C0
-		GConsoleRRect
-
-		"AISIX System Console"
-		GConsoleX@
-		GConsoleY@
-		GCWidth@ FontWidth *
-		GCHeight@ FontHeight *
-		GConsoleUIBox
-
-		GConsoleX@ 4 -
-		GConsoleY@ 4 -
-		GCWidth@ FontWidth * 8 +
-		GCHeight@ FontHeight * 8 +
-		GConsoleBG
-		GConsoleRRect
-	end else (* un-pretty box *)
-		0 0 GCGWidth@ GCGHeight@ GConsoleBG GConsoleRRect
-	end
+	0 0 GCGWidth@ GCGHeight@ GConsoleBG GConsoleRRect
+	0 GCCurX!
+	0 GCCurY!
+	GConsoleDoCur
 end
 
 fn GConsoleDraw { -- }
@@ -451,6 +437,10 @@ fn GConsolePutChar { char -- }
 		return
 	end
 
+	if (char@ 0 ==)
+		return
+	end
+
 	if (GCNeedsDraw@)
 		0 GCNeedsDraw!
 
@@ -507,7 +497,7 @@ asm "
 .section data
 
 Font:
-	.static omxvga.raw
+	.static font-terminus.raw
 
 .section text
 
@@ -524,8 +514,9 @@ fn private FontBlitBits { bpr fg bg bitd bmp x y w h -- }
 end
 
 fn FontDrawChar { x y char bg color -- }
-	(* dont draw spaces *)
+	(* draw spaces as rectangles *)
 	if (char@ ' ' ==)
+		x@ y@ FontWidth FontHeight bg@ GConsoleRRect
 		return
 	end
 

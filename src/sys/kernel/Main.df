@@ -24,8 +24,7 @@ fn AISIX { ksz args -- ret }
 
 	KLogInit
 
-	"AISIX coming up\n" Printf
-	"written by Will <http://github.com/seanbox> for the LIMNstation project\n" Printf
+	"Welcome to AISIX\n" Printf
 	ksz@ "kernel image ~%d bytes\n\n" Printf
 
 	MachineInfo

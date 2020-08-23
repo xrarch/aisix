@@ -1,6 +1,8 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
+buffer MOTDBuf 1024
+
 fn Main { ... -- ret }
 	(* kernel process is pid 1 on AISIX *)
 	if (GetPID 2 ~=)
@@ -11,23 +13,43 @@ fn Main { ... -- ret }
 	(* don't die when ^C hit on /dev/cons *)
 	TTYI_IGN SetTTYIgnore drop
 
-	auto stdin
-	auto stdout
-	auto stderr
-	"/dev/cons" O_READ Open stdin!
-	if (stdin@ iserr)
+	auto stdio
+	"/dev/cons" O_READ Open stdio!
+	if (stdio@ iserr)
 		1 Exit
 	end
 
-	"/dev/cons" O_WRITE Open stdout!
-	if (stdout@ iserr)
+	"/dev/cons" O_WRITE Open stdio!
+	if (stdio@ iserr)
 		1 Exit
 	end
 
-	"/dev/cons" O_WRITE Open stderr!
-	if (stderr@ iserr)
+	"/dev/cons" O_WRITE Open stdio!
+	if (stdio@ iserr)
 		1 Exit
 	end
+
+	(* /bin/login should do the motd but that's not a thing at the time of writing this *)
+	auto motd
+	"/sys/motd.txt" O_READ Open motd!
+	if (motd@ iserr)
+		motd@ abs motd!
+		[motd@]ErrorNames@ "init: couldn't open /sys/motd.txt: %s\n" Printf
+	end else
+		auto motdsz
+
+		MOTDBuf 1024 motd@ Read motdsz!
+
+		if (motdsz@ iserr)
+			motdsz@ abs motdsz!
+			[motdsz@]ErrorNames@ "init: couldn't read /sys/motd.txt: %s\n" Printf
+		end else
+			MOTDBuf motdsz@ STDOUT Write motdsz!
+		end
+
+		motd@ Close drop
+	end
+
 
 	while (1)
 		"init: spawning shell\n" Printf
