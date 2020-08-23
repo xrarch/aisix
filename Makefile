@@ -1,7 +1,7 @@
 FLATIMAGE  := no
 
 DISTIMAGE  := ./dist/dist.img
-DISTIMGSZ  := 1024
+DISTIMGSZ  := 2048
 FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
