@@ -9,6 +9,10 @@ fn VCacheInit { -- }
 	"vnode cache" VNodeCacheMutex InitMutex
 end
 
+fn VCacheOwned { -- owned }
+	VNodeCacheMutex MutexOwned owned!
+end
+
 fn LockVCache { -- killed }
 	VNodeCacheMutex LockMutex killed!
 end
@@ -89,9 +93,14 @@ fn VNodeNew { vnid mount -- vnode }
 	
 	auto rs
 
-	if (LockVCache)
-		-EINTR vnode!
-		return
+	auto vl
+	VCacheOwned ~~ vl!
+
+	if (vl@)
+		if (LockVCache)
+			-EINTR vnode!
+			return
+		end
 	end
 
 	while (i@ VNCACHESIZE <)
@@ -116,7 +125,9 @@ fn VNodeNew { vnid mount -- vnode }
 
 	(* no free vnode thingies, return error *)
 	if (vnode@ iserr)
-		UnlockVCache
+		if (vl@)
+			UnlockVCache
+		end
 		return
 	end
 
@@ -124,7 +135,9 @@ fn VNodeNew { vnid mount -- vnode }
 		VNode_SIZEOF Calloc vnode!
 
 		if (vnode@ iserr)
-			UnlockVCache
+			if (vl@)
+				UnlockVCache
+			end
 			return
 		end
 
@@ -140,7 +153,9 @@ fn VNodeNew { vnid mount -- vnode }
 		   instead of crashing the entire system, so for stability reasons
 		   here we go *)
 		if (vnode@ VNodeLock)
-			UnlockVCache
+			if (vl@)
+				UnlockVCache
+			end
 			-EINTR vnode!
 			return
 		end
@@ -170,7 +185,9 @@ fn VNodeNew { vnid mount -- vnode }
 		vnode@ Free
 		0 [ln@]VNodeCache!
 
-		UnlockVCache
+		if (vl@)
+			UnlockVCache
+		end
 
 		-EINTR vnode!
 		return
@@ -186,7 +203,13 @@ fn VNodeNew { vnid mount -- vnode }
 		r@ vnode!
 	end
 
-	UnlockVCache
+	if (vl@)
+		UnlockVCache
+	end
+end
+
+fn VNodeOwned { vnode -- owned }
+	vnode@ VNode_Mutex + MutexOwned owned!
 end
 
 fn VNodeLock { vnode -- killed }
@@ -254,9 +277,9 @@ fn VNodeGet { vnid mount -- vnode }
 	end
 
 	if (vnode@ 0 ==)
-		UnlockVCache
-
 		vnid@ mount@ VNodeNew vnode!
+
+		UnlockVCache
 
 		if (vnode@ iserr)
 			mount@ MountUnref

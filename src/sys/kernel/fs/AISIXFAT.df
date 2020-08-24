@@ -679,6 +679,21 @@ fn private HasEntries { vnode -- has }
 end
 
 fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
+	if (name@ "." strcmp)
+		-ENOENT ok!
+		return
+	end
+
+	if (name@ ".." strcmp)
+		-ENOENT ok!
+		return
+	end
+
+	if (name@ gb 0 ==)
+		-ENOENT ok!
+		return
+	end
+
 	if (vnode@ VNode_Type + @ VNODE_DIR ==)
 		vnode@ HasEntries ok!
 

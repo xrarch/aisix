@@ -8,6 +8,21 @@ fn InitMutex { name mutex -- }
 	mutex@ mutex@ Mutex_LockQ + EventQueue_Mutex + !
 end
 
+fn MutexOwned { mutex -- owned }
+	auto rs
+	InterruptDisable rs!
+
+	0 owned!
+
+	if (mutex@ Mutex_Locked + @)
+		if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ==)
+			1 owned!
+		end
+	end
+
+	rs@ InterruptRestore
+end
+
 fn private LockMutex1 { mutex uninterruptible -- killed }
 	if (CurrentThread@ Thread_Killed + @)
 		if (uninterruptible@ ~~)

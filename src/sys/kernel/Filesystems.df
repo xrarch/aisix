@@ -235,7 +235,13 @@ fn VFSPathX { path -- dirvnode vnode name }
 				if (dirvnode@)
 					dirvnode@ VNodePut
 				end
-				vnode@ dirvnode!
+
+				if (vnode@ VNode_VNID + @ dirent@ VDirent_VNID + @ ==)
+					vnode@ VNodePut
+				end else
+					vnode@ dirvnode!
+				end
+
 				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
 				if (dirent@ VDirent_Cookie + @)

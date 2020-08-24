@@ -130,6 +130,8 @@ extern VNodePut { vnode -- }
 
 extern VNodeGet { vnid mount -- vnode }
 
+extern VNodeOwned { vnode -- owned }
+
 extern VNodeLock { vnode -- killed }
 
 extern VNodeUnlock { vnode -- }
