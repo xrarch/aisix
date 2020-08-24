@@ -14,8 +14,9 @@ table AISIXFSTab
 	pointerof AISIXFSWrite
 	pointerof AISIXFSCreate
 	pointerof AISIXFSRename
-	pointerof AISIXFSDelete
+	pointerof AISIXFSUnlink
 	pointerof AISIXFSTrunc
+	pointerof AISIXFSDelete
 endtable
 public AISIXFSTab
 
@@ -627,8 +628,175 @@ fn (FSRename) AISIXFSRename { srcdirvnode srcname destdirvnode destname -- ok }
 	-EPERM ok!
 end
 
-fn (FSDelete) AISIXFSDelete { dirvnode name -- ok }
-	-EPERM ok!
+fn private HasEntries { vnode -- has }
+	0 has!
+
+	auto sz
+	vnode@ VNode_Size + @ sz!
+
+	auto p
+	0 p!
+
+	auto buf
+	0 buf!
+
+	auto dirent
+
+	while (p@ sz@ <)
+		if (p@ 4096 % ~~)
+			if (buf@)
+				if (buf@ brelse)
+					-EINTR has!
+					return
+				end
+			end
+
+			p@ 4096 / 1 vnode@ BMap buf!
+
+			if (buf@ iserr)
+				buf@ has!
+				return
+			end
+		end
+
+		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+
+		if (dirent@ DirEnt_INum + @)
+			buf@ brelse drop
+			-EISDIR has!
+			return
+		end
+
+		DirEnt_SIZEOF p +=
+	end
+
+	if (buf@)
+		if (buf@ brelse)
+			-EINTR has!
+			return
+		end
+	end
+end
+
+fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		vnode@ HasEntries ok!
+
+		if (ok@ iserr)
+			return
+		end
+	end
+
+	0 ok!
+
+	auto sz
+	dirvnode@ VNode_Size + @ sz!
+
+	auto p
+	0 p!
+
+	auto buf
+	0 buf!
+
+	auto dirent
+
+	auto found
+	0 found!
+
+	while (p@ sz@ <)
+		if (p@ 4096 % ~~)
+			if (buf@)
+				if (buf@ brelse)
+					-EINTR ok!
+					return
+				end
+			end
+
+			p@ 4096 / 1 dirvnode@ BMap buf!
+
+			if (buf@ iserr)
+				buf@ ok!
+				return
+			end
+		end
+
+		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+
+		if (dirent@ DirEnt_INum + @)
+			if (dirent@ DirEnt_name + name@ strcmp)
+				1 found!
+				break
+			end
+		end
+
+		DirEnt_SIZEOF p +=
+	end
+
+	if (found@ ~~) (* then how did we get here at all??? *)
+		"afs: unlink\n" Panic
+	end
+
+	0 dirent@ DirEnt_INum + !
+
+	buf@ bwrite ok!
+
+	if (ok@ iserr)
+		buf@ brelse drop
+		return
+	end
+
+	if (buf@ brelse)
+		-EINTR ok!
+		return
+	end
+
+	1 vnode@ VNode_DeleteLastRef + !
+end
+
+fn (FSDelete) AISIXFSDelete { vnode -- ok }
+	vnode@ TruncNode ok!
+
+	auto vnid
+
+	vnode@ VNode_VNID + @ vnid!
+
+	(* vnid@ vnode@ "afs: kill ptr=0x%x vnid=0x%x\n" Printf *)
+
+	auto block
+	auto off
+
+	auto inode
+
+	vnid@ INode_SIZEOF * off!
+
+	auto mount
+	vnode@ VNode_Mount + @ mount!
+
+	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 4096 / + block!
+
+	auto buf
+	block@ mount@ Mount_Device + @ bread buf!
+
+	if (buf@ iserr)
+		buf@ ok!
+		return
+	end
+
+	buf@ Buffer_Data + @ off@ 4096 % + inode!
+
+	0 inode@ INode_type + !
+
+	buf@ bwrite ok!
+
+	if (ok@ iserr)
+		buf@ brelse drop
+		return
+	end
+
+	if (buf@ brelse)
+		-EINTR ok!
+		return
+	end
 end
 
 fn (FSMount) AISIXFSMount { mount -- root }

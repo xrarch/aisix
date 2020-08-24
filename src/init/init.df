@@ -4,9 +4,9 @@
 buffer MOTDBuf 1024
 
 fn Main { ... -- ret }
-	(* kernel process is pid 1 on AISIX *)
+	(* kernel process is pid 1 on AISIX, which makes us pid 2 *)
 	if (GetPID 2 ~=)
-		"must be first process!\n" Printf
+		"init: must be first process!\n" STDERR FPrintf
 		1 Exit
 	end
 

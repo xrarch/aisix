@@ -1,0 +1,25 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto i
+	1 i!
+
+	while (i@ argc@ <)
+		[i@]argv@ Remove
+
+		1 i +=
+	end
+end
+
+fn Remove { path -- }
+	auto ok
+	path@ Unlink ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ path@ "rm: couldn't unlink %s: %s\n" STDERR FPrintf
+	end
+end

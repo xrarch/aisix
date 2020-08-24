@@ -42,6 +42,20 @@ fn VNodeUnref { vnode -- }
 
 	1 vnode@ VNode_Mount + @ Mount_VRefs + -=
 
+	if (vnode@ VNode_Refs + @ 0 ==)
+		if (vnode@ VNode_DeleteLastRef + @)
+			0 [vnode@ VNode_Index + @]VNodeCache!
+
+			rs@ InterruptRestore
+
+			vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Delete + @ FSDelete drop
+
+			vnode@ Free
+
+			return
+		end
+	end
+
 	rs@ InterruptRestore
 end
 
@@ -266,7 +280,8 @@ fn PrintVNodes { -- }
 			i@ "%d: " Printf
 			vnode@ VNode_VNID + @ "vnid=%d " Printf
 			vnode@ VNode_Refs + @ "refs=%d " Printf
-			vnode@ VNode_Index + @ "index=%d\n" Printf
+			vnode@ VNode_Index + @ "index=%d " Printf
+			vnode@ VNode_Mount + @ "mount=%x\n" Printf
 		end
 
 		0 vnode!

@@ -1,0 +1,116 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+const SYSNAME 1
+const NODENAME 2
+const RELEASE 4
+const VERSION 8
+const MACHINE 16
+const PROCESSOR 32
+
+const ALLFLAGS (SYSNAME NODENAME | RELEASE | VERSION | MACHINE | PROCESSOR |)
+
+buffer UNameBuf UNameS_SIZEOF
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto flags
+	0 flags!
+
+	if (argc@ 2 >=)
+		auto sw
+		[1]argv@ sw!
+
+		if (sw@ gb '-' ==)
+			1 sw +=
+
+			while (sw@ gb 0 ~=)
+				if (sw@ gb 'a' ==)
+					ALLFLAGS flags |=
+				end elseif (sw@ gb 's' ==)
+					SYSNAME flags |=
+				end elseif (sw@ gb 'n' ==)
+					NODENAME flags |=
+				end elseif (sw@ gb 'r' ==)
+					RELEASE flags |=
+				end elseif (sw@ gb 'v' ==)
+					VERSION flags |=
+				end elseif (sw@ gb 'm' ==)
+					MACHINE flags |=
+				end elseif (sw@ gb 'p' ==)
+					PROCESSOR flags |=
+				end
+
+				1 sw +=
+			end
+		end
+	end
+
+	UNameBuf UName ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "couldn't uname: %s\n" 2 FPrintf
+		1 Exit
+	end
+
+	auto sp
+	0 sp!
+
+	if (flags@ ~~)
+		SYSNAME flags!
+	end
+
+	if (flags@ SYSNAME &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Sysname + "%s" Printf
+		1 sp!
+	end
+
+	if (flags@ NODENAME &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Nodename + "%s" Printf
+		1 sp!
+	end
+
+	if (flags@ RELEASE &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Release + "%s" Printf
+		1 sp!
+	end
+
+	if (flags@ VERSION &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Version + "%s" Printf
+		1 sp!
+	end
+
+	if (flags@ MACHINE &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Machine + "%s" Printf
+		1 sp!
+	end
+
+	if (flags@ PROCESSOR &)
+		if (sp@)
+			' ' Putc
+		end
+		UNameBuf UNameS_Processor + "%s" Printf
+		1 sp!
+	end
+
+	'\n' Putc
+
+	0 ret!
+end

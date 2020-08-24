@@ -74,7 +74,7 @@ fn VFSMountRoot { -- }
 
 	auto rootmount
 
-	0 "aisixfs" FSByName RootDevice@ VFSMount rootmount!
+	0 0 "aisixfs" FSByName RootDevice@ VFSMount rootmount!
 
 	if (rootmount@ iserr)
 		rootmount@ abs rootmount!
@@ -87,7 +87,7 @@ fn VFSMountRoot { -- }
 
 	RootVNode@ KernelProcess@ Process_CWDVNode + !
 
-	"/dev" "devfs" FSByName 0 VFSMount DevMount!
+	0 "/dev" "devfs" FSByName 0 VFSMount DevMount!
 
 	if (DevMount@ iserr)
 		DevMount@ abs DevMount!
@@ -108,6 +108,20 @@ fn VTrunc { vnode -- ok }
 end
 
 fn VFSPath { path -- vnode }
+	auto name
+	auto dirvnode
+	path@ VFSPathX name! vnode! dirvnode!
+
+	if (name@)
+		name@ Free
+	end
+
+	if (dirvnode@)
+		dirvnode@ VNodePut
+	end
+end
+
+fn VFSPathX { path -- dirvnode vnode name }
 	if (path@ gb 0 ==)
 		-ENOENT vnode!
 		return
@@ -138,6 +152,10 @@ fn VFSPath { path -- vnode }
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
 
+	0 dirvnode!
+
+	0 name!
+
 	auto ok
 
 	while (1)
@@ -159,7 +177,7 @@ fn VFSPath { path -- vnode }
 
 		if (path@ gb 0 ==)
 			(* finished *)
-			pcomp@ Free
+			pcomp@ name!
 			dirent@ Free
 			return
 		end
@@ -214,7 +232,10 @@ fn VFSPath { path -- vnode }
 			end
 
 			if (dirent@ VDirent_Name + @ pcomp@ strcmp)
-				vnode@ VNodePut
+				if (dirvnode@)
+					dirvnode@ VNodePut
+				end
+				vnode@ dirvnode!
 				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
 				if (dirent@ VDirent_Cookie + @)
@@ -273,7 +294,7 @@ fn FSByName { name -- fs }
 	0 fs!
 end
 
-fn VFSMount { path fs dev -- mount }
+fn VFSMount { flags path fs dev -- mount }
 	if (fs@ 0 ==)
 		"VFSMount: fs = 0\n" Panic
 	end
@@ -323,6 +344,8 @@ fn VFSMount { path fs dev -- mount }
 		-ENOMEM mount!
 		return
 	end
+
+	flags@ mount@ Mount_Flags + !
 
 	auto rs
 
@@ -492,6 +515,9 @@ fn VFSUnmount { mount -- ok }
 end
 
 fn VForbidden { vnode rwx uid -- ok }
+	auto fl
+	vnode@ VNode_Mount + @ Mount_Flags + @ fl!
+
 	auto bits
 	vnode@ VNode_Permissions + @ bits!
 
@@ -514,6 +540,10 @@ fn VForbidden { vnode rwx uid -- ok }
 		end
 
 		bits@ shift@ >> 7 & permbits!
+
+		if (fl@ FS_NOUID &)
+			WORLD_W WORLD_R | permbits |=
+		end
 	end
 
 	0 ok!
@@ -526,8 +556,8 @@ fn VForbidden { vnode rwx uid -- ok }
 		-EACCES ok!
 	end
 
-	if (rwx@ WORLD_X &)
-		if (vnode@ VNode_Mount + @ Mount_ReadOnly + @)
+	if (rwx@ WORLD_W &)
+		if (fl@ FS_READONLY &)
 			-EROFS ok!
 		end
 	end

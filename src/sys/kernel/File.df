@@ -518,3 +518,53 @@ fn Chdir { path -- ok }
 
 	vnode@ VNodeUnlock
 end
+
+fn Unlink { path -- ok }
+	auto dirvnode
+	auto vnode
+	auto name
+	path@ VFSPathX name! vnode! dirvnode!
+
+	if (vnode@ iserr)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		vnode@ ok!
+		return
+	end
+
+	vnode@ WORLD_W CurrentThread@ Thread_Process + @ Process_EUID + @ VForbidden ok!
+
+	if (ok@ iserr)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		vnode@ VNodePut
+		return
+	end
+
+	auto fs
+	vnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
+
+	dirvnode@ vnode@ name@ fs@ Filesystem_Unlink + @ FSUnlink ok!
+
+	if (name@)
+		name@ Free
+	end
+	
+	if (dirvnode@)
+		dirvnode@ VNodePut
+	end
+
+	vnode@ VNodePut
+end

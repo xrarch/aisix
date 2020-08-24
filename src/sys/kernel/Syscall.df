@@ -21,6 +21,8 @@ table Syscalls
 	pointerof SysPStat
 	pointerof SysFStat
 	pointerof SysChdir
+	pointerof SysUnlink
+	pointerof SysUName
 endtable
 public Syscalls
 
@@ -464,4 +466,80 @@ fn (Syscall) SysChdir { tf -- ok }
 	path@ Chdir ok!
 
 	path@ Free
+end
+
+fn (Syscall) SysUnlink { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ Unlink ok!
+
+	path@ Free
+end
+
+struct UNameS
+	256 Sysname
+	256 Nodename
+	256 Release
+	256 Version
+	256 Machine
+	256 Processor
+endstruct
+
+asm "
+
+.section data
+
+_date:
+	.ds$ __DATE
+	.db 0
+
+.align 4
+
+.section text
+
+"
+
+fn (Syscall) SysUName { tf -- ok }
+	auto uname
+	tf@ Context_a1 + @ uname!
+
+	auto r
+	UNameS_SIZEOF uname@ 1 PlatformUserToPhys r! uname!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	uname@ UNameS_Sysname +  "AISIX" strcpy
+	uname@ UNameS_Nodename + "unk" strcpy
+	uname@ UNameS_Release +  "unk" strcpy
+
+	auto vstr
+	"pre-1.0 " vstr!
+
+	auto vl
+	vstr@ strlen vl!
+
+	uname@ UNameS_Version + vstr@ strcpy
+	
+	uname@ UNameS_Version + vl@ +
+	pointerof _date
+	255 vl@ - strncpy
+	
+	uname@ UNameS_Machine + MachineType@ 255 strncpy
+	uname@ UNameS_Processor + MachineCPU@ 255 strncpy
+
+	0 ok!
 end

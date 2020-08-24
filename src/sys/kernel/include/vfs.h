@@ -15,8 +15,9 @@ struct Filesystem
 	4 Write
 	4 Create
 	4 Rename
-	4 Delete
+	4 Unlink
 	4 Trunc
+	4 Delete
 endstruct
 
 fnptr FSMount { mount -- root }
@@ -41,16 +42,21 @@ fnptr FSCreate { dirvnode name type uid permissions -- vnode }
 
 fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
 
-fnptr FSDelete { dirvnode name -- ok }
+fnptr FSUnlink { dirvnode vnode name -- ok }
 
 fnptr FSTrunc { vnode -- ok }
+
+fnptr FSDelete { vnode -- ok }
+
+const FS_READONLY 1
+const FS_NOUID 2
 
 struct Mount
 	MOUNTNAMELEN Path
 	4 Next
 	4 Prev
 	4 Device
-	4 ReadOnly
+	4 Flags
 	4 Filesystem
 	4 FSData
 	4 Root
@@ -74,6 +80,7 @@ struct VNode
 	4 Permissions
 	4 Size
 	4 CoveredBy
+	4 DeleteLastRef
 endstruct
 
 const VNODE_FILE 1
@@ -115,6 +122,8 @@ extern VTrunc { vnode -- ok }
 
 extern VFSPath  { path -- vnode }
 
+extern VFSPathX { path -- dirvnode vnode name }
+
 extern VNodeNew { vnid mount -- vnode }
 
 extern VNodePut { vnode -- }
@@ -135,7 +144,7 @@ extern MountUnref { mount -- }
 
 extern SyncVNodes { mount remove -- res }
 
-extern VFSMount { path fs dev -- mount }
+extern VFSMount { flags path fs dev -- mount }
 
 extern VFSUnmount { mount -- ok }
 

@@ -14,8 +14,9 @@ table DevFSTab
 	pointerof DevFSWrite
 	pointerof DevFSCreate
 	pointerof DevFSRename
-	pointerof DevFSDelete
+	pointerof DevFSUnlink
 	pointerof DevFSTrunc
+	pointerof DevFSDelete
 endtable
 public DevFSTab
 
@@ -328,11 +329,15 @@ fn (FSRename) DevFSRename { srcdirvnode srcname destdirvnode destname -- ok }
 	-EPERM ok!
 end
 
-fn (FSDelete) DevFSDelete { dirvnode name -- ok }
+fn (FSUnlink) DevFSUnlink { dirvnode vnode name -- ok }
 	-EPERM ok!
 end
 
 fn (FSTrunc) DevFSTrunc { vnode -- ok }
+	-EPERM ok!
+end
+
+fn (FSDelete) DevFSDelete { vnode -- ok }
 	-EPERM ok!
 end
 

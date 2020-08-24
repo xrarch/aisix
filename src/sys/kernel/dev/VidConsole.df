@@ -175,6 +175,8 @@ fn GConsoleLongestLine { -- width }
 
 		1 i +=
 	end
+
+	width@ GCWidth@ min width!
 end
 
 fn GConsoleClear { -- }

@@ -64,3 +64,5 @@ extern PStat { stat path -- ok }
 extern FStat { stat fd -- ok }
 
 extern Chdir { path -- ok }
+
+extern Unlink { path -- ok }
