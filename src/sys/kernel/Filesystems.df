@@ -281,6 +281,12 @@ fn VFSPathX { path -- dirvnode vnode name }
 			end
 
 			vnode@ VNodeRef
+
+			if (dirvnode@)
+				dirvnode@ VNodePut
+			end
+
+			0 dirvnode!
 		end
 	end
 end
