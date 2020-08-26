@@ -23,7 +23,7 @@ extern bread { blockno dev -- buf }
 
 extern bwrite { buf -- ok }
 
-extern brelse { buf -- ok }
+extern brelse { buf -- }
 
 extern bupdate { buf -- ok }
 

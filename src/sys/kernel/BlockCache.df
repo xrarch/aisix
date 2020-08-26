@@ -9,16 +9,16 @@ buffer BufCacheMutex Mutex_SIZEOF
 
 buffer BufferHead Buffer_SIZEOF
 
-fn LockBCache { -- killed }
-	BufCacheMutex LockMutex killed!
+fn LockBCache { -- }
+	BufCacheMutex LockMutexUninterruptible
 end
 
 fn UnlockBCache { -- }
 	BufCacheMutex UnlockMutex
 end
 
-fn LockBuf { buf -- killed }
-	buf@ Buffer_Mutex + LockMutex killed!
+fn LockBuf { buf -- }
+	buf@ Buffer_Mutex + LockMutexUninterruptible
 end
 
 fn UnlockBuf { buf -- }
@@ -56,10 +56,12 @@ fn BlockInit { -- }
 end
 
 fn bget { blockno dev -- buf }
-	if (LockBCache)
+	if (CurrentThread@ Thread_Killed + @)
 		-EINTR buf!
 		return
 	end
+
+	LockBCache
 
 	auto rs
 
@@ -83,15 +85,7 @@ fn bget { blockno dev -- buf }
 
 				UnlockBCache
 
-				if (buf@ LockBuf)
-					InterruptDisable rs!
-
-					1 buf@ Buffer_Refs + -=
-
-					rs@ InterruptRestore
-
-					-EINTR buf!
-				end
+				buf@ LockBuf
 
 				return
 			end
@@ -126,15 +120,7 @@ fn bget { blockno dev -- buf }
 
 			UnlockBCache
 
-			if (buf@ LockBuf)
-				InterruptDisable rs!
-
-				1 buf@ Buffer_Refs + -=
-
-				rs@ InterruptRestore
-
-				-EINTR buf!
-			end
+			buf@ LockBuf
 
 			return
 		end
@@ -163,11 +149,9 @@ fn bread { blockno dev -- buf }
 		dev@ DeviceRead ok!
 
 		if (ok@ iserr)
-			if (buf@ brelse iserr)
-				-EINTR buf!
-			end else
-				ok@ buf!
-			end
+			buf@ brelse
+			
+			ok@ buf!
 
 			return
 		end
@@ -180,16 +164,12 @@ fn bwrite { buf -- ok }
 	1 buf@ Buffer_Dirty + !
 end
 
-fn brelse { buf -- ok }
+fn brelse { buf -- }
 	1 buf@ Buffer_Refs + -=
 
 	buf@ UnlockBuf
 
-	if (LockBCache)
-		-EINTR ok!
-
-		return
-	end
+	LockBCache
 
 	if (buf@ Buffer_Refs + @ 0 ==)
 		buf@ Buffer_Prev + @ buf@ Buffer_Next + @ Buffer_Prev + !
@@ -201,16 +181,10 @@ fn brelse { buf -- ok }
 	end
 
 	UnlockBCache
-
-	0 ok!
 end
 
 fn bupdate { buf -- ok }
-	if (buf@ LockBuf)
-		UnlockBCache
-		-EINTR ok!
-		return
-	end
+	buf@ LockBuf
 
 	if (buf@ Buffer_Valid + @ buf@ Buffer_Dirty + @ &&)
 		buf@ Buffer_Data + @
@@ -227,10 +201,7 @@ end
 fn bsync { -- ok }
 	0 ok!
 
-	if (LockBCache)
-		-EINTR ok!
-		return
-	end
+	LockBCache
 
 	auto buf
 	BufferHead Buffer_Next + @ buf!
@@ -239,6 +210,7 @@ fn bsync { -- ok }
 		buf@ bupdate ok!
 
 		if (ok@ iserr)
+			UnlockBCache
 			return
 		end
 

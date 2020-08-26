@@ -215,10 +215,7 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 		m@
 		memcpy
 
-		if (bbuf@ brelse)
-			-EINTR bytes!
-			return
-		end
+		bbuf@ brelse
 
 		m@ seek +=
 		m@ buf +=
@@ -303,10 +300,7 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 
 		bbuf@ bwrite r!
 
-		if (bbuf@ brelse iserr)
-			-EINTR bytes!
-			return
-		end
+		bbuf@ brelse
 
 		if (r@ iserr)
 			r@ bytes!

@@ -4,7 +4,7 @@
 buffer MOTDBuf 1024
 
 fn Main { ... -- ret }
-	(* kernel process is pid 1 on AISIX, which makes us pid 2 *)
+	(* kernel process is pid 1 on AISIX, which makes init pid 2 *)
 	if (GetPID 2 ~=)
 		"init: must be first process!\n" STDERR FPrintf
 		1 Exit
@@ -60,7 +60,7 @@ fn Main { ... -- ret }
 		if (shpid@ iserr)
 			shpid@ abs shpid!
 			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
-			1 Exit
+			while (1) end
 		end
 
 		auto pid
