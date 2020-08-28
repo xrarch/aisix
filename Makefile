@@ -14,9 +14,9 @@ else
 	OFFSET     := 0
 endif
 
-FILELOADER_DIR := src/stand/fileloader
-DIAG_DIR       := src/stand/diag
-LIMNVOL_DIR    := src/stand/limnvol
+FILELOADER_DIR := src/sa/fileloader
+DIAG_DIR       := src/sa/diag
+LIMNVOL_DIR    := src/sa/limnvol
 INIT_DIR       := src/init
 CMD_DIR        := src/cmd
 KERNEL_DIR     := src/sys/kernel
@@ -55,11 +55,11 @@ stand: diag limnvol
 
 diag:
 	make --directory=$(DIAG_DIR)
-	$(FSTOOL) w /stand/diag.A3X $(DIAG_DIR)/diag.a3x
+	$(FSTOOL) w /sa/diag.A3X $(DIAG_DIR)/diag.a3x
 
 limnvol:
 	make --directory=$(LIMNVOL_DIR)
-	$(FSTOOL) w /stand/limnvol.A3X $(LIMNVOL_DIR)/limnvol.a3x
+	$(FSTOOL) w /sa/limnvol.A3X $(LIMNVOL_DIR)/limnvol.a3x
 
 bootable:
 	make --directory=$(FILELOADER_DIR)
