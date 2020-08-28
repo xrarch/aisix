@@ -337,6 +337,8 @@ fn Command { -- done }
 					[fd@]ErrorNames@ fname@ "sh: couldn't open %s: %s\n" STDERR FPrintf
 				end else
 					STDIN fd@ STDERR argcn@ Argvt pname@ ASpawn pid!
+
+					fd@ Close drop
 				end 
 			end
 

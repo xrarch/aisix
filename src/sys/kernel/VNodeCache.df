@@ -44,8 +44,6 @@ fn VNodeUnref { vnode -- }
 
 	1 vnode@ VNode_Refs + -=
 
-	1 vnode@ VNode_Mount + @ Mount_VRefs + -=
-
 	if (vnode@ VNode_Refs + @ 0 ==)
 		if (vnode@ VNode_DeleteLastRef + @)
 			0 [vnode@ VNode_Index + @]VNodeCache!
@@ -56,9 +54,15 @@ fn VNodeUnref { vnode -- }
 
 			vnode@ Free
 
+			InterruptDisable rs!
+
+			1 vnode@ VNode_Mount + @ Mount_VRefs + -=
+
 			return
 		end
 	end
+
+	1 vnode@ VNode_Mount + @ Mount_VRefs + -=
 
 	rs@ InterruptRestore
 end

@@ -105,11 +105,11 @@ fn private SetBlockStatus { status block mount -- ok }
 
 	status@ fb@ Buffer_Data + @ block@ 4 * 4096 % + !
 
+	0 ok!
+
 	fb@ bwrite ok!
 
 	fb@ brelse
-
-	0 ok!
 end
 
 fn private BAlloc { link mount -- buf }
@@ -424,6 +424,13 @@ fn private TruncNode { vnode -- ok }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
+	0 vd@ AVData_FirstBN + !
+	0 vd@ AVData_NextBN + !
+
+	0 vnode@ VNode_Size + !
+	0xFFFFFFFF vd@ AVData_Entry + !
+	1 vd@ AVData_Dirty + !
+
 	auto le
 
 	while (ent@ 0xFFFFFFFF ~=)
@@ -442,12 +449,7 @@ fn private TruncNode { vnode -- ok }
 		end
 	end
 
-	0 vd@ AVData_FirstBN + !
-	0 vd@ AVData_NextBN + !
-
-	0 vnode@ VNode_Size + !
-	0xFFFFFFFF vd@ AVData_Entry + !
-	1 vd@ AVData_Dirty + !
+	0 ok!
 end
 
 fn (FSTrunc) AISIXFSTrunc { vnode -- ok }
@@ -721,11 +723,6 @@ fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
 	0 dirent@ DirEnt_INum + !
 
 	buf@ bwrite ok!
-
-	if (ok@ iserr)
-		buf@ brelse
-		return
-	end
 
 	buf@ brelse
 
