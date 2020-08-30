@@ -20,6 +20,8 @@ const SYSFSTAT 16
 const SYSCHDIR 17
 const SYSUNLINK 18
 const SYSUNAME 19
+const SYSMKDIR 20
+const SYSUMASK 21
 
 asm "
 
@@ -149,6 +151,20 @@ _unlink:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSUNLINK
+	sys
+	ret
+
+_mkdir:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSMKDIR
+	sys
+	ret
+
+_umask:
+	mov a1, a0
+	li a0, SYSUMASK
 	sys
 	ret
 
@@ -327,4 +343,16 @@ extern _unlink { pathlen path -- ok }
 
 fn Unlink { path -- ok }
 	path@ strlen path@ _unlink ok!
+end
+
+extern _mkdir { mode pathlen path -- ok }
+
+fn Mkdir { path mode -- ok }
+	mode@ path@ strlen path@ _mkdir ok!
+end
+
+extern _umask { umask -- old }
+
+fn UMask { umask -- old }
+	umask@ _umask old!
 end

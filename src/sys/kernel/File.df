@@ -172,6 +172,8 @@ fn Open { path mode -- fd }
 
 	FD_FILE filp@ FileP_Type + !
 
+	mode@ filp@ FileP_Flags + !
+
 	auto r
 
 	auto vnode
@@ -523,7 +525,7 @@ fn Unlink { path -- ok }
 	auto dirvnode
 	auto vnode
 	auto name
-	path@ VFSPathX name! vnode! dirvnode!
+	path@ VFSPathX name! vnode! dirvnode! drop
 
 	if (vnode@ iserr)
 		if (name@)
@@ -567,4 +569,77 @@ fn Unlink { path -- ok }
 	end
 
 	vnode@ VNodePut
+end
+
+fn Mkdir { path mode -- ok }
+	CurrentThread@ Thread_Process + @ Process_UMask + @ ~ mode &=
+
+	auto dirvnode
+	auto vnode
+	auto name
+	auto sook
+	path@ VFSPathX name! vnode! dirvnode! sook!
+
+	if (vnode@ iserr ~~)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		vnode@ VNodePut
+
+		-EEXIST ok!
+		return
+	end
+
+	if (vnode@ iserr vnode@ -ENOENT ~= &&)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		vnode@ ok!
+		return
+	end
+
+	if (vnode@ -ENOENT ~=)
+		"mkdir\n" Panic
+	end
+
+	if (sook@ ~~)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		-ENOENT ok!
+		return
+	end
+
+	auto fs
+	dirvnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
+
+	dirvnode@
+	name@
+	VNODE_DIR
+	CurrentThread@ Thread_Process + @ Process_UID + @
+	mode@
+	fs@ Filesystem_Create + @ FSCreate ok!
+
+	if (name@)
+		name@ Free
+	end
+
+	if (dirvnode@)
+		dirvnode@ VNodePut
+	end
 end

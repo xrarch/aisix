@@ -49,7 +49,7 @@ ifeq ($(REBUILD_CMD),yes)
 endif
 	make --directory=$(INIT_DIR)
 	$(FSTOOL) w /sys/init $(INIT_DIR)/init.LOFF
-	$(FSTOOL) chmod /sys/init 493
+	$(FSTOOL) chmod /sys/init 484
 
 stand: diag limnvol
 

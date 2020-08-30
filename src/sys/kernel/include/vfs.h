@@ -38,7 +38,7 @@ fnptr FSRead { buf len seek vnode -- bytes }
 
 fnptr FSWrite { buf len seek vnode -- bytes }
 
-fnptr FSCreate { dirvnode name type uid permissions -- vnode }
+fnptr FSCreate { dirvnode name type uid permissions -- vnid }
 
 fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
 
@@ -122,7 +122,7 @@ extern VTrunc { vnode -- ok }
 
 extern VFSPath  { path -- vnode }
 
-extern VFSPathX { path -- dirvnode vnode name }
+extern VFSPathX { path -- sook dirvnode vnode name }
 
 extern VNodeNew { vnid mount -- vnode }
 

@@ -70,6 +70,8 @@ struct Process
 
 	4 ReturnValue
 	PROCNAMELEN Name
+
+	4 UMask
 endstruct
 
 externptr CurrentThread

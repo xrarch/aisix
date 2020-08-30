@@ -8,18 +8,18 @@ fn Main { ... -- ret }
 	1 i!
 
 	while (i@ argc@ <)
-		[i@]argv@ Remove
+		[i@]argv@ MkDir
 
 		1 i +=
 	end
 end
 
-fn Remove { path -- }
+fn MkDir { path -- }
 	auto ok
-	path@ Unlink ok!
+	path@ 511 Mkdir ok!
 
 	if (ok@ iserr)
 		ok@ abs ok!
-		[ok@]ErrorNames@ path@ "rm: %s: %s\n" STDERR FPrintf
+		[ok@]ErrorNames@ path@ "mkdir: %s: %s\n" STDERR FPrintf
 	end
 end

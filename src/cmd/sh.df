@@ -152,8 +152,25 @@ fn Word { -- word }
 	end
 end
 
+table UMaskNames
+	""
+	"x"
+	"w"
+	"wx"
+	"r"
+	"rx"
+	"rw"
+	"rwx"
+endtable
+
 fn Builtin { argcn cmd -- builtin }
 	0 builtin!
+
+	auto ok
+
+	auto q
+
+	auto w
 
 	if (cmd@ "cd" strcmp)
 		1 builtin!
@@ -162,10 +179,7 @@ fn Builtin { argcn cmd -- builtin }
 			return
 		end
 
-		auto w
 		Argvt@ w!
-
-		auto ok
 
 		w@ Chdir ok!
 
@@ -173,11 +187,47 @@ fn Builtin { argcn cmd -- builtin }
 			ok@ abs ok!
 			[ok@]ErrorNames@ w@ "sh: couldn't cd %s: %s\n" STDERR FPrintf
 		end
+	end elseif (cmd@ "umask" strcmp)
+		1 builtin!
+
+		0 q!
+
+		if (argcn@ 1 <)
+			1 q!
+		end else
+			Argvt@ w!
+
+			if (w@ "-S" strcmp)
+				2 q!
+			end
+		end
+
+		if (q@)
+			0 UMask ok!
+			ok@ UMask drop
+			
+			if (q@ 1 ==)
+				ok@ "%d\n" Printf
+			end else
+				[ok@ 6 >> 7 & 7 ^]UMaskNames@ "u=%s," Printf
+				[ok@ 3 >> 7 & 7 ^]UMaskNames@ "g=%s," Printf
+				[ok@ 7 & 7 ^]UMaskNames@ "o=%s\n" Printf
+			end
+
+			return
+		end
+
+		w@ atoi UMask drop
 	end
 end
 
 fn IsPath { cand -- ispath }
 	if (cand@ "." strcmp)
+		1 ispath!
+		return
+	end
+
+	if (cand@ ".." strcmp)
 		1 ispath!
 		return
 	end

@@ -11,6 +11,7 @@ all: init.LOFF
 init.LOFF: $(OBJ)
 	$(LD) init.LOFF $(OBJ) L/rtaisix/rtaisix.o
 	$(OBJTOOL) move init.LOFF aisix
+	$(OBJTOOL) strip init.LOFF
 
 %.o: %.df
 	$(DC) $< $@

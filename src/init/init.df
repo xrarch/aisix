@@ -13,6 +13,8 @@ fn Main { ... -- ret }
 	(* don't die when ^C hit on /dev/cons *)
 	TTYI_IGN SetTTYIgnore drop
 
+	18 UMask drop
+
 	auto stdio
 	"/dev/cons" O_READ Open stdio!
 	if (stdio@ iserr)

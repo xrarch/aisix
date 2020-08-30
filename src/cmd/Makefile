@@ -14,6 +14,7 @@ all: $(LOFF)
 %.LOFF: %.o
 	$(LD) $@ $< L/rtaisix/rtaisix.o
 	$(OBJTOOL) move $@ aisix
+	$(OBJTOOL) strip $@
 
 %.o: %.df
 	$(DC) $< $@

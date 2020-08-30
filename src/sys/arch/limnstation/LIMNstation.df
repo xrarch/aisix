@@ -65,6 +65,8 @@ fn Main { ksz args -- ret }
 	ksz@ args@ AISIX ret!
 end
 
+externptr LIMN2KTimeslice
+
 extern DeviceTree { -- }
 extern ExceptionInit { -- }
 extern LGFXExclude { -- }
@@ -74,6 +76,16 @@ fn PlatformInit { -- }
 	DeviceTree
 
 	LGFXExclude
+
+	auto ts
+	"ts" ArgsValue ts!
+
+	if (ts@)
+		ts@ atoi LIMN2KTimeslice!
+		ts@ Free
+	end
+
+	LIMN2KTimeslice@ "limn2k timeslice: %d cycles\n" Printf
 
 	'\n' Putc
 end

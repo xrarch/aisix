@@ -382,6 +382,11 @@ fn private VNewProcess1 { vnode name udvec udcnt -- process }
 end
 
 fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		-EISDIR process!
+		return
+	end
+
 	vnode@ WORLD_X CurrentThread@ Thread_Process + @ Process_UID + @ VForbidden process!
 
 	if (process@ iserr)
@@ -409,8 +414,10 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 
 		while (i@ OFILEMAX <)
 			if (ofile@@)
-				ofile@@ FDup
-				ofile@@ ofilen@!
+				if (ofile@@ FileP_Flags + @ O_CLOEXEC & ~~)
+					ofile@@ FDup
+					ofile@@ ofilen@!
+				end
 			end
 
 			4 ofile +=
@@ -444,6 +451,8 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 	end else
 		ity@ process@ Process_IgnoreTTY + !
 	end
+
+	p@ Process_UMask + @ process@ Process_UMask + !
 
 	process@ Process_MainThread + @ ThreadReady
 end

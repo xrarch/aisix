@@ -110,7 +110,7 @@ end
 fn VFSPath { path -- vnode }
 	auto name
 	auto dirvnode
-	path@ VFSPathX name! vnode! dirvnode!
+	path@ VFSPathX name! vnode! dirvnode! drop
 
 	if (name@)
 		name@ Free
@@ -121,7 +121,10 @@ fn VFSPath { path -- vnode }
 	end
 end
 
-fn VFSPathX { path -- dirvnode vnode name }
+fn VFSPathX { path -- sook dirvnode vnode name }
+	0 name!
+	0 dirvnode!
+
 	if (path@ gb 0 ==)
 		-ENOENT vnode!
 		return
@@ -152,13 +155,14 @@ fn VFSPathX { path -- dirvnode vnode name }
 	auto fs
 	mount@ Mount_Filesystem + @ fs!
 
-	0 dirvnode!
-
-	0 name!
+	auto uid
+	CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
 
 	auto ok
 
 	while (1)
+		0 sook!
+
 		vnode@ VNode_Type + @ ok!
 
 		if (path@ gb '/' ==)
@@ -176,9 +180,20 @@ fn VFSPathX { path -- dirvnode vnode name }
 		end
 
 		if (path@ gb 0 ==)
+			1 sook!
 			(* finished *)
 			pcomp@ name!
 			dirent@ Free
+			return
+		end
+
+		vnode@ WORLD_X uid@ VForbidden pr!
+
+		if (pr@ iserr)
+			vnode@ VNodePut
+			pcomp@ Free
+			dirent@ Free
+			pr@ vnode!
 			return
 		end
 
@@ -203,6 +218,16 @@ fn VFSPathX { path -- dirvnode vnode name }
 			continue
 		end
 
+		path@ pr!
+
+		while (pr@ gb '/' ==)
+			1 pr +=
+		end
+
+		if (pr@ gb 0 ==)
+			1 sook!
+		end
+
 		vnode@ dirent@ VDirent_DirVNode + !
 
 		dirent@ fs@ Filesystem_RewindDir + @ FSRewindDir ok!
@@ -224,8 +249,12 @@ fn VFSPathX { path -- dirvnode vnode name }
 			dirent@ fs@ Filesystem_ReadDir + @ FSReadDir ok!
 
 			if (ok@ iserr)
-				vnode@ VNodePut
-				pcomp@ Free
+				if (dirvnode@)
+					dirvnode@ VNodePut
+				end
+
+				vnode@ dirvnode!
+				pcomp@ name!
 				dirent@ Free
 				ok@ vnode!
 				return
@@ -533,12 +562,6 @@ fn VForbidden { vnode rwx uid -- ok }
 	auto bits
 	vnode@ VNode_Permissions + @ bits!
 
-	if (rwx@ WORLD_X & vnode@ VNode_Type + @ VNODE_DIR == &&)
-		(* first things first, check if executing a directory, and return with an appropriate error *)
-		-EISDIR ok!
-		return
-	end
-
 	auto permbits
 
 	if (uid@ 0 ==) (* superuser *)
@@ -564,8 +587,10 @@ fn VForbidden { vnode rwx uid -- ok }
 		-EACCES ok!
 	end
 
-	if (rwx@ WORLD_X & bits@ XMASK & 0 == &&)
-		-EACCES ok!
+	if (vnode@ VNode_Type + @ VNODE_DIR ~=)
+		if (rwx@ WORLD_X & bits@ XMASK & 0 == &&)
+			-EACCES ok!
+		end
 	end
 
 	if (rwx@ WORLD_W &)

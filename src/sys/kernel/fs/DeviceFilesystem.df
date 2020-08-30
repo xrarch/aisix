@@ -315,7 +315,7 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 	len@ bytes!
 end
 
-fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnode }
+fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnid }
 	-EPERM vnode!
 end
 
@@ -377,7 +377,7 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 	if (vnid@ 0 ==)
 		VNODE_DIR vnode@ VNode_Type + !
 
-		OWNER_R OWNER_W | GROUP_R | WORLD_R | vnode@ VNode_Permissions + !
+		OWNER_R OWNER_X | GROUP_R | GROUP_X | WORLD_R | WORLD_X | vnode@ VNode_Permissions + !
 
 		return
 	end

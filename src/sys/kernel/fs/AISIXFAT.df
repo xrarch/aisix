@@ -598,8 +598,8 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 	vnode@ VNodeUnlock
 end
 
-fn (FSCreate) AISIXFSCreate { dirvnode name type uid permissions -- vnode }
-	-EPERM vnode!
+fn (FSCreate) AISIXFSCreate { dirvnode name type uid permissions -- vnid }
+	-EPERM vnid!
 end
 
 fn (FSRename) AISIXFSRename { srcdirvnode srcname destdirvnode destname -- ok }

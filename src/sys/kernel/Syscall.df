@@ -23,6 +23,8 @@ table Syscalls
 	pointerof SysChdir
 	pointerof SysUnlink
 	pointerof SysUName
+	pointerof SysMkdir
+	pointerof SysUMask
 endtable
 public Syscalls
 
@@ -542,4 +544,35 @@ fn (Syscall) SysUName { tf -- ok }
 	uname@ UNameS_Processor + MachineCPU@ 255 strncpy
 
 	0 ok!
+end
+
+fn (Syscall) SysMkdir { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	auto mode
+	tf@ Context_a3 + @ mode!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ mode@ Mkdir ok!
+
+	path@ Free
+end
+
+fn (Syscall) SysUMask { tf -- ok }
+	auto umask
+	tf@ Context_a1 + @ umask!
+
+	CurrentThread@ Thread_Process + @ Process_UMask + @ ok!
+
+	umask@ CurrentThread@ Thread_Process + @ Process_UMask + !
 end

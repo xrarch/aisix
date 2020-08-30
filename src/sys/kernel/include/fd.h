@@ -7,6 +7,7 @@ struct FileP
 	4 VNode
 	4 VDirent
 	4 Seek
+	4 Flags
 endstruct
 
 struct Dirent
@@ -31,6 +32,8 @@ const O_WRITE 2
 const O_RW (O_READ O_WRITE |)
 
 const O_TRUNC 4
+const O_CLOEXEC 8
+const O_CREATE 16
 
 const FD_FILE 1
 const FD_PIPE 2
@@ -66,3 +69,5 @@ extern FStat { stat fd -- ok }
 extern Chdir { path -- ok }
 
 extern Unlink { path -- ok }
+
+extern Mkdir { path mode -- ok }

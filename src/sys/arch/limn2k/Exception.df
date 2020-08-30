@@ -8,7 +8,8 @@ public InterruptGet
 var InterruptAck 0
 public InterruptAck
 
-const CYCLESLICE 100000
+var LIMN2KTimeslice 100000
+public LIMN2KTimeslice
 
 asm "
 
@@ -99,7 +100,8 @@ CPUIdle:
 
 PlatformSetTimer:
 .global PlatformSetTimer
-	la timer, CYCLESLICE
+	la t0, LIMN2KTimeslice
+	l.l timer, t0, zero
 	ret
 
 ExceptionInit:
@@ -239,7 +241,7 @@ fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 		pointerof forkret ctx@ Context_lr + !
 	end
 
-	CYCLESLICE ctx@ Context_timer + !
+	LIMN2KTimeslice@ ctx@ Context_timer + !
 end
 
 asm "
