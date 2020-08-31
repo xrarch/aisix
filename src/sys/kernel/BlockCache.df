@@ -160,7 +160,7 @@ fn bread { blockno dev -- buf }
 	end
 end
 
-fn bwrite { buf -- ok }
+fn bwrite { buf -- }
 	1 buf@ Buffer_Dirty + !
 end
 

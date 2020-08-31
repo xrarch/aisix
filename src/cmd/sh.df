@@ -376,7 +376,7 @@ fn Command { -- done }
 				argcn@ Argvt pname@ VSpawn pid!
 			end else
 				if (effect@ FTRUNC ==)
-					fname@ O_WRITE O_TRUNC | Open fd!
+					fname@ O_WRITE O_TRUNC | 438 Create fd!
 				end elseif (effect@ FAPPEND ==)
 					"append NYI\n" Abort
 				end

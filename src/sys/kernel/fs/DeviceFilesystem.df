@@ -298,14 +298,9 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 		m@
 		memcpy
 
-		bbuf@ bwrite r!
+		bbuf@ bwrite
 
 		bbuf@ brelse
-
-		if (r@ iserr)
-			r@ bytes!
-			return
-		end
 
 		m@ seek +=
 		m@ buf +=
@@ -316,7 +311,7 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 end
 
 fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnid }
-	-EPERM vnode!
+	-EPERM vnid!
 end
 
 fn (FSRename) DevFSRename { srcdirvnode srcname destdirvnode destname -- ok }

@@ -56,6 +56,9 @@ fn (Syscall) SysOpen { tf -- ok }
 	auto mode
 	tf@ Context_a3 + @ mode!
 
+	auto pbits
+	tf@ Context_v0 + @ pbits!
+
 	path@ pathlen@ GetString path!
 
 	if (path@ iserr)
@@ -63,7 +66,7 @@ fn (Syscall) SysOpen { tf -- ok }
 		return
 	end
 
-	path@ mode@ Open ok!
+	path@ mode@ pbits@ Open ok!
 
 	path@ Free
 end

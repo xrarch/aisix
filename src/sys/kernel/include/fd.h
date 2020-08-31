@@ -50,7 +50,7 @@ extern FDup { filp -- }
 
 extern FilDup { fd1 -- fd2 }
 
-extern Open { path mode -- fd }
+extern Open { path mode pbits -- fd }
 
 extern ReadDir { dirent fd -- ok }
 

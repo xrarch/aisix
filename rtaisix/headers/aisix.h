@@ -2,6 +2,8 @@ extern Main { ... -- ret }
 
 extern Abort { ... fmt -- }
 
+extern Create { path mode pbits -- fd }
+
 extern Open { path mode -- fd }
 
 extern Close { fd -- ok }

@@ -26,6 +26,7 @@ const SYSUMASK 21
 asm "
 
 _open:
+	mov v0, a3
 	mov a3, a2
 	mov a2, a1
 	mov a1, a0
@@ -183,10 +184,14 @@ FPutc:
 
 "
 
-extern _open { mode pathlen path -- fd }
+extern _open { pbits mode pathlen path -- fd }
 
 fn Open { path mode -- fd }
-	mode@ path@ strlen path@ _open fd!
+	0 mode@ path@ strlen path@ _open fd!
+end
+
+fn Create { path mode pbits -- fd }
+	pbits@ mode@ O_CREATE | path@ strlen path@ _open fd!
 end
 
 extern _write { buf len fd -- bytes }

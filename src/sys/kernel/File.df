@@ -147,7 +147,72 @@ fn FilDup { fd1 -- fd2 }
 	fd1@ fd2@ 4 * ofile@ + !
 end
 
-fn Open { path mode -- fd }
+fn private VOpen { path rwx mode pbits -- vnode }
+	CurrentThread@ Thread_Process + @ Process_UMask + @ ~ pbits &=
+
+	auto dirvnode
+	auto name
+	auto sook
+	path@ VFSPathX name! vnode! dirvnode! sook!
+
+	if (vnode@ iserr)
+		if (vnode@ -ENOENT == mode@ O_CREATE & && sook@ &&)
+			auto fs
+			dirvnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
+
+			dirvnode@
+			name@
+			VNODE_FILE
+			CurrentThread@ Thread_Process + @ Process_UID + @
+			pbits@
+			fs@ Filesystem_Create + @ FSCreate vnode!
+
+			if (name@)
+				name@ Free
+			end
+
+			if (dirvnode@)
+				dirvnode@ VNodePut
+			end
+
+			if (vnode@ iserr)
+				return
+			end
+
+			vnode@ dirvnode@ VNode_Mount + @ VNodeGet vnode!
+
+			return
+		end else
+			if (name@)
+				name@ Free
+			end
+
+			if (dirvnode@)
+				dirvnode@ VNodePut
+			end
+
+			return
+		end
+	end
+
+	if (name@)
+		name@ Free
+	end
+
+	if (dirvnode@)
+		dirvnode@ VNodePut
+	end
+
+	auto r
+	vnode@ rwx@ CurrentThread@ Thread_Process + @ Process_EUID + @ VForbidden r!
+
+	if (r@ iserr)
+		vnode@ VNodePut
+		r@ vnode!
+	end
+end
+
+fn Open { path mode pbits -- fd }
 	if (mode@ 3 & 0 ==)
 		-EINVAL fd!
 		return
@@ -177,7 +242,7 @@ fn Open { path mode -- fd }
 	auto r
 
 	auto vnode
-	path@ VFSPath vnode!
+	path@ bits@ mode@ pbits@ VOpen vnode!
 
 	if (vnode@ iserr)
 		filp@ UnrefFilp
@@ -187,15 +252,6 @@ fn Open { path mode -- fd }
 
 	auto p
 	CurrentThread@ Thread_Process + @ p!
-
-	vnode@ bits@ p@ Process_EUID + @ VForbidden r!
-
-	if (r@ iserr)
-		filp@ UnrefFilp
-		vnode@ VNodePut
-		r@ fd!
-		return
-	end
 
 	auto type
 	vnode@ VNode_Type + @ type!
@@ -641,5 +697,9 @@ fn Mkdir { path mode -- ok }
 
 	if (dirvnode@)
 		dirvnode@ VNodePut
+	end
+
+	if (ok@ iserr ~~)
+		0 ok!
 	end
 end

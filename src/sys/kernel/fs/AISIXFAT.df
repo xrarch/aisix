@@ -107,7 +107,7 @@ fn private SetBlockStatus { status block mount -- ok }
 
 	0 ok!
 
-	fb@ bwrite ok!
+	fb@ bwrite
 
 	fb@ brelse
 end
@@ -173,14 +173,7 @@ fn private BAlloc { link mount -- buf }
 
 			buf@ Buffer_Data + @ 4096 0 memset
 
-			buf@ bwrite r!
-
-			if (r@ iserr)
-				0 i@ mount@ SetBlockStatus drop
-				buf@ brelse
-				r@ buf!
-				return
-			end
+			buf@ bwrite
 
 			i@ fsd@ AFSData_LastFreeBlock + !
 
@@ -244,12 +237,7 @@ fn private UpdateNode { vnode -- ok }
 	vnode@ VNode_UID + @ inode@ INode_uid + !
 	vnode@ VNode_Timestamp + @ inode@ INode_timestamp + !
 
-	buf@ bwrite ok!
-
-	if (ok@ iserr)
-		buf@ brelse
-		return
-	end
+	buf@ bwrite
 
 	0 vd@ AVData_Dirty + !
 
@@ -572,14 +560,7 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 		buf@
 		m@ memcpy
 
-		bbuf@ bwrite r!
-
-		if (r@ iserr)
-			bbuf@ brelse
-			r@ bytes!
-			vnode@ VNodeUnlock
-			return
-		end
+		bbuf@ bwrite
 
 		bbuf@ brelse
 
@@ -598,8 +579,169 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 	vnode@ VNodeUnlock
 end
 
+fn private IAlloc { mount -- inum ino buf }
+	auto istart
+	mount@ Mount_FSData + @ AFSData_IStart + @ istart!
+
+	auto icount
+	mount@ Mount_FSData + @ AFSData_ICount + @ icount!
+
+	if (icount@ 1 <=)
+		"afs: icount<=1\n" Panic
+	end
+
+	auto dev
+	mount@ Mount_Device + @ dev!
+
+	auto p
+	0 p!
+
+	0 buf!
+
+	0 inum!
+
+	while (inum@ icount@ <)
+		if (p@ 4096 % ~~)
+			if (buf@)
+				buf@ brelse
+			end
+
+			p@ 4096 / istart@ + dev@ bread buf!
+
+			if (buf@ iserr)
+				return
+			end
+		end
+
+		(* never allocate inode 0 *)
+		if (inum@ 0 ==)
+			INode_SIZEOF p +=
+			1 inum +=
+			continue
+		end
+
+		buf@ Buffer_Data + @ p@ 4096 % + ino!
+
+		if (ino@ INode_type + @ 0 ==)
+			(* unused inode *)
+			return
+		end
+
+		INode_SIZEOF p +=
+		1 inum +=
+	end
+
+	if (buf@)
+		buf@ brelse
+	end
+
+	-ENOSPC buf!
+end
+
+fn private DirentAlloc { vnode -- dirent buf }
+	auto sz
+	vnode@ VNode_Size + @ sz!
+
+	auto p
+	0 p!
+
+	0 buf!
+
+	while (1)
+		if (p@ 4096 % ~~)
+			if (buf@)
+				buf@ brelse
+			end
+
+			p@ 4096 / 0 vnode@ BMap buf!
+
+			if (buf@ iserr)
+				return
+			end
+		end
+
+		if (p@ DirEnt_SIZEOF + sz@ >)
+			p@ DirEnt_SIZEOF + sz!
+			sz@ vnode@ VNode_Size + !
+			1 vnode@ VNode_FSData + @ AVData_Dirty + !
+		end
+
+		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+
+		if (dirent@ DirEnt_INum + @ ~~)
+			(* unused directory entry *)
+			return
+		end
+
+		DirEnt_SIZEOF p +=
+	end
+
+	if (buf@)
+		buf@ brelse
+	end
+end
+
 fn (FSCreate) AISIXFSCreate { dirvnode name type uid permissions -- vnid }
-	-EPERM vnid!
+	if (name@ "." strcmp)
+		-EEXIST vnid!
+		return
+	end
+
+	if (name@ ".." strcmp)
+		-EEXIST vnid!
+		return
+	end
+
+	auto dirent
+	auto ino
+
+	auto debuf
+	dirvnode@ DirentAlloc debuf! dirent!
+
+	if (debuf@ 0 ==)
+		"AFSCreate: DirentAlloc\n" Panic
+	end
+
+	if (debuf@ iserr)
+		debuf@ vnid!
+		return
+	end
+
+	auto ibuf
+	dirvnode@ VNode_Mount + @ IAlloc ibuf! ino! vnid!
+
+	if (ibuf@ 0 ==)
+		"AFSCreate: IAlloc\n" Panic
+	end
+
+	if (ibuf@ iserr)
+		debuf@ brelse
+		ibuf@ vnid!
+		return
+	end
+
+	dirent@ DirEnt_name + name@ 59 strncpy
+	vnid@ dirent@ DirEnt_INum + !
+
+	if (type@ VNODE_DIR ==)
+		2 ino@ INode_type + !
+	end else
+		1 ino@ INode_type + !
+	end
+
+	dirvnode@ VNode_VNID + @ ino@ INode_iparent + !
+
+	uid@ ino@ INode_uid + !
+	permissions@ ino@ INode_permissions + !
+	0 ino@ INode_timestamp + !
+	0 ino@ INode_bytesize + !
+	0xFFFFFFFF ino@ INode_startblock + !
+
+	ibuf@ bwrite
+	debuf@ bwrite
+
+	ibuf@ brelse
+	debuf@ brelse
 end
 
 fn (FSRename) AISIXFSRename { srcdirvnode srcname destdirvnode destname -- ok }
@@ -722,7 +864,9 @@ fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
 
 	0 dirent@ DirEnt_INum + !
 
-	buf@ bwrite ok!
+	0 ok!
+
+	buf@ bwrite
 
 	buf@ brelse
 
@@ -762,12 +906,9 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 
 	0 inode@ INode_type + !
 
-	buf@ bwrite ok!
+	0 ok!
 
-	if (ok@ iserr)
-		buf@ brelse
-		return
-	end
+	buf@ bwrite
 
 	buf@ brelse
 end

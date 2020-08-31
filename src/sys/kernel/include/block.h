@@ -21,7 +21,7 @@ extern bget { blockno dev -- buf }
 
 extern bread { blockno dev -- buf }
 
-extern bwrite { buf -- ok }
+extern bwrite { buf -- }
 
 extern brelse { buf -- }
 
