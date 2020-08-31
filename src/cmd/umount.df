@@ -1,0 +1,24 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn private Usage { -- }
+	"usage: umount device or mountpoint\n" Printf
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 2 <)
+		Usage
+		1 ret!
+		return
+	end
+
+	[1]argv@ UMount ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "umount: %s\n" Printf
+		1 ret!
+	end
+end

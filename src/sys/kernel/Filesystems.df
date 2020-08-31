@@ -322,6 +322,8 @@ end
 
 fn FSByName { name -- fs }
 	auto i
+	0 i!
+
 	while (i@ Filesystems <)
 		[i@]FilesystemTab@ fs!
 
@@ -333,6 +335,42 @@ fn FSByName { name -- fs }
 	end
 
 	0 fs!
+end
+
+fn SMount { type dir pdev flags -- ok }
+	type@ FSByName type!
+
+	if (type@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	pdev@ VFSPath pdev!
+
+	if (pdev@ iserr)
+		pdev@ ok!
+		return
+	end
+
+	if (pdev@ VNode_Type + @ VNODE_BLOCK ~=)
+		-ENOTBLK ok!
+		pdev@ VNodePut
+		return
+	end
+
+	auto dev
+
+	pdev@ VNode_FSData + @ dev!
+
+	pdev@ VNodePut
+
+	flags@ dir@ type@ dev@ VFSMount ok!
+
+	if (ok@ iserr)
+		return
+	end
+
+	0 ok!
 end
 
 fn VFSMount { flags path fs dev -- mount }
@@ -353,13 +391,8 @@ fn VFSMount { flags path fs dev -- mount }
 
 		if (covervn@ iserr)
 			covervn@ mount!
-			return
-		end
 
-		if (covervn@ VNode_CoveredBy + @)
-			covervn@ VNodePut
-
-			-EBUSY mount!
+			UnlockMountList
 			return
 		end
 
@@ -367,6 +400,17 @@ fn VFSMount { flags path fs dev -- mount }
 			covervn@ VNodePut
 
 			-ENOTDIR mount!
+
+			UnlockMountList
+			return
+		end
+
+		if (covervn@ VNode_Refs + @ 1 >)
+			covervn@ VNodePut
+
+			-EBUSY mount!
+
+			UnlockMountList
 			return
 		end
 	end else
@@ -471,6 +515,34 @@ fn VFSMount { flags path fs dev -- mount }
 	fs@ Filesystem_Name + @ pname@ devname@ "mounted %s on %s as %s\n" Printf
 end
 
+fn UMount { path -- ok }
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	auto mount
+	0 mount!
+
+	if (vnode@ VNode_Type + @ VNODE_BLOCK ==)
+		vnode@ VNode_FSData + @ Device_Mount + @ mount!
+	end elseif (vnode@ VNode_Mount + @ Mount_Root + @ vnode@ ==)
+		vnode@ VNode_Mount + @ mount!
+	end
+
+	vnode@ VNodePut
+
+	if (mount@ 0 ==)
+		-ENODEV ok!
+		return
+	end
+
+	mount@ VFSUnmount ok!
+end
+
 fn VFSUnmount { mount -- ok }
 	auto rs
 	InterruptDisable rs!
@@ -525,8 +597,7 @@ fn VFSUnmount { mount -- ok }
 		[ok@]ErrorNames@ "VFSUnmount: couldn't sync: %s\n" Printf
 	end
 	
-	(* for when block cache works: *)
-	(* mount@ Mount_Device + @ SyncBlocks *)
+	bsync drop
 
 	auto link
 	mount@ Mount_Next + @ link!
@@ -551,6 +622,10 @@ fn VFSUnmount { mount -- ok }
 	mount@ Mount_Filesystem + @ fs!
 
 	mount@ fs@ Filesystem_Unmount + @ FSUnmount ok!
+
+	if (mount@ Mount_Device + @)
+		0 mount@ Mount_Device + @ Device_Mount + !
+	end
 
 	mount@ Free
 end

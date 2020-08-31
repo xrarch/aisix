@@ -1,0 +1,37 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn private Usage { -- }
+	"usage: mount device mountpoint [fstype]\n" Printf
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 3 <)
+		Usage
+		1 ret!
+		return
+	end
+
+	if (argc@ 4 >)
+		Usage
+		1 ret!
+		return
+	end
+
+	auto fst
+	"aisixfs" fst!
+
+	if (argc@ 4 ==)
+		[3]argv@ fst!
+	end
+
+	0 [1]argv@ [2]argv@ fst@ Mount ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "mount: %s\n" Printf
+		1 ret!
+	end
+end

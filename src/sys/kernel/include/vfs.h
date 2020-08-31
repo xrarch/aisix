@@ -151,3 +151,7 @@ extern VFSMount { flags path fs dev -- mount }
 extern VFSUnmount { mount -- ok }
 
 extern VForbidden { vnode rwx uid -- ok }
+
+extern SMount { type dir pdev flags -- ok }
+
+extern UMount { path -- ok }

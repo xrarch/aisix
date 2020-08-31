@@ -22,6 +22,8 @@ const SYSUNLINK 18
 const SYSUNAME 19
 const SYSMKDIR 20
 const SYSUMASK 21
+const SYSMOUNT 22
+const SYSUMOUNT 23
 
 asm "
 
@@ -166,6 +168,25 @@ _mkdir:
 _umask:
 	mov a1, a0
 	li a0, SYSUMASK
+	sys
+	ret
+
+_mount:
+	lio.l t1, sp, 16
+	lio.l t0, sp, 12
+	lio.l v1, sp, 8
+	mov v0, a3
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSMOUNT
+	sys
+	ret
+
+_umount:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSUMOUNT
 	sys
 	ret
 
@@ -360,4 +381,16 @@ extern _umask { umask -- old }
 
 fn UMask { umask -- old }
 	umask@ _umask old!
+end
+
+extern _mount { flags pdevlen pdev dirlen dir typelen type -- ok }
+
+fn Mount { flags dev dir type -- ok }
+	flags@ dev@ strlen dev@ dir@ strlen dir@ type@ strlen type@ _mount ok!
+end
+
+extern _umount { pathlen path -- ok }
+
+fn UMount { path -- ok }
+	path@ strlen path@ _umount ok!
 end

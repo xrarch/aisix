@@ -596,6 +596,21 @@ fn Unlink { path -- ok }
 		return
 	end
 
+	if (vnode@ VNode_Mount + @ Mount_Root + @ vnode@ ==)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		vnode@ VNodePut
+
+		-EBUSY ok!
+		return
+	end
+
 	vnode@ WORLD_W CurrentThread@ Thread_Process + @ Process_EUID + @ VForbidden ok!
 
 	if (ok@ iserr)

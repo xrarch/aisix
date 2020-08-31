@@ -25,6 +25,8 @@ table Syscalls
 	pointerof SysUName
 	pointerof SysMkdir
 	pointerof SysUMask
+	pointerof SysMount
+	pointerof SysUMount
 endtable
 public Syscalls
 
@@ -578,4 +580,92 @@ fn (Syscall) SysUMask { tf -- ok }
 	CurrentThread@ Thread_Process + @ Process_UMask + @ ok!
 
 	umask@ CurrentThread@ Thread_Process + @ Process_UMask + !
+end
+
+fn (Syscall) SysMount { tf -- ok }
+	if (CurrentThread@ Thread_Process + @ Process_EUID + @ 0 ~=)
+		-EPERM ok!
+		return
+	end
+
+	auto type
+	tf@ Context_a1 + @ type!
+
+	auto typelen
+	tf@ Context_a2 + @ typelen!
+
+	type@ typelen@ GetString type!
+
+	if (type@ iserr)
+		type@ ok!
+		return
+	end
+
+	auto dir
+	tf@ Context_a3 + @ dir!
+
+	auto dirlen
+	tf@ Context_v0 + @ dirlen!
+
+	dir@ dirlen@ GetString dir!
+
+	if (dir@ iserr)
+		type@ Free
+		dir@ ok!
+		return
+	end
+
+	auto pdev
+	tf@ Context_v1 + @ pdev!
+
+	auto pdevlen
+	tf@ Context_t0 + @ pdevlen!
+
+	if (pdev@)
+		pdev@ pdevlen@ GetString pdev!
+
+		if (pdev@ iserr)
+			type@ Free
+			dir@ Free
+			pdev@ ok!
+			return
+		end
+	end
+
+	auto flags
+	tf@ Context_t1 + @ flags!
+
+	type@ dir@ pdev@ flags@ SMount ok!
+
+	type@ Free
+
+	dir@ Free
+
+	if (pdev@)
+		pdev@ Free
+	end
+end
+
+fn (Syscall) SysUMount { tf -- ok }
+	if (CurrentThread@ Thread_Process + @ Process_EUID + @ 0 ~=)
+		-EPERM ok!
+		return
+	end
+
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ UMount ok!
+
+	path@ Free
 end

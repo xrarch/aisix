@@ -68,7 +68,7 @@ fn VNodeUnref { vnode -- }
 end
 
 fn VNodeRemove { vnode -- res }
-	if (vnode@ VNode_Refs + @)
+	if (vnode@ VNode_Refs + @ 1 >)
 		"tried to remove vnode with hanging references!\n" Panic
 	end
 
