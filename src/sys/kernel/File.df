@@ -148,8 +148,6 @@ fn FilDup { fd1 -- fd2 }
 end
 
 fn private VOpen { path rwx mode pbits -- vnode }
-	CurrentThread@ Thread_Process + @ Process_UMask + @ ~ pbits &=
-
 	auto dirvnode
 	auto name
 	auto sook
@@ -157,15 +155,17 @@ fn private VOpen { path rwx mode pbits -- vnode }
 
 	if (vnode@ iserr)
 		if (vnode@ -ENOENT == mode@ O_CREATE & && sook@ &&)
-			auto fs
-			dirvnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
+			CurrentThread@ Thread_Process + @ Process_UMask + @ ~ pbits &=
+
+			auto mount
+			dirvnode@ VNode_Mount + @ mount!
 
 			dirvnode@
 			name@
 			VNODE_FILE
 			CurrentThread@ Thread_Process + @ Process_UID + @
 			pbits@
-			fs@ Filesystem_Create + @ FSCreate vnode!
+			mount@ Mount_Filesystem + @ Filesystem_Create + @ FSCreate vnode!
 
 			if (name@)
 				name@ Free
@@ -179,7 +179,7 @@ fn private VOpen { path rwx mode pbits -- vnode }
 				return
 			end
 
-			vnode@ dirvnode@ VNode_Mount + @ VNodeGet vnode!
+			vnode@ mount@ VNodeGet vnode!
 
 			return
 		end else
