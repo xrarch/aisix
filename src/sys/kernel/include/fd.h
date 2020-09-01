@@ -71,3 +71,7 @@ extern Chdir { path -- ok }
 extern Unlink { path -- ok }
 
 extern Mkdir { path mode -- ok }
+
+extern Chown { path owner -- ok }
+
+extern Chmod { path mode -- ok }

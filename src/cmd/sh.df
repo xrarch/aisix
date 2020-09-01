@@ -185,7 +185,7 @@ fn Builtin { argcn cmd -- builtin }
 
 		if (ok@ iserr)
 			ok@ abs ok!
-			[ok@]ErrorNames@ w@ "sh: couldn't cd %s: %s\n" STDERR FPrintf
+			[ok@]ErrorNames@ w@ "sh: %s: %s\n" STDERR FPrintf
 		end
 	end elseif (cmd@ "umask" strcmp)
 		1 builtin!
@@ -384,7 +384,7 @@ fn Command { -- done }
 				if (fd@ iserr)
 					0 pid!
 					fd@ abs fd!
-					[fd@]ErrorNames@ fname@ "sh: couldn't open %s: %s\n" STDERR FPrintf
+					[fd@]ErrorNames@ fname@ "sh: %s: %s\n" STDERR FPrintf
 				end else
 					STDIN fd@ STDERR argcn@ Argvt pname@ ASpawn pid!
 

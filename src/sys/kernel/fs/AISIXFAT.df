@@ -35,7 +35,6 @@ endstruct
 
 struct AVData
 	4 Entry
-	4 Dirty
 	4 IParent
 	4 BNCache
 	4 FirstBN
@@ -198,7 +197,7 @@ fn private UpdateNode { vnode -- ok }
 	auto vd
 	vnode@ VNode_FSData + @ vd!
 
-	if (vd@ AVData_Dirty + @ ~~)
+	if (vnode@ VNode_Dirty + @ ~~)
 		return
 	end
 
@@ -239,7 +238,7 @@ fn private UpdateNode { vnode -- ok }
 
 	buf@ bwrite
 
-	0 vd@ AVData_Dirty + !
+	0 vnode@ VNode_Dirty + !
 
 	buf@ brelse
 end
@@ -417,7 +416,7 @@ fn private TruncNode { vnode -- ok }
 
 	0 vnode@ VNode_Size + !
 	0xFFFFFFFF vd@ AVData_Entry + !
-	1 vd@ AVData_Dirty + !
+	1 vnode@ VNode_Dirty + !
 
 	auto le
 
@@ -571,7 +570,7 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 
 	if (seek@ vnode@ VNode_Size + @ >)
 		seek@ vnode@ VNode_Size + !
-		1 vnode@ VNode_FSData + @ AVData_Dirty + !
+		1 vnode@ VNode_Dirty + !
 	end
 
 	len@ bytes!
@@ -663,7 +662,7 @@ fn private DirentAlloc { vnode -- dirent buf }
 		if (p@ DirEnt_SIZEOF + sz@ >)
 			p@ DirEnt_SIZEOF + sz!
 			sz@ vnode@ VNode_Size + !
-			1 vnode@ VNode_FSData + @ AVData_Dirty + !
+			1 vnode@ VNode_Dirty + !
 		end
 
 		buf@ Buffer_Data + @ p@ 4096 % + dirent!
@@ -1010,7 +1009,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 
 	vd@ vnode@ VNode_FSData + !
 
-	0 vd@ AVData_Dirty + !
+	0 vnode@ VNode_Dirty + !
 
 	auto block
 	auto off

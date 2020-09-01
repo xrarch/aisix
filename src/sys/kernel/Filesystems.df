@@ -65,8 +65,6 @@ fn VFSInit { -- }
 	syncw@ ThreadReady
 end
 
-var rn 0
-
 fn VFSMountRoot { -- }
 	if (RootDevice@ ~~)
 		"couldn't find root device!\n" Panic
@@ -338,6 +336,11 @@ fn FSByName { name -- fs }
 end
 
 fn SMount { type dir pdev flags -- ok }
+	if (CurrentThread@ Thread_Process + @ Process_EUID + @ 0 ~=)
+		-EPERM ok!
+		return
+	end
+
 	type@ FSByName type!
 
 	if (type@ ~~)
@@ -345,24 +348,28 @@ fn SMount { type dir pdev flags -- ok }
 		return
 	end
 
-	pdev@ VFSPath pdev!
+	if (pdev@)
+		pdev@ VFSPath pdev!
 
-	if (pdev@ iserr)
-		pdev@ ok!
-		return
-	end
+		if (pdev@ iserr)
+			pdev@ ok!
+			return
+		end
 
-	if (pdev@ VNode_Type + @ VNODE_BLOCK ~=)
-		-ENOTBLK ok!
+		if (pdev@ VNode_Type + @ VNODE_BLOCK ~=)
+			-ENOTBLK ok!
+			pdev@ VNodePut
+			return
+		end
+
+		auto dev
+
+		pdev@ VNode_FSData + @ dev!
+
 		pdev@ VNodePut
-		return
+	end else
+		0 dev!
 	end
-
-	auto dev
-
-	pdev@ VNode_FSData + @ dev!
-
-	pdev@ VNodePut
 
 	flags@ dir@ type@ dev@ VFSMount ok!
 
@@ -516,6 +523,11 @@ fn VFSMount { flags path fs dev -- mount }
 end
 
 fn UMount { path -- ok }
+	if (CurrentThread@ Thread_Process + @ Process_EUID + @ 0 ~=)
+		-EPERM ok!
+		return
+	end
+
 	auto vnode
 	path@ VFSPath vnode!
 
@@ -675,38 +687,46 @@ fn VForbidden { vnode rwx uid -- ok }
 	end
 end
 
+fn VFSSync { -- ok }
+	LockMountList ok!
+
+	if (ok@)
+		-EINTR ok!
+		return
+	end
+
+	auto mount
+
+	MountListHead@ mount!
+
+	while (mount@)
+		mount@ 0 SyncVNodes ok!
+
+		if (ok@ iserr)
+			UnlockMountList
+			return
+		end
+
+		mount@ Mount_Next + @ mount!
+	end
+
+	UnlockMountList
+
+	bsync ok!
+end
+
 fn VFSSyncWorker { -- }
 	while (1)
 		if (3000 SleepFor)
 			"sync thread killed in its sleep\n" Panic
 		end
 
-		if (LockMountList)
-			"sync thread killed while locking mount list\n" Panic
-		end
+		auto ok
+		VFSSync ok!
 
-		auto mount
-
-		MountListHead@ mount!
-
-		while (mount@)
-			mount@ 0 SyncVNodes r!
-
-			if (r@ -EINTR ==)
-				"sync thread killed\n" Panic
-			end
-
-			mount@ Mount_Next + @ mount!
-		end
-
-		UnlockMountList
-
-		auto r
-		bsync r!
-
-		if (r@ iserr)
-			r@ abs r!
-			[r@]ErrorNames@ "block cache sync error: %s\n" Printf
+		if (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ "kernel: sync error: %s\n" Printf
 		end
 	end
 end

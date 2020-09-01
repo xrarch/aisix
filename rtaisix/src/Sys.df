@@ -24,6 +24,9 @@ const SYSMKDIR 20
 const SYSUMASK 21
 const SYSMOUNT 22
 const SYSUMOUNT 23
+const SYSCHOWN 24
+const SYSCHMOD 25
+const SYSSYNC 26
 
 asm "
 
@@ -187,6 +190,27 @@ _umount:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSUMOUNT
+	sys
+	ret
+
+_chown:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSCHOWN
+	sys
+	ret
+
+_chmod:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSCHMOD
+	sys
+	ret
+
+_sync:
+	li a0, SYSSYNC
 	sys
 	ret
 
@@ -393,4 +417,22 @@ extern _umount { pathlen path -- ok }
 
 fn UMount { path -- ok }
 	path@ strlen path@ _umount ok!
+end
+
+extern _chown { owner pathlen path -- ok }
+
+fn Chown { path owner -- ok }
+	owner@ path@ strlen path@ _chown ok!
+end
+
+extern _chmod { mode pathlen path -- ok }
+
+fn Chmod { path mode -- ok }
+	mode@ path@ strlen path@ _chmod ok!
+end
+
+extern _sync { -- ok }
+
+fn Sync { -- ok }
+	_sync ok!
 end

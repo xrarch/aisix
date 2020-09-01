@@ -8,9 +8,13 @@ const VERSION 8
 const MACHINE 16
 const PROCESSOR 32
 
-const ALLFLAGS (SYSNAME NODENAME | RELEASE | VERSION | MACHINE | PROCESSOR |)
+const ALLFLAGS (SYSNAME VERSION | MACHINE | PROCESSOR |)
 
 buffer UNameBuf UNameS_SIZEOF
+
+fn private Usage { -- }
+	"usage: uname [-amnprs]\n" Printf
+end
 
 fn Main { ... -- ret }
 	0 ret!
@@ -40,6 +44,9 @@ fn Main { ... -- ret }
 					MACHINE flags |=
 				end elseif (sw@ gb 'p' ==)
 					PROCESSOR flags |=
+				end else
+					Usage
+					1 Exit
 				end
 
 				1 sw +=

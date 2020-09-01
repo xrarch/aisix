@@ -3,6 +3,11 @@
 
 var AFlag 0
 var LFlag 0
+var DFlag 0
+
+fn private Usage { -- }
+	"usage: ls [-adl] [file ...]\n" Printf
+end
 
 fn Main { ... -- ret }
 	0 ret!
@@ -26,8 +31,13 @@ fn Main { ... -- ret }
 			while (sw@ gb 0 ~=)
 				if (sw@ gb 'a' ==)
 					1 AFlag!
+				end elseif (sw@ gb 'd' ==)
+					1 DFlag!
 				end elseif (sw@ gb 'l' ==)
 					1 LFlag!
+				end else
+					Usage
+					1 Exit
 				end
 
 				1 sw +=
@@ -66,7 +76,11 @@ fn Ls { path -- }
 	end
 
 	if (StatB Stat_Type + @ VNODE_DIR ==)
-		path@ fd@ ListDir
+		if (DFlag@)
+			path@ EInfo
+		end else
+			path@ fd@ ListDir
+		end
 	end else
 		path@ EInfo
 	end

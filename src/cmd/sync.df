@@ -1,0 +1,14 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	Sync ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "sync: %s\n" Printf
+		1 ret!
+	end
+
+	0 ret!
+end

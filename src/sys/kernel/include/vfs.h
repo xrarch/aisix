@@ -81,6 +81,7 @@ struct VNode
 	4 Size
 	4 CoveredBy
 	4 DeleteLastRef
+	4 Dirty
 endstruct
 
 const VNODE_FILE 1
@@ -155,3 +156,5 @@ extern VForbidden { vnode rwx uid -- ok }
 extern SMount { type dir pdev flags -- ok }
 
 extern UMount { path -- ok }
+
+extern VFSSync { -- ok }

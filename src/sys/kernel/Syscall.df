@@ -27,10 +27,18 @@ table Syscalls
 	pointerof SysUMask
 	pointerof SysMount
 	pointerof SysUMount
+	pointerof SysChown
+	pointerof SysChmod
+	pointerof SysSync
 endtable
 public Syscalls
 
 fn private GetString { user len -- str }
+	if (user@ ~~)
+		-EINVAL str!
+		return
+	end
+
 	auto r
 	len@ user@ 0 PlatformUserToPhys r! user!
 
@@ -668,4 +676,52 @@ fn (Syscall) SysUMount { tf -- ok }
 	path@ UMount ok!
 
 	path@ Free
+end
+
+fn (Syscall) SysChown { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	auto owner
+	tf@ Context_a3 + @ owner!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ owner@ Chown ok!
+
+	path@ Free
+end
+
+fn (Syscall) SysChmod { tf -- ok }
+	auto path
+	tf@ Context_a1 + @ path!
+
+	auto pathlen
+	tf@ Context_a2 + @ pathlen!
+
+	auto mode
+	tf@ Context_a3 + @ mode!
+
+	path@ pathlen@ GetString path!
+
+	if (path@ iserr)
+		path@ ok!
+		return
+	end
+
+	path@ mode@ Chmod ok!
+
+	path@ Free
+end
+
+fn (Syscall) SysSync { tf -- ok }
+	VFSSync ok!
 end

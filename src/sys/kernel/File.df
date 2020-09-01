@@ -696,6 +696,20 @@ fn Mkdir { path mode -- ok }
 		return
 	end
 
+	dirvnode@ WORLD_W CurrentThread@ Thread_Process + @ Process_EUID + @ VForbidden ok!
+
+	if (ok@ iserr)
+		if (name@)
+			name@ Free
+		end
+
+		if (dirvnode@)
+			dirvnode@ VNodePut
+		end
+
+		return
+	end
+
 	auto fs
 	dirvnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
 
@@ -717,4 +731,81 @@ fn Mkdir { path mode -- ok }
 	if (ok@ iserr ~~)
 		0 ok!
 	end
+end
+
+fn Chown { path owner -- ok }
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	auto fl
+	vnode@ VNode_Mount + @ Mount_Flags + @ fl!
+
+	if (fl@ FS_READONLY &)
+		-EROFS ok!
+		vnode@ VNodePut
+		return
+	end
+
+	if (fl@ FS_NOUID & ~~)
+		auto uid
+		CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
+
+		if (uid@ 0 ~=)
+			if (owner@ uid@ ~= vnode@ VNode_UID + @ uid@ ~= ||)
+				vnode@ VNodePut
+				-EPERM ok!
+				return
+			end
+		end
+	end
+
+	owner@ vnode@ VNode_UID + !
+	SUID ~ vnode@ VNode_Permissions + &=
+	1 vnode@ VNode_Dirty + !
+
+	vnode@ VNodePut
+	0 ok!
+end
+
+fn Chmod { path mode -- ok }
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	auto fl
+	vnode@ VNode_Mount + @ Mount_Flags + @ fl!
+
+	if (fl@ FS_READONLY &)
+		-EROFS ok!
+		vnode@ VNodePut
+		return
+	end
+
+	if (fl@ FS_NOUID & ~~)
+		auto uid
+		CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
+
+		if (uid@ 0 ~=)
+			if (vnode@ VNode_UID + @ uid@ ~=)
+				vnode@ VNodePut
+				-EPERM ok!
+				return
+			end
+		end
+	end
+
+	mode@ 1023 & vnode@ VNode_Permissions + !
+	1 vnode@ VNode_Dirty + !
+
+	vnode@ VNodePut
+	0 ok!
 end
