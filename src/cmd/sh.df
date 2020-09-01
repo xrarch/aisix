@@ -378,7 +378,7 @@ fn Command { -- done }
 				if (effect@ FTRUNC ==)
 					fname@ O_WRITE O_TRUNC | 438 Create fd!
 				end elseif (effect@ FAPPEND ==)
-					"append NYI\n" Abort
+					fname@ O_WRITE O_APPEND | 438 Create fd!
 				end
 
 				if (fd@ iserr)

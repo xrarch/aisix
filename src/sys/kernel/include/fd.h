@@ -34,6 +34,7 @@ const O_RW (O_READ O_WRITE |)
 const O_TRUNC 4
 const O_CLOEXEC 8
 const O_CREATE 16
+const O_APPEND 32
 
 const FD_FILE 1
 const FD_PIPE 2

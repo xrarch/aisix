@@ -307,6 +307,10 @@ fn Open { path mode pbits -- fd }
 
 	filp@ fd@ 4 * ofile@ + !
 
+	if (mode@ O_APPEND &)
+		vnode@ VNode_Size + @ filp@ FileP_Seek + !
+	end
+
 	vnode@ VNodeUnlock
 end
 
