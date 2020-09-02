@@ -2,7 +2,7 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn private Usage { -- }
-	"usage: chown owner file\n" Printf
+	"usage: chown owner file\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }

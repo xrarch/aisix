@@ -178,13 +178,14 @@ fn (DevRead) DKSRead { buf len unit seek -- bytes }
 	end
 
 	12 seek >>=
-	dks@ DKS_Offset + @ seek +=
 
 	if (seek@ dks@ DKS_Blocks + @ >=)
-		dks@ DKS_Name + @ "%s: seek > size\n" Printf
+		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
 		-EIO bytes!
 		return
 	end
+
+	dks@ DKS_Offset + @ seek +=
 
 	if (LockDKS)
 		-EINTR bytes!
@@ -230,13 +231,14 @@ fn (DevWrite) DKSWrite { buf len unit seek -- bytes }
 	end
 
 	12 seek >>=
-	dks@ DKS_Offset + @ seek +=
-
+	
 	if (seek@ dks@ DKS_Blocks + @ >=)
-		dks@ DKS_Name + @ "%s: seek > size\n" Printf
+		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
 		-EIO bytes!
 		return
 	end
+
+	dks@ DKS_Offset + @ seek +=
 
 	if (LockDKS)
 		-EINTR bytes!

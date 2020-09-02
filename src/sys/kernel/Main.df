@@ -66,21 +66,21 @@ fn AISIXInitialThread { -- }
 	VFSMountRoot
 
 	auto vnode
-	"/sys/init" VFSPath vnode!
+	"/sys/bin/init" VFSPath vnode!
 
 	if (vnode@ iserr)
 		vnode@ abs vnode!
-		[vnode@]ErrorNames@ "couldn't open /sys/init: %s\n" Printf
+		[vnode@]ErrorNames@ "couldn't open /sys/bin/init: %s\n" Printf
 	end else
 		vnode@ VNodeUnlock
 
-		vnode@ "/sys/init" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
+		vnode@ "/sys/bin/init" 0 0 0 NP_INHERIT 0 0 VNewProcess InitProcess!
 
 		vnode@ VNodeUnref
 
 		if (InitProcess@ iserr)
 			InitProcess@ abs InitProcess!
-			[InitProcess@]ErrorNames@ "couldn't spawn /sys/init: %s\n" Printf
+			[InitProcess@]ErrorNames@ "couldn't spawn /sys/bin/init: %s\n" Printf
 		end
 	end
 

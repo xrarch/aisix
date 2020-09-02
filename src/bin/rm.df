@@ -20,6 +20,6 @@ fn Remove { path -- }
 
 	if (ok@ iserr)
 		ok@ abs ok!
-		[ok@]ErrorNames@ path@ "rm: %s: %s\n" STDERR FPrintf
+		[ok@]ErrorNames@ path@ "rm: %s: %s\n" Abort
 	end
 end

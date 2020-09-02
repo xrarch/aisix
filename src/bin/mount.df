@@ -2,7 +2,7 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn private Usage { -- }
-	"usage: mount [-ru] device mountpoint [fstype]\n" Printf
+	"usage: mount [-ru] device mountpoint [fstype]\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }
@@ -72,7 +72,6 @@ fn Main { ... -- ret }
 
 	if (ret@ iserr)
 		ret@ abs ret!
-		[ret@]ErrorNames@ "mount: %s\n" Printf
-		1 ret!
+		[ret@]ErrorNames@ "mount: %s\n" Abort
 	end
 end

@@ -274,9 +274,12 @@ fn Scheduler { -- }
 				KDebug
 			end
 
-			if (TTYKill@)
-				TTYKill@ KillTTY
+			auto kt
+			TTYKill@ kt!
+
+			if (kt@)
 				0 TTYKill!
+				kt@ KillTTY
 			end
 
 			[i@]Threads@ thread!
@@ -604,7 +607,9 @@ fn KillTTY { tty -- }
 		if (proc@)
 			if (proc@ Process_IgnoreTTY + @ 0xFF & 0 ==)
 				if (proc@ Process_TTY + @ tty@ ==)
-					130 proc@ ProcessKill
+					if (proc@ Process_Zombie + @ ~~)
+						130 proc@ ProcessKill
+					end
 				end
 			end
 		end

@@ -27,11 +27,15 @@ const FontHeight 16
 
 const FontBitD 1
 
-const GConsoleMargin (FontWidth 6 *)
+const GConsoleMargin (FontWidth 2 *)
 const GConsoleMargin2 (GConsoleMargin 2 *)
 
 var VConsOBuffer 0
 public VConsOBuffer
+
+const ScrollJumpD 8
+
+var ScrollJump 0
 
 var GCGFX 0
 
@@ -91,16 +95,22 @@ fn GConsoleDefault { -- }
 	auto ccols
 	80 ccols!
 
+	auto h
+
 	GCGWidth@ GConsoleMargin2 - GCGWidth@ min FontWidth / GCWidth!
-	GCGHeight@ GConsoleMargin2 - GCGHeight@ min FontHeight / GCHeight!
+	GCGHeight@ GConsoleMargin2 - GCGHeight@ min FontHeight / h!
+
+	h@ GCHeight!
 
 	GCGWidth@ 2 / GCWidth@ FontWidth * 2 / - GConsoleX!
-	GCGHeight@ 2 / GCHeight@ FontHeight * 2 / - GConsoleY!
+	GCGHeight@ 2 / h@ FontHeight * 2 / - GConsoleY!
 
 	0 GCCurX!
 	0 GCCurY!
 
 	GCLineLenBuf@ GCHeight@ 4 * 0 memset
+
+	h@ ScrollJumpD min ScrollJump!
 
 	1 GCInitialConfig!
 	1 GCNeedsDraw!
@@ -259,9 +269,9 @@ fn GConsoleNewline { -- }
 	GCCurY@ 1 + GCCurY!
 
 	if (GCCurY@ GCHeight@ >=)
-		GCHeight@ 1 - GCCurY!
+		GCHeight@ ScrollJump@ - GCCurY!
 		0 GCCurX!
-		1 GConsoleScroll
+		ScrollJump@ GConsoleScroll
 	end
 end
 

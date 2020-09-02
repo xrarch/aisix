@@ -52,6 +52,9 @@ endtable
 public AFSErrors
 
 fn AFSMount { -- success }
+	-1 AFSICached!
+	-1 AFSFatCached!
+
 	0 success!
 
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock

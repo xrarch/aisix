@@ -39,6 +39,10 @@ const O_APPEND 32
 const FD_FILE 1
 const FD_PIPE 2
 
+const SEEK_SET 1
+const SEEK_CUR 2
+const SEEK_END 3
+
 extern GetFD { bits -- fd filp }
 
 extern GetFilp { fd -- filp }
@@ -76,3 +80,5 @@ extern Mkdir { path mode -- ok }
 extern Chown { path owner -- ok }
 
 extern Chmod { path mode -- ok }
+
+extern Seek { fd offset whence -- ok }

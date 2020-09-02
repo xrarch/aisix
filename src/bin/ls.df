@@ -6,7 +6,7 @@ var LFlag 0
 var DFlag 0
 
 fn private Usage { -- }
-	"usage: ls [-adl] [file ...]\n" Printf
+	"usage: ls [-adl] [file ...]\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }

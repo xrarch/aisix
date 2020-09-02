@@ -813,3 +813,46 @@ fn Chmod { path mode -- ok }
 	vnode@ VNodePut
 	0 ok!
 end
+
+fn Seek { fd offset whence -- ok }
+	if (whence@ 0 ==)
+		-EINVAL ok!
+		return
+	end
+
+	if (whence@ SEEK_END >)
+		-EINVAL ok!
+		return
+	end
+
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vn
+	filp@ FileP_VNode + @ vn!
+
+	auto nseek
+	0 nseek!
+
+	if (whence@ SEEK_SET ==)
+		offset@ nseek!
+	end elseif (whence@ SEEK_CUR ==)
+		offset@ filp@ FileP_Seek + @ + nseek!
+	end elseif (whence@ SEEK_END ==)
+		offset@ vn@ VNode_Size + @ + nseek!
+	end
+
+	if (nseek@ 0 s<)
+		-EINVAL ok!
+		return
+	end
+
+	nseek@ filp@ FileP_Seek + !
+
+	0 ok!
+end

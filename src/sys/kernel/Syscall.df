@@ -30,6 +30,7 @@ table Syscalls
 	pointerof SysChown
 	pointerof SysChmod
 	pointerof SysSync
+	pointerof SysSeek
 endtable
 public Syscalls
 
@@ -724,4 +725,17 @@ end
 
 fn (Syscall) SysSync { tf -- ok }
 	VFSSync ok!
+end
+
+fn (Syscall) SysSeek { tf -- ok }
+	auto whence
+	tf@ Context_a1 + @ whence!
+
+	auto offset
+	tf@ Context_a2 + @ offset!
+
+	auto fd
+	tf@ Context_a3 + @ fd!
+
+	fd@ offset@ whence@ Seek ok!
 end

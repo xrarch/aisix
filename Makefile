@@ -17,39 +17,43 @@ endif
 FILELOADER_DIR := src/sa/fileloader
 DIAG_DIR       := src/sa/diag
 LIMNVOL_DIR    := src/sa/limnvol
-INIT_DIR       := src/init
-CMD_DIR        := src/cmd
+CMD_DIR        := src/bin
+SYSBIN_DIR     := src/sys/bin
 KERNEL_DIR     := src/sys/kernel
 
 FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
-dist: $(DISTIMAGE) motd bootable stand kernel init cmd
+dist: $(DISTIMAGE) bootable stand kernel sysbin bin motd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
 	$(FSTOOL) w /sys/aisix.A3X $(KERNEL_DIR)/aisix.a3x
 
-cmd:
+bin:
 ifeq ($(REBUILD_CMD),yes)
 	rm -f $(CMD_DIR)/*.o
 	rm -f $(CMD_DIR)/*.LOFF
 endif
 	make --directory=$(CMD_DIR)
-	make writecmd
+	make writebin
 
-writecmd:
+writebin:
 	$(foreach file, $(wildcard $(CMD_DIR)/*.LOFF), \
 		$(FSTOOL) w /bin/$(shell basename -s .LOFF $(file)) $(file) ; \
 		$(FSTOOL) chmod /bin/$(shell basename -s .LOFF $(file)) 493 ;)
 
-init:
+sysbin:
 ifeq ($(REBUILD_CMD),yes)
-	rm -f $(INIT_DIR)/*.o
-	rm -f $(INIT_DIR)/*.LOFF
+	rm -f $(SYSBIN_DIR)/*.o
+	rm -f $(SYSBIN_DIR)/*.LOFF
 endif
-	make --directory=$(INIT_DIR)
-	$(FSTOOL) w /sys/init $(INIT_DIR)/init.LOFF
-	$(FSTOOL) chmod /sys/init 484
+	make --directory=$(SYSBIN_DIR)
+	make writesys
+
+writesys:
+	$(foreach file, $(wildcard $(SYSBIN_DIR)/*.LOFF), \
+		$(FSTOOL) w /sys/bin/$(shell basename -s .LOFF $(file)) $(file) ; \
+		$(FSTOOL) chmod /sys/bin/$(shell basename -s .LOFF $(file)) 493 ;)
 
 stand: diag limnvol
 

@@ -27,6 +27,7 @@ const SYSUMOUNT 23
 const SYSCHOWN 24
 const SYSCHMOD 25
 const SYSSYNC 26
+const SYSSEEK 27
 
 asm "
 
@@ -211,6 +212,14 @@ _chmod:
 
 _sync:
 	li a0, SYSSYNC
+	sys
+	ret
+
+_seek:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSSEEK
 	sys
 	ret
 
@@ -435,4 +444,10 @@ extern _sync { -- ok }
 
 fn Sync { -- ok }
 	_sync ok!
+end
+
+extern _seek { fd offset whence -- ok }
+
+fn Seek { fd offset whence -- ok }
+	fd@ offset@ whence@ _seek ok!
 end

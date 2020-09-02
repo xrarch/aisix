@@ -1,0 +1,271 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn private Usage { -- }
+	"usage: mkfs dev\n" Printf
+end
+
+struct Superblock
+	4 Version
+	4 Magic
+	4 Dirty
+	4 ReservedBlocks
+	4 FATStart
+	4 FATSize
+	4 IStart
+	4 ICount
+	4 DataStart
+	4 DataSize
+	4 VolSize
+endstruct
+
+struct DirEnt
+	4 INum
+	60 name
+endstruct
+
+struct INode
+	4 type
+	4 permissions
+	4 uid
+	4 iparent
+	4 timestamp
+	4 startblock
+	4 reserved2
+	4 bytesize
+endstruct
+
+const BLOCKSZ 4096
+const RESERVEDBLOCKS 15
+const AFSMAGIC 0xAFBBAFBB
+const AFSVER 0x6
+
+const ROOTINO 1
+
+var FSBlocks 0
+var FATSize 0
+var FATStart 0
+var IStart 0
+var ICount 0
+var ISize 0
+var DataStart 0
+
+buffer ZeroBlock BLOCKSZ
+
+buffer BlockBuf BLOCKSZ
+
+buffer Prompt 256
+
+fn Main { ... -- ret }
+	if (argc@ 2 ~=)
+		Usage
+		1 Exit
+	end
+
+	auto fd
+	[1]argv@ GetParams fd!
+
+	"write? " Printf
+	Prompt 255 Gets
+
+	if (Prompt gb 'n' ==)
+		0 Exit
+	end
+
+	fd@ WriteSuper
+	fd@ InitializeFAT
+	fd@ InitializeIList
+	fd@ InitializeRootINode
+
+	Sync ret!
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "mkfs: couldn't sync: %s\n" Abort
+	end
+end
+
+buffer StatB Stat_SIZEOF
+
+fn GetParams { path -- fd }
+	path@ O_RW Open fd!
+
+	if (fd@ iserr)
+		fd@ abs fd!
+		[fd@]ErrorNames@ path@ "mkfs: %s: %s\n" Abort
+	end
+
+	auto ok
+	StatB fd@ FStat ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ path@ "mkfs: couldn't stat %s: %s\n" Abort
+	end
+
+	auto sz
+	StatB Stat_Size + @ sz!
+
+	if (sz@ BLOCKSZ %)
+		BLOCKSZ path@ "mkfs: %s: size is not multiple of block size (%d)\n" Abort
+	end
+
+	sz@ BLOCKSZ / FSBlocks!
+
+	FSBlocks@ 4 * BLOCKSZ / FATSize!
+
+	if (FSBlocks@ 4 * BLOCKSZ %)
+		1 FATSize +=
+	end
+
+	RESERVEDBLOCKS 1 + FATStart!
+
+	FATStart@ FATSize@ + IStart!
+	FSBlocks@ 4 / ICount!
+	ICount@ INode_SIZEOF * BLOCKSZ / ISize!
+
+	if (ICount@ INode_SIZEOF * BLOCKSZ %)
+		1 ISize +=
+	end
+
+	IStart@ ISize@ + DataStart!
+
+	"params:\n" Printf
+	BLOCKSZ    "  blocksz    %d bytes\n" Printf
+	FSBlocks@  "  blocks     %d blocks\n" Printf
+	FATSize@   "  fatsize    %d blocks\n" Printf
+	ICount@    "  icount     %d inodes\n" Printf
+	ISize@     "  isize      %d blocks\n" Printf
+	FATStart@  "  fatstart   block %d\n" Printf
+	IStart@    "  istart     block %d\n" Printf
+	DataStart@ "  datastart  block %d\n" Printf
+end
+
+buffer SuperblockB BLOCKSZ
+
+fn WriteSuper { fd -- }
+	"init superblock\n" Printf
+
+	AFSMAGIC SuperblockB Superblock_Magic + !
+	AFSVER SuperblockB Superblock_Version + !
+	RESERVEDBLOCKS SuperblockB Superblock_ReservedBlocks + !
+	FATStart@ SuperblockB Superblock_FATStart + !
+	FATSize@ SuperblockB Superblock_FATSize + !
+	IStart@ SuperblockB Superblock_IStart + !
+	ICount@ SuperblockB Superblock_ICount + !
+	DataStart@ SuperblockB Superblock_DataStart + !
+	FSBlocks@ SuperblockB Superblock_DataSize + !
+	FSBlocks@ SuperblockB Superblock_VolSize + !
+
+	0 SuperblockB fd@ bwrite
+end
+
+fn InitializeFAT { fd -- }
+	"init fat\n" Printf
+
+	auto cantalloc
+	1 RESERVEDBLOCKS + FATSize@ + ISize@ + cantalloc!
+
+	auto buf
+	BlockBuf buf!
+
+	buf@ BLOCKSZ 0 memset
+
+	auto i
+	0 i!
+
+	while (i@ cantalloc@ <)
+		0xFFFFFFFF buf@ i@ 4 * + !
+
+		1 i +=
+	end
+
+	FATStart@ buf@ fd@ bwrite
+
+	FATStart@ 1 + i!
+
+	auto max
+	i@ FATSize@ + max!
+
+	ZeroBlock buf!
+
+	while (i@ max@ <)
+		i@ buf@ fd@ bwrite
+
+		1 i +=
+	end
+end
+
+fn InitializeIList { fd -- }
+	"init ilist\n" Printf
+
+	auto buf
+	ZeroBlock buf!
+
+	auto i
+	IStart@ i!
+
+	auto max
+	i@ ISize@ + max!
+
+	while (i@ max@ <)
+		i@ buf@ fd@ bwrite
+
+		1 i +=
+	end
+end
+
+fn InitializeRootINode { fd -- }
+	"init root\n" Printf
+
+	auto buf
+	BlockBuf buf!
+
+	buf@ BLOCKSZ 0 memset
+
+	auto root
+	buf@ ROOTINO INode_SIZEOF * + root!
+
+	0 root@ INode_uid + !
+	493 root@ INode_permissions + !
+	ROOTINO root@ INode_iparent + !
+	2 root@ INode_type + !
+	0 root@ INode_bytesize + !
+	0xFFFFFFFF root@ INode_startblock + !
+	0 root@ INode_timestamp + !
+
+	IStart@ buf@ fd@ bwrite
+end
+
+fn bread { blockno buf fd -- }
+	auto ok
+	fd@ blockno@ BLOCKSZ * SEEK_SET Seek ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ blockno@ "mkfs: couldn't seek to block %d: %s\n" Abort
+	end
+
+	buf@ BLOCKSZ fd@ Read ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ blockno@ "mkfs: couldn't read block %d: %s\n" Abort
+	end
+end
+
+fn bwrite { blockno buf fd -- }
+	auto ok
+	fd@ blockno@ BLOCKSZ * SEEK_SET Seek ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ blockno@ "mkfs: couldn't seek to block %d: %s\n" Abort
+	end
+
+	buf@ BLOCKSZ fd@ Write ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ blockno@ "mkfs: couldn't write block %d: %s\n" Abort
+	end
+end

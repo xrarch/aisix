@@ -6,8 +6,7 @@ fn Main { ... -- ret }
 
 	if (ret@ iserr)
 		ret@ abs ret!
-		[ret@]ErrorNames@ "sync: %s\n" Printf
-		1 ret!
+		[ret@]ErrorNames@ "sync: %s\n" Abort
 	end
 
 	0 ret!

@@ -2,7 +2,7 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn private Usage { -- }
-	"usage: chmod mode file\n" Printf
+	"usage: chmod mode file\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }

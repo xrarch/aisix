@@ -2,7 +2,7 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn private Usage { -- }
-	"usage: umount device or mountpoint\n" Printf
+	"usage: umount device or mountpoint\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }
@@ -18,7 +18,6 @@ fn Main { ... -- ret }
 
 	if (ret@ iserr)
 		ret@ abs ret!
-		[ret@]ErrorNames@ "umount: %s\n" Printf
-		1 ret!
+		[ret@]ErrorNames@ "umount: %s\n" Abort
 	end
 end
