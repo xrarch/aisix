@@ -30,28 +30,7 @@ var YRes 0
 const BOXROWS 12
 const BOXCOLS 12
 
-buffer Back (BOXROWS BOXCOLS * 2 *)
-
-fn PutBack { x y -- }
-	auto i
-	0 i!
-
-	auto line
-	Back line!
-
-	auto ry
-	y@ ry!
-
-	while (i@ BOXROWS <)
-		FBFD@ ry@ XRes@ * 2 * x@ 2 * + SEEK_SET Seek drop
-
-		line@ BOXCOLS 2 * FBFD@ Write drop
-
-		BOXCOLS 2 * line +=
-		1 ry +=
-		1 i +=
-	end
-end
+buffer RowBuf (BOXROWS 2 *)
 
 fn FastInvert { buf -- }
 	auto i
@@ -65,9 +44,7 @@ fn FastInvert { buf -- }
 	end
 end
 
-buffer RowBuf (BOXROWS 2 *)
-
-fn PutBox { x y -- }
+fn InvertBox { x y -- }
 	auto i
 	0 i!
 
@@ -77,21 +54,7 @@ fn PutBox { x y -- }
 	auto mod
 	XRes@ 2 * mod!
 
-	auto line
-	Back line!
-
 	auto rbase
-	base@ rbase!
-
-	while (i@ BOXROWS <)
-		FBFD@ rbase@ SEEK_SET Seek drop
-
-		line@ BOXCOLS 2 * FBFD@ Read drop
-
-		mod@ rbase +=
-		BOXCOLS 2 * line +=
-		1 i +=
-	end
 
 	0 i!
 
@@ -159,7 +122,7 @@ fn Main { ... -- ret }
 	auto mouseY
 	20 mouseY!
 
-	mouseX@ mouseY@ PutBox
+	mouseX@ mouseY@ InvertBox
 
 	auto bytes
 
@@ -173,7 +136,7 @@ fn Main { ... -- ret }
 		end
 
 		if (buf@ MousePacket_Event + @ MOUSEMOVE ==)
-			mouseX@ mouseY@ PutBack
+			mouseX@ mouseY@ InvertBox
 
 			auto dx
 			buf@ MousePacket_Info1 + @ dx!
@@ -196,7 +159,7 @@ fn Main { ... -- ret }
 				YRes@ 1 - mouseY!
 			end
 
-			mouseX@ mouseY@ PutBox
+			mouseX@ mouseY@ InvertBox
 		end
 	end
 
