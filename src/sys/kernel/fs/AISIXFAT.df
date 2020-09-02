@@ -35,7 +35,6 @@ endstruct
 
 struct AVData
 	4 Entry
-	4 IParent
 	4 BNCache
 	4 FirstBN
 	4 NextBN
@@ -231,7 +230,7 @@ fn private UpdateNode { vnode -- ok }
 
 	vnode@ VNode_Size + @ inode@ INode_bytesize + !
 	vd@ AVData_Entry + @ inode@ INode_startblock + !
-	vd@ AVData_IParent + @ inode@ INode_iparent + !
+	vnode@ VNode_DirParentVNID + @ inode@ INode_iparent + !
 	vnode@ VNode_Permissions + @ inode@ INode_permissions + !
 	vnode@ VNode_UID + @ inode@ INode_uid + !
 	vnode@ VNode_Timestamp + @ inode@ INode_timestamp + !
@@ -1045,7 +1044,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 
 	inode@ INode_bytesize + @ vnode@ VNode_Size + !
 	inode@ INode_startblock + @ vd@ AVData_Entry + !
-	inode@ INode_iparent + @ vd@ AVData_IParent + !
+	inode@ INode_iparent + @ vnode@ VNode_DirParentVNID + !
 	inode@ INode_permissions + @ vnode@ VNode_Permissions + !
 	inode@ INode_uid + @ vnode@ VNode_UID + !
 	0 vnode@ VNode_GID + !
@@ -1080,7 +1079,7 @@ end
 fn (FSRewindDir) AISIXFSRewindDir { dirent -- ok }
 	0 ok!
 
-	-1 dirent@ VDirent_Index + !
+	0 dirent@ VDirent_Index + !
 end
 
 fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
@@ -1092,21 +1091,6 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 
 	auto index
 	dirent@ VDirent_Index + @ index!
-
-	if (index@ -1 ==)
-		index@ DirEnt_SIZEOF + dirent@ VDirent_Index + !
-
-		dirvn@ VNode_FSData + @ AVData_IParent + @ dirent@ VDirent_VNID + !
-
-		".." dirent@ VDirent_Name + !
-
-		0 dirent@ VDirent_Cookie + !
-
-		0 dirent@ VDirent_Index + !
-
-		0 ok!
-		return
-	end
 
 	auto buf
 	0 buf!

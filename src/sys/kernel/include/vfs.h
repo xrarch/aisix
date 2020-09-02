@@ -82,6 +82,7 @@ struct VNode
 	4 CoveredBy
 	4 DeleteLastRef
 	4 Dirty
+	4 DirParentVNID
 endstruct
 
 const VNODE_FILE 1

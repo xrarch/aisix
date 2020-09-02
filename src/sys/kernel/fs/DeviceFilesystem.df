@@ -374,6 +374,8 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 
 		OWNER_R OWNER_X | GROUP_R | GROUP_X | WORLD_R | WORLD_X | vnode@ VNode_Permissions + !
 
+		0 vnode@ VNode_DirParentVNID + !
+
 		return
 	end
 
@@ -422,7 +424,7 @@ end
 fn (FSRewindDir) DevFSRewindDir { dirent -- ok }
 	0 ok!
 
-	0 dirent@ VDirent_Index + !
+	1 dirent@ VDirent_Index + !
 end
 
 fn (FSReadDir) DevFSReadDir { dirent -- ok }
@@ -437,16 +439,6 @@ fn (FSReadDir) DevFSReadDir { dirent -- ok }
 
 	auto index
 	dirent@ VDirent_Index + @ index!
-
-	if (index@ 0 ==)
-		0 dirent@ VDirent_VNID + !
-
-		1 dirent@ VDirent_Index + !
-
-		".." dirent@ VDirent_Name + !
-
-		return
-	end
 
 	if (index@ 1 - Devices@ >=)
 		-ENOENT ok!

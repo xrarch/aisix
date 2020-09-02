@@ -94,7 +94,14 @@ fn ListDir { path fd -- }
 	auto ok
 
 	if (AFlag@)
-		"." EInfo	
+		"." EInfo
+		StatB ".." PStat ok!
+		if (ok@ iserr)
+			ok@ abs ok!
+			[ok@]ErrorNames@ "ls: couldn't stat ..: %s\n" STDERR FPrintf
+		end else
+			".." EInfo
+		end
 	end
 
 	auto pl

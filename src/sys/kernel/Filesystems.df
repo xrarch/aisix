@@ -226,6 +226,53 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			1 sook!
 		end
 
+		if (pcomp@ ".." strcmp)
+			if (vnode@ VNode_DirParentVNID + @ vnode@ VNode_VNID + @ ==)
+				mount@ Mount_Covering + @ ok!
+
+				if (ok@)
+					(* step out of the filesystem *)
+
+					if (dirvnode@)
+						dirvnode@ VNodePut
+					end
+
+					0 dirvnode!
+
+					vnode@ VNodePut
+
+					ok@ VNode_DirParentVNID + @ ok@ VNode_Mount + @ VNodeGet vnode!
+
+					if (vnode@ iserr)
+						pcomp@ Free
+						dirent@ Free
+						return
+					end
+
+					vnode@ VNode_Mount + @ mount!
+					mount@ Mount_Filesystem + @ fs!
+				end
+
+				continue
+			end else
+				if (dirvnode@)
+					dirvnode@ VNodePut
+				end
+
+				vnode@ dirvnode!
+
+				vnode@ VNode_DirParentVNID + @ mount@ VNodeGet vnode!
+
+				if (vnode@ iserr)
+					pcomp@ Free
+					dirent@ Free
+					return
+				end
+
+				continue
+			end
+		end
+
 		vnode@ dirent@ VDirent_DirVNode + !
 
 		dirent@ fs@ Filesystem_RewindDir + @ FSRewindDir ok!
@@ -263,11 +310,7 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 					dirvnode@ VNodePut
 				end
 
-				if (vnode@ VNode_VNID + @ dirent@ VDirent_VNID + @ ==)
-					vnode@ VNodePut
-				end else
-					vnode@ dirvnode!
-				end
+				vnode@ dirvnode!
 
 				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
@@ -294,6 +337,12 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 		end
 
 		if (vnode@ VNode_CoveredBy + @)
+			if (dirvnode@)
+				dirvnode@ VNodePut
+			end
+
+			0 dirvnode!
+
 			vnode@ VNode_CoveredBy + @ ok!
 			vnode@ VNodePut
 			ok@ vnode!
@@ -308,12 +357,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			end
 
 			vnode@ VNodeRef
-
-			if (dirvnode@)
-				dirvnode@ VNodePut
-			end
-
-			0 dirvnode!
 		end
 	end
 end
@@ -491,10 +534,10 @@ fn VFSMount { flags path fs dev -- mount }
 
 	root@ mount@ Mount_Root + !
 
+	covervn@ mount@ Mount_Covering + !
+
 	if (covervn@)
 		root@ covervn@ VNode_CoveredBy + !
-
-		covervn@ mount@ Mount_Covering + !
 
 		covervn@ VNodeUnlock
 	end
