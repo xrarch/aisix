@@ -23,7 +23,7 @@ KERNEL_DIR     := src/sys/kernel
 
 FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
-dist: $(DISTIMAGE) bootable stand kernel sysbin bin motd
+dist: $(DISTIMAGE) rtaisixt bootable stand kernel sysbin bin motd
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
@@ -73,6 +73,9 @@ bootable:
 motd:
 	$(FSTOOL) w /sys/motd.txt ./src/sys/motd.txt
 
+rtaisixt:
+	./build-rtaisix.sh
+
 $(DISTIMAGE):
 	dd if=/dev/zero of=$(DISTIMAGE) bs=4096 count=$(DISTIMGSZ) 2>/dev/null
 
@@ -88,8 +91,8 @@ endif
 
 cleanup:
 	rm -f $(DISTIMAGE)
+	make -C rtaisix cleanup
 	make -C src/sa cleanup
 	make -C $(KERNEL_DIR) cleanup
-	make -C $(SH_DIR) cleanup
 	make -C $(CMD_DIR) cleanup
 	make -C $(SYSBIN_DIR) cleanup

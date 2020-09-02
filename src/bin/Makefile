@@ -18,3 +18,6 @@ all: $(LOFF)
 
 %.o: %.df
 	$(DC) $< $@
+
+cleanup:
+	rm -f *.o *.LOFF
