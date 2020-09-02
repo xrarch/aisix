@@ -88,7 +88,8 @@ endif
 
 cleanup:
 	rm -f $(DISTIMAGE)
-	make -C src/stand cleanup
+	make -C src/sa cleanup
 	make -C $(KERNEL_DIR) cleanup
 	make -C $(SH_DIR) cleanup
-	make -C $(INIT_DIR) cleanup
+	make -C $(CMD_DIR) cleanup
+	make -C $(SYSBIN_DIR) cleanup
