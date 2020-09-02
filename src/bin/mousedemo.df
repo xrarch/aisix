@@ -27,8 +27,8 @@ var FBFD 0
 var XRes 0
 var YRes 0
 
-const BOXROWS 12
-const BOXCOLS 12
+const BOXROWS 8
+const BOXCOLS 8
 
 buffer RowBuf (BOXROWS 2 *)
 
@@ -149,13 +149,13 @@ fn Main { ... -- ret }
 
 			if (mouseX@ 0 s<)
 				0 mouseX!
-			end elseif (mouseX@ XRes@ >=)
+			end elseif (mouseX@ XRes@ s>=)
 				XRes@ 1 - mouseX!
 			end
 
 			if (mouseY@ 0 s<)
 				0 mouseY!
-			end elseif (mouseY@ YRes@ >=)
+			end elseif (mouseY@ YRes@ s>=)
 				YRes@ 1 - mouseY!
 			end
 
