@@ -1,0 +1,204 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+struct MousePacket
+	4 Event
+	4 Info1
+	4 Info2
+endstruct
+
+const MOUSEPRESS 1
+const MOUSERELEASE 2
+const MOUSEMOVE 3
+
+table EventNames
+	0
+	"press"
+	"release"
+	"move"
+endtable
+
+buffer MouseEventBuf MousePacket_SIZEOF
+
+buffer Prompt 256
+
+var FBFD 0
+
+var XRes 0
+var YRes 0
+
+const BOXROWS 12
+const BOXCOLS 12
+
+buffer Back (BOXROWS BOXCOLS * 2 *)
+
+fn PutBack { x y -- }
+	auto i
+	0 i!
+
+	auto line
+	Back line!
+
+	auto ry
+	y@ ry!
+
+	while (i@ BOXROWS <)
+		FBFD@ ry@ XRes@ * 2 * x@ 2 * + SEEK_SET Seek drop
+
+		line@ BOXCOLS 2 * FBFD@ Write drop
+
+		BOXCOLS 2 * line +=
+		1 ry +=
+		1 i +=
+	end
+end
+
+fn FastInvert { buf -- }
+	auto i
+	0 i!
+
+	while (i@ BOXCOLS 2 * <)
+		buf@@ ~ buf@!
+
+		4 buf +=
+		4 i +=
+	end
+end
+
+buffer RowBuf (BOXROWS 2 *)
+
+fn PutBox { x y -- }
+	auto i
+	0 i!
+
+	auto base
+	y@ XRes@ * 2 * x@ 2 * + base!
+
+	auto mod
+	XRes@ 2 * mod!
+
+	auto line
+	Back line!
+
+	auto rbase
+	base@ rbase!
+
+	while (i@ BOXROWS <)
+		FBFD@ rbase@ SEEK_SET Seek drop
+
+		line@ BOXCOLS 2 * FBFD@ Read drop
+
+		mod@ rbase +=
+		BOXCOLS 2 * line +=
+		1 i +=
+	end
+
+	0 i!
+
+	auto bl
+	RowBuf bl!
+
+	base@ rbase!
+
+	while (i@ BOXROWS <)
+		FBFD@ rbase@ SEEK_SET Seek drop
+
+		bl@ BOXCOLS 2 * FBFD@ Read drop
+
+		bl@ FastInvert
+
+		FBFD@ rbase@ SEEK_SET Seek drop
+
+		bl@ BOXCOLS 2 * FBFD@ Write drop
+
+		mod@ rbase +=
+		1 i +=
+	end
+end
+
+fn Main { ... -- ret }
+	auto mousefd
+	"/dev/mouse0" O_READ Open mousefd!
+
+	if (mousefd@ iserr)
+		mousefd@ abs mousefd!
+		[mousefd@]ErrorNames@ "mousedemo: couldn't open /dev/mouse0: %s\n" Abort
+	end
+
+	auto fbfd
+	"/dev/fb0" O_RW Open fbfd!
+
+	if (fbfd@ iserr)
+		fbfd@ abs fbfd!
+		[fbfd@]ErrorNames@ "mousedemo: couldn't open /dev/fb0: %s\n" Abort
+	end
+	
+	fbfd@ FBFD!
+
+	"screen xres [1024]: " Printf
+	Prompt 255 Gets
+
+	if (Prompt strlen 0 ==)
+		1024 XRes!
+	end else
+		Prompt atoi XRes!
+	end
+
+	"screen yres [768]: " Printf
+	Prompt 255 Gets
+
+	if (Prompt strlen 0 ==)
+		768 YRes!
+	end else
+		Prompt atoi YRes!
+	end
+
+	auto mouseX
+	20 mouseX!
+
+	auto mouseY
+	20 mouseY!
+
+	mouseX@ mouseY@ PutBox
+
+	auto bytes
+
+	auto buf
+	MouseEventBuf buf!
+
+	while (1)
+		buf@ MousePacket_SIZEOF mousefd@ Read bytes!
+		if (bytes@ MousePacket_SIZEOF <)
+			"mousedemo: couldn't read full packet\n" Abort
+		end
+
+		if (buf@ MousePacket_Event + @ MOUSEMOVE ==)
+			mouseX@ mouseY@ PutBack
+
+			auto dx
+			buf@ MousePacket_Info1 + @ dx!
+
+			auto dy
+			buf@ MousePacket_Info2 + @ dy!
+
+			dy@ mouseY +=
+			dx@ mouseX +=
+
+			if (mouseX@ 0 s<)
+				0 mouseX!
+			end elseif (mouseX@ XRes@ >=)
+				XRes@ 1 - mouseX!
+			end
+
+			if (mouseY@ 0 s<)
+				0 mouseY!
+			end elseif (mouseY@ YRes@ >=)
+				YRes@ 1 - mouseY!
+			end
+
+			mouseX@ mouseY@ PutBox
+		end
+	end
+
+	0 ret!
+end

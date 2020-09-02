@@ -1,0 +1,181 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+#include "<inc>/dev/amtsu.h"
+
+table MouseDriver
+	"mouse"
+	DEV_CHAR
+	pointerof MouseOpen
+	pointerof MouseClose
+	pointerof MouseIoctl
+	pointerof MouseRead
+	pointerof MouseWrite
+	pointerof MouseSysctl
+endtable
+
+var MouseFound 0
+
+var MouseID 0
+
+struct MousePacket
+	4 Event
+	4 Info1
+	4 Info2
+endstruct
+
+const MOUSEPRESS 1
+const MOUSERELEASE 2
+const MOUSEMOVE 3
+
+const MOUSEBUFSZ 8
+
+var MouseIBuffer 0
+
+fn DrvMouseFoundNode { node -- }
+	if (MouseFound@)
+		return
+	end
+
+	1 MouseFound!
+
+	MOUSEBUFSZ MousePacket_SIZEOF * AllocIOBuf MouseIBuffer!
+
+	if (MouseIBuffer@ iserr)
+		"couldn't allocate MouseIBuffer\n" Panic
+	end
+
+	1 MouseIBuffer@ IOBuffer_Overwrite + !
+
+	"amanatsu,unit" a3xDGetProperty MouseID!
+
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	intn@ MouseID@ "mouse @ amtsu:%d int:%d" Printf
+
+	pointerof MouseIntr intn@ InterruptRegister
+
+	MouseID@ AmanatsuSetInterrupt
+
+	OWNER_R GROUP_R | WORLD_R | 0 0 "mouse0" MouseDriver 0 DeviceRegister drop
+end
+
+fn (DevSysctl) MouseSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) MouseOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) MouseClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) MouseIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) MouseRead { buf len unit seek -- bytes }
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		auto c
+
+		MouseIBuffer@ 1 IOBufGetc c!
+
+		if (c@ iserr)
+			c@ bytes!
+			return
+		end
+
+		c@ buf@ sb
+
+		1 buf +=
+		1 i +=
+	end
+
+	len@ bytes!
+end
+
+fn (DevWrite) MouseWrite { buf len unit seek -- bytes }
+	-ENOTBLK bytes!
+end
+
+fn AMouseEvent { -- detail event }
+	auto rs
+	InterruptDisable rs!
+
+	MouseID@ AmanatsuSelectDev
+	1 AmanatsuCommand
+	AmanatsuReadB detail!
+	AmanatsuReadA event!
+
+	rs@ InterruptRestore
+end
+
+buffer MousePacketBuf MousePacket_SIZEOF
+
+fn AMousePushEvent { -- }
+	auto i
+	0 i!
+
+	auto len
+	MousePacket_SIZEOF len!
+
+	auto buf
+	MousePacketBuf buf!
+
+	while (i@ len@ <)
+		buf@ i@ + gb MouseIBuffer@ 0 IOBufPutc drop
+
+		1 i +=
+	end
+end
+
+fn (IntHandler) MouseIntr { intn -- }
+	MouseID@ AmanatsuClearInterrupt
+
+	intn@ InterruptAck@ InterruptAcker
+
+	auto detail
+	auto event
+	AMouseEvent event! detail!
+
+	auto buf
+	MousePacketBuf buf!
+
+	while (event@)
+		event@ buf@ MousePacket_Event + !
+
+		if (event@ MOUSEMOVE ==)
+			(* info 1 is delta x, info 2 is delta y *)
+			auto dx
+			detail@ 16 >> dx!
+
+			auto dy
+			detail@ 0xFFFF & dy!
+
+			if (dx@ 0x8000 &)
+				0xFFFF0000 dx |=
+			end
+
+			if (dy@ 0x8000 &)
+				0xFFFF0000 dy |=
+			end
+
+			dx@ buf@ MousePacket_Info1 + !
+			dy@ buf@ MousePacket_Info2 + !
+		end else
+			detail@ buf@ MousePacket_Info1 + !
+		end
+
+		AMousePushEvent
+
+		AMouseEvent event! detail!
+	end
+
+	MouseID@ AmanatsuSetInterrupt
+end

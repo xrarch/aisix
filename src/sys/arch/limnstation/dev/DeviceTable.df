@@ -12,6 +12,7 @@ extern DrvDKSLogicalFoundNode { node -- }
 extern DrvLGFXFoundNode { node -- }
 extern DrvAmtsuFoundNode { node -- }
 extern DrvKeybdFoundNode { node -- }
+extern DrvMouseFoundNode { node -- }
 
 fnptr FoundNode { node -- }
 
@@ -21,7 +22,7 @@ externptr LSICFound
 
 externptr AmtsuFound
 
-const Devices 10
+const Devices 11
 
 const ElemPerDevice 5
 
@@ -56,6 +57,9 @@ table DeviceTable
 
     "keybd"  "keyboard"               "AISA,keyboard"     1
     pointerof DrvKeybdFoundNode
+
+    "mouse"  "mouse"                  "AISA,mouse"        1
+    pointerof DrvMouseFoundNode
 endtable
 public DeviceTable
 
