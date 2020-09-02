@@ -48,3 +48,105 @@ fn Gets { s max -- }
 		s@ max@ Readline eof!
 	end
 end
+
+const CANONLEN 1024
+
+fn RealPath { path -- canon }
+	CANONLEN Calloc canon!
+
+	if (canon@ iserr)
+		return
+	end
+
+	auto pcomp
+	256 Calloc pcomp!
+
+	if (pcomp@ iserr)
+		canon@ Free
+		pcomp@ canon!
+		return
+	end
+
+	if (path@ gb '/' ==)
+		'/' canon@ sb
+	end else
+		auto ok
+		canon@ GetCWD ok!
+		if (ok@ iserr)
+			canon@ Free
+			pcomp@ Free
+			ok@ canon!
+			return
+		end
+	end
+
+	auto ci
+	canon@ strlen ci!
+
+	auto lenleft
+	CANONLEN ci@ - lenleft!
+
+	while (1)
+		while (path@ gb '/' ==)
+			1 path +=
+		end
+
+		if (path@ gb 0 ==)
+			break
+		end
+
+		auto pr
+		0 pr!
+
+		while (1)
+			if (path@ gb '/' == path@ gb 0 == ||)
+				break
+			end
+
+			if (pr@ 255 <)
+				path@ gb pcomp@ pr@ + sb
+				1 pr +=
+			end
+
+			1 path +=
+		end
+
+		0 pcomp@ pr@ + sb
+
+		if (pcomp@ "." strcmp)
+			continue
+		end
+
+		if (pcomp@ ".." strcmp)
+			while (canon@ ci@ + gb '/' ~=)
+				if (ci@ 0 ==)
+					"RealPath\n" Abort
+				end
+
+				1 ci -=
+				1 lenleft +=
+			end
+
+			if (ci@ 0 ==)
+				1 ci!
+			end
+
+			canon@ ci@ + strzero
+
+			continue
+		end
+
+		if (ci@ 1 >)
+			'/' canon@ ci@ + sb
+			1 ci +=
+			1 lenleft -=
+		end
+
+		canon@ ci@ + pcomp@ lenleft@ 1 - strncpy
+		pcomp@ strlen pr!
+		pr@ lenleft@ min ci +=
+		pr@ lenleft@ min lenleft -=
+	end
+
+	pcomp@ Free
+end

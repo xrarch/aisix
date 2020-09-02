@@ -574,6 +574,18 @@ fn Chdir { path -- ok }
 		return
 	end
 
+	auto canon
+	path@ VFSCanonicalizePath canon!
+
+	if (canon@ iserr)
+		vnode@ VNodePut
+		canon@ ok!
+	end
+
+	p@ Process_CWDPathString + canon@ CWDPATHLEN 1 - strncpy
+
+	canon@ Free
+
 	p@ Process_CWDVNode + @ VNodeUnref
 
 	vnode@ p@ Process_CWDVNode + !
@@ -843,13 +855,18 @@ fn Seek { fd offset whence -- ok }
 		offset@ nseek!
 	end elseif (whence@ SEEK_CUR ==)
 		offset@ filp@ FileP_Seek + @ + nseek!
+
+		if (nseek@ 0 s<)
+			-EINVAL ok!
+			return
+		end
 	end elseif (whence@ SEEK_END ==)
 		offset@ vn@ VNode_Size + @ + nseek!
-	end
 
-	if (nseek@ 0 s<)
-		-EINVAL ok!
-		return
+		if (nseek@ 0 s<)
+			-EINVAL ok!
+			return
+		end
 	end
 
 	nseek@ filp@ FileP_Seek + !

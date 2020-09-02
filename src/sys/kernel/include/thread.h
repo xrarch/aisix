@@ -30,6 +30,8 @@ const OFILEMAX 64
 
 const PROCNAMELEN 32
 
+const CWDPATHLEN 512
+
 struct Process
 	4 Threads
 	4 Mapped
@@ -49,6 +51,7 @@ struct Process
 	4 UPages
 
 	4 CWDVNode
+	CWDPATHLEN CWDPathString
 
 	4 Exited
 

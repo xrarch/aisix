@@ -379,6 +379,8 @@ fn private VNewProcess1 { vnode name udvec udcnt -- process }
 	cwd@ VNodeRef
 
 	cwd@ process@ Process_CWDVNode + !
+
+	process@ Process_CWDPathString + p@ Process_CWDPathString + CWDPATHLEN 1 - strncpy
 end
 
 fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }

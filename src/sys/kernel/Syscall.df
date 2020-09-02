@@ -31,6 +31,7 @@ table Syscalls
 	pointerof SysChmod
 	pointerof SysSync
 	pointerof SysSeek
+	pointerof SysGetCWD
 endtable
 public Syscalls
 
@@ -738,4 +739,24 @@ fn (Syscall) SysSeek { tf -- ok }
 	tf@ Context_a3 + @ fd!
 
 	fd@ offset@ whence@ Seek ok!
+end
+
+fn (Syscall) SysGetCWD { tf -- ok }
+	auto buf
+	tf@ Context_a1 + @ buf!
+
+	auto cwdlen
+	CurrentThread@ Thread_Process + @ Process_CWDPathString + strlen cwdlen!
+
+	auto r
+	cwdlen@ 1 + buf@ 1 PlatformUserToPhys r! buf!
+
+	if (r@ ~~)
+		-EINVAL ok!
+		return
+	end
+
+	buf@ CurrentThread@ Thread_Process + @ Process_CWDPathString + strcpy
+
+	0 ok!
 end

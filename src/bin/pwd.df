@@ -1,0 +1,17 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+buffer CWDBuf 512
+
+fn Main { ... -- ret }
+	CWDBuf GetCWD ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "pwd: %s\n" Abort
+	end
+
+	CWDBuf "%s\n" Printf
+
+	0 ret!
+end

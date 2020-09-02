@@ -28,6 +28,7 @@ const SYSCHOWN 24
 const SYSCHMOD 25
 const SYSSYNC 26
 const SYSSEEK 27
+const SYSGETCWD 28
 
 asm "
 
@@ -220,6 +221,12 @@ _seek:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSSEEK
+	sys
+	ret
+
+_getcwd:
+	mov a1, a0
+	li a0, SYSGETCWD
 	sys
 	ret
 
@@ -450,4 +457,10 @@ extern _seek { fd offset whence -- ok }
 
 fn Seek { fd offset whence -- ok }
 	fd@ offset@ whence@ _seek ok!
+end
+
+extern _getcwd { buf -- ok }
+
+fn GetCWD { buf -- ok }
+	buf@ _getcwd ok!
 end

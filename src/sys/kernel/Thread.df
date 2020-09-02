@@ -27,7 +27,7 @@ fn ThreadInit { -- }
 	PROCMAX THREADMAX "max %d threads, %d processes\n" Printf
 
 	auto process
-	pointerof AISIXInitialThread "kernel" 0 0 ProcessNew process!
+	pointerof AISIXInitialThread 0 0 0 ProcessNew process!
 
 	if (process@ iserr KernelProcess@ process@ ~= ||)
 		"couldn't set up kernel process\n" Panic
@@ -560,6 +560,19 @@ fn private ProcessFreeSlot { process -- }
 end
 
 fn ProcessNew { entry name udata udatasz -- process }
+	auto canon
+	if (name@ 0 ==)
+		0 canon!
+		"(kernel)" name!
+	end else
+		1 canon!
+		name@ VFSCanonicalizePath name!
+		if (name@ iserr)
+			name@ process!
+			return
+		end
+	end
+
 	ProcessAllocate process!
 
 	if (process@ iserr)
@@ -567,6 +580,10 @@ fn ProcessNew { entry name udata udatasz -- process }
 	end
 
 	process@ Process_Name + name@ PROCNAMELEN 1 - strncpy
+
+	if (canon@)
+		name@ Free
+	end
 
 	auto kernel
 	0 kernel!

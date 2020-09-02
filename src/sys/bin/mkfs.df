@@ -1,10 +1,6 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
-fn private Usage { -- }
-	"usage: mkfs dev\n" Printf
-end
-
 struct Superblock
 	4 Version
 	4 Magic
@@ -56,20 +52,75 @@ buffer BlockBuf BLOCKSZ
 
 buffer Prompt 256
 
+var VFlag 0
+var YFlag 0
+var SFlag 0
+
+fn private Usage { -- }
+	"usage: mkfs -svy dev\n" STDERR FPrintf
+end
+
 fn Main { ... -- ret }
-	if (argc@ 2 ~=)
+	auto i
+	1 i!
+
+	auto chk
+	2 chk!
+
+	auto flags
+	0 flags!
+
+	if (argc@ 2 >=)
+		auto sw
+		[1]argv@ sw!
+
+		if (sw@ gb '-' ==)
+			2 i!
+			3 chk!
+
+			1 sw +=
+
+			while (sw@ gb 0 ~=)
+				if (sw@ gb 'v' ==)
+					1 VFlag!
+				end elseif (sw@ gb 'y' ==)
+					1 YFlag!
+				end elseif (sw@ gb 's' ==)
+					1 SFlag!
+				end else
+					Usage
+					1 Exit
+				end
+
+				1 sw +=
+			end
+		end
+	end
+
+	if (argc@ chk@ ~=)
 		Usage
-		1 Exit
+		1 ret!
+		return
+	end
+
+	auto rp
+	[i@]argv@ RealPath rp!
+
+	if (rp@ iserr)
+		rp@ abs rp!
+		[rp@]ErrorNames@ "mkfs: %s\n" Abort
 	end
 
 	auto fd
-	[1]argv@ GetParams fd!
+	rp@ GetParams fd!
 
-	"write? " Printf
-	Prompt 255 Gets
+	if (YFlag@ ~~)
+		"mkfs: write [y]? " Printf
+		Prompt 255 Gets
 
-	if (Prompt gb 'n' ==)
-		0 Exit
+		if (Prompt gb 'n' ==)
+			0 Exit
+		end
 	end
 
 	fd@ WriteSuper
@@ -81,6 +132,10 @@ fn Main { ... -- ret }
 	if (ret@ iserr)
 		ret@ abs ret!
 		[ret@]ErrorNames@ "mkfs: couldn't sync: %s\n" Abort
+	end
+
+	if (SFlag@ ~~)
+		"mkfs: enjoy your new filesystem :)\n" Printf
 	end
 end
 
@@ -129,21 +184,25 @@ fn GetParams { path -- fd }
 
 	IStart@ ISize@ + DataStart!
 
-	"params:\n" Printf
-	BLOCKSZ    "  blocksz    %d bytes\n" Printf
-	FSBlocks@  "  blocks     %d blocks\n" Printf
-	FATSize@   "  fatsize    %d blocks\n" Printf
-	ICount@    "  icount     %d inodes\n" Printf
-	ISize@     "  isize      %d blocks\n" Printf
-	FATStart@  "  fatstart   block %d\n" Printf
-	IStart@    "  istart     block %d\n" Printf
-	DataStart@ "  datastart  block %d\n" Printf
+	if (VFlag@ SFlag@ ~~ ||)
+		path@ "mkfs: params for %s:\n" Printf
+		BLOCKSZ    "  blocksz    %d bytes\n" Printf
+		FSBlocks@  "  blocks     %d blocks\n" Printf
+		FATSize@   "  fatsize    %d blocks\n" Printf
+		ICount@    "  icount     %d inodes\n" Printf
+		ISize@     "  isize      %d blocks\n" Printf
+		FATStart@  "  fatstart   block %d\n" Printf
+		IStart@    "  istart     block %d\n" Printf
+		DataStart@ "  datastart  block %d\n" Printf
+	end
 end
 
 buffer SuperblockB BLOCKSZ
 
 fn WriteSuper { fd -- }
-	"init superblock\n" Printf
+	if (VFlag@)
+		"mkfs: writing superblock\n" Printf
+	end
 
 	AFSMAGIC SuperblockB Superblock_Magic + !
 	AFSVER SuperblockB Superblock_Version + !
@@ -160,7 +219,9 @@ fn WriteSuper { fd -- }
 end
 
 fn InitializeFAT { fd -- }
-	"init fat\n" Printf
+	if (VFlag@)
+		"mkfs: initializing FAT\n" Printf
+	end
 
 	auto cantalloc
 	1 RESERVEDBLOCKS + FATSize@ + ISize@ + cantalloc!
@@ -196,7 +257,9 @@ fn InitializeFAT { fd -- }
 end
 
 fn InitializeIList { fd -- }
-	"init ilist\n" Printf
+	if (VFlag@)
+		"mkfs: initializing ilist\n" Printf
+	end
 
 	auto buf
 	ZeroBlock buf!
@@ -215,7 +278,9 @@ fn InitializeIList { fd -- }
 end
 
 fn InitializeRootINode { fd -- }
-	"init root\n" Printf
+	if (VFlag@)
+		"mkfs: initializing root inode\n" Printf
+	end
 
 	auto buf
 	BlockBuf buf!

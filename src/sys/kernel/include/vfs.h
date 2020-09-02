@@ -1,4 +1,4 @@
-const MOUNTNAMELEN 64
+const MOUNTNAMELEN 256
 
 const VNCACHESIZE 128
 
@@ -53,6 +53,7 @@ const FS_NOUID 2
 
 struct Mount
 	MOUNTNAMELEN Path
+	MOUNTNAMELEN DevPath
 	4 Next
 	4 Prev
 	4 Device
@@ -148,7 +149,7 @@ extern MountUnref { mount -- }
 
 extern SyncVNodes { mount remove -- res }
 
-extern VFSMount { flags path fs dev -- mount }
+extern VFSMount { flags path fs dev devpath -- mount }
 
 extern VFSUnmount { mount -- ok }
 
@@ -159,3 +160,5 @@ extern SMount { type dir pdev flags -- ok }
 extern UMount { path -- ok }
 
 extern VFSSync { -- ok }
+
+extern VFSCanonicalizePath { path -- canon }

@@ -33,7 +33,7 @@ const GConsoleMargin2 (GConsoleMargin 2 *)
 var VConsOBuffer 0
 public VConsOBuffer
 
-const ScrollJumpD 8
+const ScrollJumpD 1
 
 var ScrollJump 0
 

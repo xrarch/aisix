@@ -72,7 +72,20 @@ fn VFSMountRoot { -- }
 
 	auto rootmount
 
-	0 0 "aisixfs" FSByName RootDevice@ VFSMount rootmount!
+	auto dp
+	128 Malloc dp!
+
+	if (dp@ iserr)
+		"oh no\n" Panic
+	end
+
+	dp@ "/dev/" strcpy
+
+	dp@ 5 + RootDevice@ Device_Name + strcpy
+
+	0 0 "aisixfs" FSByName RootDevice@ dp@ VFSMount rootmount!
+
+	dp@ Free
 
 	if (rootmount@ iserr)
 		rootmount@ abs rootmount!
@@ -84,8 +97,9 @@ fn VFSMountRoot { -- }
 	RootVNode@ VNodeRef
 
 	RootVNode@ KernelProcess@ Process_CWDVNode + !
+	KernelProcess@ Process_CWDPathString + "/" CWDPATHLEN 1 - strncpy
 
-	0 "/dev" "devfs" FSByName 0 VFSMount DevMount!
+	0 "/dev" "devfs" FSByName 0 "devfs" VFSMount DevMount!
 
 	if (DevMount@ iserr)
 		DevMount@ abs DevMount!
@@ -103,6 +117,101 @@ end
 
 fn VTrunc { vnode -- ok }
 	vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Trunc + @ FSTrunc ok!
+end
+
+const CANONLEN 1024
+
+fn VFSCanonicalizePath { path -- canon }
+	CANONLEN Calloc canon!
+
+	if (canon@ iserr)
+		return
+	end
+
+	auto pcomp
+	256 Calloc pcomp!
+
+	if (pcomp@ iserr)
+		canon@ Free
+		pcomp@ canon!
+		return
+	end
+
+	if (path@ gb '/' ==)
+		'/' canon@ sb
+	end else
+		canon@ CurrentThread@ Thread_Process + @ Process_CWDPathString + CANONLEN 1 - strncpy
+	end
+
+	auto ci
+	canon@ strlen ci!
+
+	auto lenleft
+	CANONLEN ci@ - lenleft!
+
+	while (1)
+		while (path@ gb '/' ==)
+			1 path +=
+		end
+
+		if (path@ gb 0 ==)
+			break
+		end
+
+		auto pr
+		0 pr!
+
+		while (1)
+			if (path@ gb '/' == path@ gb 0 == ||)
+				break
+			end
+
+			if (pr@ 255 <)
+				path@ gb pcomp@ pr@ + sb
+				1 pr +=
+			end
+
+			1 path +=
+		end
+
+		0 pcomp@ pr@ + sb
+
+		if (pcomp@ "." strcmp)
+			continue
+		end
+
+		if (pcomp@ ".." strcmp)
+			while (canon@ ci@ + gb '/' ~=)
+				if (ci@ 0 ==)
+					"VFSCanonicalizePath\n" Panic
+				end
+
+				1 ci -=
+				1 lenleft +=
+			end
+
+			if (ci@ 0 ==)
+				1 ci!
+			end
+
+			canon@ ci@ + strzero
+
+			continue
+		end
+
+		if (ci@ 1 >)
+			'/' canon@ ci@ + sb
+			1 ci +=
+			1 lenleft -=
+		end
+
+		canon@ ci@ + pcomp@ lenleft@ 1 - strncpy
+		pcomp@ strlen pr!
+		pr@ lenleft@ min ci +=
+		pr@ lenleft@ min lenleft -=
+	end
+
+	pcomp@ Free
 end
 
 fn VFSPath { path -- vnode }
@@ -132,15 +241,20 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 		CurrentThread@ Thread_Process + @ Process_CWDVNode + @ vnode!
 	end
 
+	auto pcomp
+	256 Malloc pcomp!
+
+	if (pcomp@ iserr)
+		pcomp@ vnode!
+		return
+	end
+
 	if (vnode@ VNodeLock)
 		-EINTR vnode!
 		return
 	end
 
 	vnode@ VNodeRef
-
-	auto pcomp
-	256 Malloc pcomp!
 
 	auto pr
 
@@ -202,7 +316,7 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 				break
 			end
 
-			if (pr@ 256 <)
+			if (pr@ 255 <)
 				path@ gb pcomp@ pr@ + sb
 				1 pr +=
 			end
@@ -391,30 +505,43 @@ fn SMount { type dir pdev flags -- ok }
 		return
 	end
 
-	if (pdev@)
-		pdev@ VFSPath pdev!
+	auto canon
 
-		if (pdev@ iserr)
-			pdev@ ok!
+	if (pdev@)
+		pdev@ VFSPath ok!
+
+		if (ok@ iserr)
 			return
 		end
 
-		if (pdev@ VNode_Type + @ VNODE_BLOCK ~=)
+		if (ok@ VNode_Type + @ VNODE_BLOCK ~=)
+			ok@ VNodePut
 			-ENOTBLK ok!
-			pdev@ VNodePut
 			return
 		end
 
 		auto dev
 
-		pdev@ VNode_FSData + @ dev!
+		ok@ VNode_FSData + @ dev!
 
-		pdev@ VNodePut
+		ok@ VNodePut
+
+		pdev@ ok!
+
+		pdev@ VFSCanonicalizePath pdev!
+
+		if (pdev@ iserr)
+			ok@ pdev!
+		end else
+			1 canon!
+		end
 	end else
+		type@ Filesystem_Name + @ pdev!
+		0 canon!
 		0 dev!
 	end
 
-	flags@ dir@ type@ dev@ VFSMount ok!
+	flags@ dir@ type@ dev@ pdev@ VFSMount ok!
 
 	if (ok@ iserr)
 		return
@@ -423,7 +550,7 @@ fn SMount { type dir pdev flags -- ok }
 	0 ok!
 end
 
-fn VFSMount { flags path fs dev -- mount }
+fn VFSMount { flags path fs dev devpath -- mount }
 	if (fs@ 0 ==)
 		"VFSMount: fs = 0\n" Panic
 	end
@@ -510,15 +637,6 @@ fn VFSMount { flags path fs dev -- mount }
 
 	dev@ mount@ Mount_Device + !
 
-	auto pname
-	if (path@)
-		path@ pname!
-	end else
-		"/" pname!
-	end
-
-	mount@ Mount_Path + pname@ MOUNTNAMELEN 1 - strncpy
-
 	mount@ fs@ Filesystem_Mount + @ FSMount root!
 
 	if (root@ iserr)
@@ -536,13 +654,37 @@ fn VFSMount { flags path fs dev -- mount }
 
 	covervn@ mount@ Mount_Covering + !
 
+	auto canon
+
+	auto pname
+
+	if (path@)
+		1 canon!
+		path@ VFSCanonicalizePath pname!
+		if (pname@ iserr)
+			path@ pname!
+			0 canon!
+		end
+	end else
+		0 canon!
+		"/" pname!
+	end
+
+	mount@ Mount_Path + pname@ MOUNTNAMELEN 1 - strncpy
+
+	if (canon@)
+		pname@ Free
+	end
+
+	mount@ Mount_DevPath + devpath@ MOUNTNAMELEN 1 - strncpy
+
 	if (covervn@)
 		root@ covervn@ VNode_CoveredBy + !
 
 		covervn@ VNodeUnlock
 	end
 
-	root@ VNodeUnlock 
+	root@ VNodeUnlock
 
 	if (MountListHead@)
 		MountListHead@ mount@ Mount_Next + !
@@ -555,14 +697,7 @@ fn VFSMount { flags path fs dev -- mount }
 
 	UnlockMountList
 
-	auto devname
-	if (dev@)
-		dev@ Device_Name + devname!
-	end else
-		"(none)" devname!
-	end
-
-	fs@ Filesystem_Name + @ pname@ devname@ "mounted %s on %s as %s\n" Printf
+	fs@ Filesystem_Name + @ mount@ Mount_Path + devpath@ "mounted %s on %s as %s\n" Printf
 end
 
 fn UMount { path -- ok }
@@ -779,23 +914,16 @@ fn VFSPrintMounts { -- }
 
 	MountListHead@ mount!
 	while (mount@)
-		auto dev
-		mount@ Mount_Device + @ dev!
-
 		auto path
 		mount@ Mount_Path + path!
+
+		auto devpath
+		mount@ Mount_DevPath + devpath!
 
 		auto fs
 		mount@ Mount_Filesystem + @ fs!
 
-		auto devname
-		if (dev@)
-			dev@ Device_Name + devname!
-		end else
-			"(none)" devname!
-		end
-
-		fs@ Filesystem_Name + @ path@ devname@ "%s on /%s as %s\n" Printf
+		fs@ Filesystem_Name + @ path@ devpath@ "%s on %s as %s\n" Printf
 
 		mount@ Mount_Next + @ mount!
 	end
