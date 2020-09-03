@@ -111,6 +111,8 @@ fn IOBufPutc { c buf sleeponfull -- ok }
 
 	wp@ 1 + buf@ IOBuffer_WriteP + !
 
+	1 wp +=
+
 	auto btty
 	buf@ IOBuffer_TTY + @ btty!
 
@@ -159,6 +161,11 @@ fn IOBufGetc { buf sleeponempty -- c }
 	buf@ IOBuffer_Size + @ sz!
 
 	if (wp@ rp@ ==)
+		0 wp!
+		0 rp!
+		wp@ buf@ IOBuffer_WriteP + !
+		rp@ buf@ IOBuffer_ReadP + !
+
 		if (sleeponempty@)
 			if (buf@ IOBuffer_ReadQ + WaitQueue)
 				-EINTR c!
@@ -180,6 +187,8 @@ fn IOBufGetc { buf sleeponempty -- c }
 	rp@ sz@ % buf@ IOBuffer_Data + @ + gb c!
 
 	rp@ 1 + buf@ IOBuffer_ReadP + !
+
+	1 rp +=
 
 	buf@ IOBuffer_WriteQ + WakeQueue
 

@@ -30,7 +30,10 @@ const MOUSEMOVE 3
 
 const MOUSEBUFSZ 8
 
-var MouseIBuffer 0
+buffer MouseIBuffer (MousePacket_SIZEOF MOUSEBUFSZ *)
+
+var WriteP 0
+var ReadP 0
 
 fn DrvMouseFoundNode { node -- }
 	if (MouseFound@)
@@ -38,14 +41,6 @@ fn DrvMouseFoundNode { node -- }
 	end
 
 	1 MouseFound!
-
-	MOUSEBUFSZ MousePacket_SIZEOF * AllocIOBuf MouseIBuffer!
-
-	if (MouseIBuffer@ iserr)
-		"couldn't allocate MouseIBuffer\n" Panic
-	end
-
-	1 MouseIBuffer@ IOBuffer_Overwrite + !
 
 	"amanatsu,unit" a3xDGetProperty MouseID!
 
@@ -77,27 +72,47 @@ fn (DevIoctl) MouseIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
+buffer MouseEvQ EventQueue_SIZEOF
+
 fn (DevRead) MouseRead { buf len unit seek -- bytes }
 	auto i
 	0 i!
 
-	while (i@ len@ <)
-		auto c
-
-		MouseIBuffer@ 1 IOBufGetc c!
-
-		if (c@ iserr)
-			c@ bytes!
-			return
-		end
-
-		c@ buf@ sb
-
-		1 buf +=
-		1 i +=
+	if (len@ MousePacket_SIZEOF %)
+		-EINVAL bytes!
+		return
 	end
 
 	len@ bytes!
+
+	MousePacket_SIZEOF len /=
+
+	while (i@ len@ <)
+		auto rs
+		InterruptDisable rs!
+
+		if (ReadP@ WriteP@ ==)
+			0 ReadP!
+			0 WriteP!
+
+			if (MouseEvQ WaitQueue)
+				rs@ InterruptRestore
+				-EINTR bytes!
+				return
+			end
+		end
+
+		buf@
+		ReadP@ MOUSEBUFSZ % MousePacket_SIZEOF * MouseIBuffer +
+		MousePacket_SIZEOF memcpy
+
+		1 ReadP +=
+
+		rs@ InterruptRestore
+
+		MousePacket_SIZEOF buf +=
+		1 i +=
+	end
 end
 
 fn (DevWrite) MouseWrite { buf len unit seek -- bytes }
@@ -105,15 +120,10 @@ fn (DevWrite) MouseWrite { buf len unit seek -- bytes }
 end
 
 fn AMouseEvent { -- detail event }
-	auto rs
-	InterruptDisable rs!
-
 	MouseID@ AmanatsuSelectDev
 	1 AmanatsuCommand
 	AmanatsuReadB detail!
 	AmanatsuReadA event!
-
-	rs@ InterruptRestore
 end
 
 buffer MousePacketBuf MousePacket_SIZEOF
@@ -122,17 +132,17 @@ fn AMousePushEvent { -- }
 	auto i
 	0 i!
 
-	auto len
-	MousePacket_SIZEOF len!
-
-	auto buf
-	MousePacketBuf buf!
-
-	while (i@ len@ <)
-		buf@ i@ + gb MouseIBuffer@ 0 IOBufPutc drop
-
-		1 i +=
+	if (WriteP@ ReadP@ - MOUSEBUFSZ >=)
+		1 ReadP +=
 	end
+
+	WriteP@ MOUSEBUFSZ % MousePacket_SIZEOF * MouseIBuffer +
+	MousePacketBuf
+	MousePacket_SIZEOF memcpy
+
+	1 WriteP +=
+
+	MouseEvQ WakeQueue
 end
 
 fn (IntHandler) MouseIntr { intn -- }
@@ -147,35 +157,31 @@ fn (IntHandler) MouseIntr { intn -- }
 	auto buf
 	MousePacketBuf buf!
 
-	while (event@)
-		event@ buf@ MousePacket_Event + !
+	event@ buf@ MousePacket_Event + !
 
-		if (event@ MOUSEMOVE ==)
-			(* info 1 is delta x, info 2 is delta y *)
-			auto dx
-			detail@ 16 >> dx!
+	if (event@ MOUSEMOVE ==)
+		(* info 1 is delta x, info 2 is delta y *)
+		auto dx
+		detail@ 16 >> dx!
 
-			auto dy
-			detail@ 0xFFFF & dy!
+		auto dy
+		detail@ 0xFFFF & dy!
 
-			if (dx@ 0x8000 &)
-				0xFFFF0000 dx |=
-			end
-
-			if (dy@ 0x8000 &)
-				0xFFFF0000 dy |=
-			end
-
-			dx@ buf@ MousePacket_Info1 + !
-			dy@ buf@ MousePacket_Info2 + !
-		end else
-			detail@ buf@ MousePacket_Info1 + !
+		if (dx@ 0x8000 &)
+			0xFFFF0000 dx |=
 		end
 
-		AMousePushEvent
+		if (dy@ 0x8000 &)
+			0xFFFF0000 dy |=
+		end
 
-		AMouseEvent event! detail!
+		dx@ buf@ MousePacket_Info1 + !
+		dy@ buf@ MousePacket_Info2 + !
+	end else
+		detail@ buf@ MousePacket_Info1 + !
 	end
+
+	AMousePushEvent
 
 	MouseID@ AmanatsuSetInterrupt
 end
