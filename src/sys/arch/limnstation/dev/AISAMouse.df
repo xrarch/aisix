@@ -102,12 +102,14 @@ fn (DevRead) MouseRead { buf len unit seek -- bytes }
 			end
 		end
 
+		rs@ InterruptRestore
+
 		buf@
 		ReadP@ MOUSEBUFSZ % MousePacket_SIZEOF * MouseIBuffer +
 		MousePacket_SIZEOF memcpy
 
+		InterruptDisable rs!
 		1 ReadP +=
-
 		rs@ InterruptRestore
 
 		MousePacket_SIZEOF buf +=
@@ -150,38 +152,44 @@ fn (IntHandler) MouseIntr { intn -- }
 
 	intn@ InterruptAck@ InterruptAcker
 
-	auto detail
-	auto event
-	AMouseEvent event! detail!
+	while (1)
+		auto detail
+		auto event
+		AMouseEvent event! detail!
 
-	auto buf
-	MousePacketBuf buf!
-
-	event@ buf@ MousePacket_Event + !
-
-	if (event@ MOUSEMOVE ==)
-		(* info 1 is delta x, info 2 is delta y *)
-		auto dx
-		detail@ 16 >> dx!
-
-		auto dy
-		detail@ 0xFFFF & dy!
-
-		if (dx@ 0x8000 &)
-			0xFFFF0000 dx |=
+		if (event@ 0 ==)
+			break
 		end
 
-		if (dy@ 0x8000 &)
-			0xFFFF0000 dy |=
+		auto buf
+		MousePacketBuf buf!
+
+		event@ buf@ MousePacket_Event + !
+
+		if (event@ MOUSEMOVE ==)
+			(* info 1 is delta x, info 2 is delta y *)
+			auto dx
+			detail@ 16 >> dx!
+
+			auto dy
+			detail@ 0xFFFF & dy!
+
+			if (dx@ 0x8000 &)
+				0xFFFF0000 dx |=
+			end
+
+			if (dy@ 0x8000 &)
+				0xFFFF0000 dy |=
+			end
+
+			dx@ buf@ MousePacket_Info1 + !
+			dy@ buf@ MousePacket_Info2 + !
+		end else
+			detail@ buf@ MousePacket_Info1 + !
 		end
 
-		dx@ buf@ MousePacket_Info1 + !
-		dy@ buf@ MousePacket_Info2 + !
-	end else
-		detail@ buf@ MousePacket_Info1 + !
+		AMousePushEvent
 	end
-
-	AMousePushEvent
 
 	MouseID@ AmanatsuSetInterrupt
 end

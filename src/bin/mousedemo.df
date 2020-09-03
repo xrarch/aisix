@@ -126,17 +126,27 @@ fn Main { ... -- ret }
 
 	auto bytes
 
+	auto rcur
+	1 rcur!
+
 	auto buf
 	MouseEventBuf buf!
 
 	while (1)
 		buf@ MousePacket_SIZEOF mousefd@ Read bytes!
+		if (bytes@ iserr)
+			bytes@ abs bytes!
+			[bytes@]ErrorNames@ "mousedemo: couldn't read /dev/mouse0: %s\n" Abort
+		end
+
 		if (bytes@ MousePacket_SIZEOF <)
 			"mousedemo: couldn't read full packet\n" Abort
 		end
 
 		if (buf@ MousePacket_Event + @ MOUSEMOVE ==)
-			mouseX@ mouseY@ InvertBox
+			if (rcur@)
+				mouseX@ mouseY@ InvertBox
+			end
 
 			auto dx
 			buf@ MousePacket_Info1 + @ dx!
@@ -160,6 +170,10 @@ fn Main { ... -- ret }
 			end
 
 			mouseX@ mouseY@ InvertBox
+		end elseif (buf@ MousePacket_Event + @ MOUSEPRESS ==)
+			0 rcur!
+		end elseif (buf@ MousePacket_Event + @ MOUSERELEASE ==)
+			1 rcur!
 		end
 	end
 
