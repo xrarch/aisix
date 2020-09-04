@@ -358,8 +358,6 @@ fn (FSMount) DevFSMount { mount -- root }
 end
 
 fn (FSUnmount) DevFSUnmount { mount -- ok }
-	"devfs: unmount\n" Printf
-
 	0 ok!
 end
 
@@ -416,8 +414,6 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 end
 
 fn (FSPutNode) DevFSPutNode { vnode -- ok }
-	vnode@ "devfs put: %x\n" Printf
-
 	0 ok!
 end
 

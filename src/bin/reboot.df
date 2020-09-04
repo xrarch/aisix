@@ -1,0 +1,17 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	if (GetUID 0 ~=)
+		"reboot: must be root!\n" Abort
+	end
+
+	HALT_REBOOT Halt ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "reboot: %s\n" Abort
+	end
+
+	0 ret!
+end

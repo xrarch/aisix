@@ -1,0 +1,124 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+buffer Prompt 256
+
+var FD 0
+
+fn BPutc { c -- }
+	c@ Putc
+	FD@ c@ FPutc
+end
+
+fn BPuts { s -- }
+	s@ Puts
+	FD@ s@ FPuts
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 2 < argc@ 3 > ||)
+		"usage: art: art out [in]\n" Abort
+	end
+
+	[1]argv@ O_WRITE O_TRUNC | 438 Create FD!
+
+	if (FD@ iserr)
+		FD@ abs FD!
+		[FD@]ErrorNames@ [1]argv@ "art: %s: %s\n" Abort
+	end
+
+	auto ifd
+
+	if (argc@ 3 ==)
+		[2]argv@ O_READ Open ifd!
+
+		if (ifd@ iserr)
+			ifd@ abs ifd!
+			[ifd@]ErrorNames@ [2]argv@ "art: %s: %s\n" Abort
+		end
+	end else
+		STDIN ifd!
+	end
+
+	while (1)
+		auto bytes
+		Prompt 256 ifd@ Read bytes!
+
+		if (bytes@ iserr)
+			bytes@ abs bytes!
+			[bytes@]ErrorNames@ "art: couldn't read: %s\n" Abort
+		end
+
+		if (bytes@ 0 ==)
+			"\[[0m\n" BPuts
+			return
+		end
+
+		auto s
+		Prompt s!
+
+		auto c
+		-1 c!
+
+		auto i
+		0 i!
+
+		while (i@ bytes@ <)
+			if (s@ gb ' ' ~=)
+				if (s@ gb c@ ~=)
+					s@ gb PutColor
+					s@ gb c!
+				end
+
+				if (s@ gb '\n' ~=)
+					' ' BPutc
+				end
+			end
+
+			1 s +=
+			1 i +=
+		end
+	end
+end
+
+fn PutColor { c -- }
+	if (c@ 'b' ==)
+		"\[[40m" BPuts
+	end elseif (c@ 'r' ==)
+		"\[[41m" BPuts
+	end elseif (c@ 'g' ==)
+		"\[[42m" BPuts
+	end elseif (c@ 'y' ==)
+		"\[[43m" BPuts
+	end elseif (c@ 'l' ==)
+		"\[[44m" BPuts
+	end elseif (c@ 'm' ==)
+		"\[[45m" BPuts
+	end elseif (c@ 'c' ==)
+		"\[[46m" BPuts
+	end elseif (c@ 'x' ==)
+		"\[[47m" BPuts
+	end elseif (c@ 'X' ==)
+		"\[[100m" BPuts
+	end elseif (c@ 'R' ==)
+		"\[[101m" BPuts
+	end elseif (c@ 'G' ==)
+		"\[[102m" BPuts
+	end elseif (c@ 'Y' ==)
+		"\[[103m" BPuts
+	end elseif (c@ 'L' ==)
+		"\[[104m" BPuts
+	end elseif (c@ 'M' ==)
+		"\[[105m" BPuts
+	end elseif (c@ 'C' ==)
+		"\[[106m" BPuts
+	end elseif (c@ 'w' ==)
+		"\[[107m" BPuts
+	end elseif (c@ '\n' ==)
+		"\[[0m\n" BPuts
+	end elseif (c@ 'Z' ==)
+		"\[[0m" BPuts
+	end
+end

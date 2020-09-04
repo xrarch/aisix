@@ -32,6 +32,7 @@ table Syscalls
 	pointerof SysSync
 	pointerof SysSeek
 	pointerof SysGetCWD
+	pointerof SysHalt
 endtable
 public Syscalls
 
@@ -759,4 +760,11 @@ fn (Syscall) SysGetCWD { tf -- ok }
 	buf@ CurrentThread@ Thread_Process + @ Process_CWDPathString + strcpy
 
 	0 ok!
+end
+
+fn (Syscall) SysHalt { tf -- ok }
+	auto hmode
+	tf@ Context_a1 + @ hmode!
+
+	hmode@ Halt ok!
 end

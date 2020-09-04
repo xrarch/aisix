@@ -159,6 +159,8 @@ extern SMount { type dir pdev flags -- ok }
 
 extern UMount { path -- ok }
 
+extern VFSUnmountAll { -- ok }
+
 extern VFSSync { -- ok }
 
 extern VFSCanonicalizePath { path -- canon }

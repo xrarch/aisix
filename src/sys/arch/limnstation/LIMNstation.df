@@ -73,10 +73,6 @@ extern LGFXExclude { -- }
 fn PlatformInit { -- }
 	ExceptionInit
 
-	DeviceTree
-
-	LGFXExclude
-
 	auto ts
 	"ts" ArgsValue ts!
 
@@ -85,9 +81,11 @@ fn PlatformInit { -- }
 		ts@ Free
 	end
 
-	LIMN2KTimeslice@ "limn2k timeslice: %d cycles\n" Printf
+	DeviceTree
 
 	'\n' Putc
+
+	LGFXExclude
 end
 
 fn PlatformPutc { c -- }
@@ -110,6 +108,15 @@ end
 
 fn PlatformAlertUser { -- }
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
+
+	auto gc
+	"/gconsole" a3xDevTreeWalk gc!
+
+	if (gc@)
+		gc@ a3xDeviceSelectNode
+			"nodraw" a3xDCallMethod drop drop drop drop
+		a3xDeviceExit
+	end
 
 	a3xConsoleUserOut
 end
@@ -176,4 +183,21 @@ fn PlatformUserToPhys { len user wr -- phys valid }
 
 	flag@ MMUPHYMASK & MMUPSHIFT << off@ + phys!
 	1 valid!
+end
+
+extern RestoreFWGFX { -- }
+
+fn PlatformHalt { haltmode -- }
+	InterruptDisable drop
+
+	if (haltmode@ HALT_SHUTDOWN ==)
+		RestoreFWGFX
+		1024 a3xReturn
+	end
+
+	if (haltmode@ HALT_REBOOT ==)
+		"/cpu" a3xDeviceSelect
+			"reset" a3xDCallMethod drop drop drop drop
+		a3xDeviceExit
+	end
 end

@@ -1,0 +1,186 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+table ModeNames
+	0
+	"shutting down"
+	"rebooting"
+endtable
+
+extern PlatformHalt { mode -- }
+
+var Halting 0
+
+fn Halt { haltmode -- ok }
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	if (p@ Process_Threads + @ 1 ~=)
+		-EPERM ok!
+		return
+	end
+
+	if (p@ Process_EUID + @ 0 ~=)
+		-EPERM ok!
+		return
+	end
+
+	if (haltmode@ 0 ==)
+		-EINVAL ok!
+		return
+	end
+
+	if (haltmode@ HALT_REBOOT >)
+		-EINVAL ok!
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	if (Halting@)
+		rs@ InterruptRestore
+		-EBUSY ok!
+		return
+	end
+
+	1 Halting!
+
+	rs@ InterruptRestore
+
+	"\n\n\naisix HALT\n\n" Printf
+
+	"killing all processes\n" Printf
+
+	InterruptDisable rs!
+
+	TS_SUSPEND InitProcess@ Process_MainThread + @ Thread_Status + !
+
+	auto process
+
+	auto i
+	0 i!
+	while (i@ PROCMAX <)
+		[i@]Processes@ process!
+
+		if (process@)
+			if (process@ KernelProcess@ ~=)
+				if (process@ InitProcess@ ~=)
+					0 process@ ProcessKill
+				end
+			end
+		end
+
+		1 i +=
+	end
+
+	rs@ InterruptRestore
+
+	if (p@ Process_Exited + @ ~~)
+		"halt: self not killed\n" Panic
+	end
+
+	(* protect ourselves from weird business *)
+	0 p@ Process_Exited + !
+	0 CurrentThread@ Thread_Killed + !
+
+	(* gives some time for the kernel threads to drop out naturally *)
+	500 SleepFor
+
+	(* forcefully suspend any threads that are still around *)
+	InterruptDisable rs!
+
+	(* just in case *)
+	0 p@ Process_Exited + !
+	0 CurrentThread@ Thread_Killed + !
+
+	0 i!
+	while (i@ THREADMAX <)
+		auto thread
+		[i@]Threads@ thread!
+
+		if (thread@)
+			if (thread@ CurrentThread@ ~=)
+				if (thread@ KernelProcess@ Process_MainThread + @ ~=) (* keep the idle thread around *)
+					TS_SUSPEND thread@ Thread_Status + !
+				end
+			end
+		end
+
+		1 i +=
+	end
+
+	rs@ InterruptRestore
+
+	(* nobody but us should be running anymore *)
+
+	(* something important to note is that the vcons worker
+	thread is not running anymore, which means we need
+	to pump console messages ourselves if we want the user
+	to be able to see them *)
+
+	(* forcefully close all remaining fds *)
+	auto ofile
+	auto j
+
+	0 i!
+	while (i@ PROCMAX <)
+		[i@]Processes@ process!
+
+		if (process@)
+			(* if its a zombie it already this all this itself *)
+			if (process@ Process_Zombie + @ ~~)
+				process@ Process_CWDVNode + @ VNodeUnref
+
+				process@ Process_OFiles + ofile!
+
+				0 j!
+
+				while (j@ OFILEMAX <)
+					if (ofile@@)
+						ofile@@ CloseP drop
+					end
+
+					4 ofile +=
+					1 j +=
+				end
+			end
+		end
+
+		1 i +=
+	end
+
+	'\n' Putc
+
+	LogPump
+
+	VFSUnmountAll ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "halt: couldn't unmount all: %s\n" Panic
+	end
+
+	'\n' Putc
+
+	"syncing disks\n" Printf
+
+	LogPump
+
+	VFSSync ok!
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "halt: sync error: %s\n" Printf
+	end
+
+	(* allow I/O to finish *)
+	1000 SleepFor
+
+	[haltmode@]ModeNames@ "%s...\n" Printf
+
+	LogPump
+
+	haltmode@ PlatformHalt
+
+	"PlatformHalt returned!\n" Panic
+end

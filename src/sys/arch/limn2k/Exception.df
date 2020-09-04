@@ -184,9 +184,11 @@ fn Exception { badaddr ecause tf -- }
 			(* kernel mode exception, panic *)
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end else
-			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "ecause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Printf
-			KDebug
+			CurrentThread@ Thread_Process + @ Process_Name + "killed: %s\n" Printf
+			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ " %9xECAUSE\n %9xEPC\n %9xERS\n %9xBADADDR\n" Printf
 		end
+
+		139 CurrentThread@ Thread_Process + @ Process_ReturnValue + !
 
 		1 CurrentThread@ Thread_Killed + !
 	end
@@ -263,6 +265,12 @@ InterruptDisable:
 	mov v0, rs
 	bclri rs, rs, 3
 	bclri rs, rs, 1
+	ret
+
+PreemptDisable:
+.global PreemptDisable
+	mov v0, rs
+	bclri rs, rs, 3
 	ret
 
 InterruptRestore:

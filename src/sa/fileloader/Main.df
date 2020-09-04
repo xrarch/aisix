@@ -83,6 +83,37 @@ fn GetBootDrive { -- }
 	end
 end
 
+(* assumes 80 columns and 34 rows *)
+fn CenteredMessage { msg -- }
+	"\[[c\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" Printf
+
+	auto spaces
+	40 msg@ strlen 2 / - spaces!
+
+	while (spaces@)
+		' ' Putc
+		1 spaces -=
+	end
+
+	msg@ "\[[33m%s\[[0m\[[7m" Printf
+
+	while (Getc ERR ==) end
+
+	"\[[0m\n" Printf
+end
+
+fn RunKernel { args file -- ret }
+	args@ file@ DoFile ret!
+
+	if (ret@ 1024 ==)
+		a3xConsoleUserOut
+
+		"It's now safe to turn off your computer." CenteredMessage
+
+		0 ret!
+	end
+end
+
 fn Main { args -- ret }
 	0 ret!
 
@@ -123,7 +154,7 @@ fn Main { args -- ret }
 			if (vs@ ~~)
 				BootPath@ "load-file = %s\n" Printf
 
-				args@ BootFile@ DoFile ret!
+				args@ BootFile@ RunKernel ret!
 			end
 		end
 	end else
@@ -228,11 +259,13 @@ fn Prompt { -- ret }
 		"/" AFSPrintList
 	end
 
-	"Type name of standalone program, 'exit' to return, or 'ls' to list files.\n" Printf
-	"Type 'go' to load the boot file with normal args.\n" Printf
+	"Type the name of a standalone program. OR,
+ 'exit' to return to the BIOS,
+ 'ls'   to list files,
+ 'go'   to load the OS with normal arguments.\n\n" Printf
 
 	while (Go@)
-		"\t>> " Printf
+		">> " Printf
 		buf@ 255 Gets
 
 		auto nw
@@ -260,9 +293,9 @@ fn Prompt { -- ret }
 					GetBootFile
 				end
 
-				bootargs@ BootFile@ DoFile ret!
+				bootargs@ BootFile@ RunKernel ret!
 
-				if (ret@ 0 ~=)
+				if (ret@ 1 ~=)
 					break
 				end
 			end else

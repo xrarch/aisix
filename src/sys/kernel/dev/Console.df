@@ -97,49 +97,17 @@ fn ConsInit { -- }
 
 		KLogDumpEarly
 	end else
-		auto ab
+		auto sdev
+		"serial0" DevByName sdev!
 
-		"consin" ArgsValue ab!
-
-		if (ab@)
-			ab@ consin!
-		end else
-			"serial0" consin!
+		if (sdev@ ~~)
+			[ENODEV]ErrorNames@ "couldn't set serial console: %s\n" Panic
 		end
 
-		consin@ "consin=%s\n" Printf
+		sdev@ Device_IBuffer + @ consin!
+		sdev@ Device_OBuffer + @ consout!
 
-		consin@ GetConsIn consin!
-
-		if (consin@ iserr)
-			consin@ abs consin!
-			[consin@]ErrorNames@ "couldn't get consin: %s\n" Panic
-		end
-
-		if (ab@)
-			ab@ Free
-		end
-
-		"consout" ArgsValue ab!
-
-		if (ab@)
-			ab@ consout!
-		end else
-			"serial0" consout!
-		end
-
-		consout@ "consout=%s\n" Printf
-
-		consout@ GetConsOut consout!
-
-		if (consout@ iserr)
-			consout@ abs consout!
-			[consout@]ErrorNames@ "couldn't get consout: %s\n" Panic
-		end
-
-		if (ab@)
-			ab@ Free
-		end
+		0 EarlyLog!
 	end
 
 	consin@ ConsIBuf!

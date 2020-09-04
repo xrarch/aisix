@@ -1,7 +1,7 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
-buffer MOTDBuf 1024
+buffer MOTDBuf 4096
 
 fn Main { ... -- ret }
 	(* kernel process is pid 1 on AISIX, which makes init pid 2 *)
@@ -40,7 +40,7 @@ fn Main { ... -- ret }
 	end else
 		auto motdsz
 
-		MOTDBuf 1024 motd@ Read motdsz!
+		MOTDBuf 4096 motd@ Read motdsz!
 
 		if (motdsz@ iserr)
 			motdsz@ abs motdsz!
@@ -61,8 +61,7 @@ fn Main { ... -- ret }
 
 		if (shpid@ iserr)
 			shpid@ abs shpid!
-			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Printf
-			while (1) end
+			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Abort
 		end
 
 		auto pid

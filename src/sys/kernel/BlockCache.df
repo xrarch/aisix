@@ -51,8 +51,6 @@ fn BlockInit { -- }
 
 		Buffer_SIZEOF b +=
 	end
-
-	NBUF "%d block buffers\n" Printf
 end
 
 fn bget { blockno dev -- buf }

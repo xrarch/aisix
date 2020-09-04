@@ -1,0 +1,17 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	if (GetUID 0 ~=)
+		"shutdown: must be root!\n" Abort
+	end
+
+	HALT_SHUTDOWN Halt ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "shutdown: %s\n" Abort
+	end
+
+	0 ret!
+end

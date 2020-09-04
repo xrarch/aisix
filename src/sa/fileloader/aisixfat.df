@@ -246,7 +246,7 @@ fn AFSPrintList { path -- }
 	ino@ AFSINode_startblock + @ dirblock!
 	ino@ AFSINode_bytesize + @ dirsz!
 
-	path@ "%s:\n" Printf
+	path@ "\[[33m%s\[[0m:\n" Printf
 
 	auto off
 	0 off!
@@ -265,10 +265,8 @@ fn AFSPrintList { path -- }
 		if (inum@ 0 ~=)
 			inum@ AFSIGet ino!
 
-			if (ino@ AFSINode_type + @ 1 ==)
-				ino@ AFSINode_bytesize + @ ptr@ AFSDirEnt_name + "\t%s\t%d\n" Printf
-			end else
-				ino@ AFSINode_bytesize + @ ptr@ AFSDirEnt_name + "\t%s/\t%d\n" Printf
+			if (ino@ AFSINode_type + @ 0 ~=)
+				ino@ AFSINode_bytesize + @ ptr@ AFSDirEnt_name + " \[[33m%15s\[[0m \[[94m%d\[[0m\n" Printf
 			end
 		end
 

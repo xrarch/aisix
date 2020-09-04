@@ -4,6 +4,8 @@ fnptr KLogWriter { c -- }
 
 fnptr KLogReader { -- c }
 
+extern LogPump { -- }
+
 externptr KLogWrite
 
 externptr KLogRead

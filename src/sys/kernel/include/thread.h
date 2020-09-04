@@ -99,6 +99,7 @@ const TS_RUNNING 2
 const TS_TIMER 4
 const TS_EVENT 5
 const TS_EVENT_UNINTERRUPTIBLE 6
+const TS_SUSPEND 7
 
 extern PlatformSwitchSeg { proc -- }
 

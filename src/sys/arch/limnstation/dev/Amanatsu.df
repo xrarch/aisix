@@ -11,6 +11,9 @@ fn DrvAmtsuFoundNode { node -- }
 	1 AmtsuFound!
 
 	AmanatsuReset
+
+	(* TODO get these from device tree properties *)
+	AmaPortB AmaPortA AmaPortCMD AmaPortMID AmaPortDev "citron:%x,%x,%x,%x,%x" Printf
 end
 
 (* disabling and restoring interrupts is up to the user of these functions *)

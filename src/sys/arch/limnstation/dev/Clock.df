@@ -28,7 +28,7 @@ fn DrvClockFoundNode { node -- }
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
-	intn@ ClockDataPort@ ClockCmdPort@ "clock @ citron:%x,%x int:%d" Printf
+	intn@ ClockDataPort@ ClockCmdPort@ "citron:%x,%x int:%d" Printf
 
 	pointerof ClockIntr intn@ InterruptRegister
 

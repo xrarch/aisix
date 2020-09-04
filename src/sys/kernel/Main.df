@@ -13,6 +13,8 @@ extern Scheduler { -- }
 
 extern KLogInit { -- }
 
+extern TriviaTable { -- }
+
 fn AISIX { ksz args -- ret }
 	0 ret!
 
@@ -24,16 +26,15 @@ fn AISIX { ksz args -- ret }
 
 	KLogInit
 
-	"Welcome to AISIX\n" Printf
-	ksz@ "kernel image ~%d bytes\n\n" Printf
-
-	MachineInfo
+	"\[[33mWelcome to AISIX\[[0m\n\n" Printf
 
 	PlatformInit
 
 	BlockInit
 
 	ThreadInit
+
+	TriviaTable
 
 	Scheduler
 
@@ -53,8 +54,6 @@ extern VConsInit { -- }
 extern CPUHlt { -- }
 
 fn AISIXInitialThread { -- }
-	"initial thread was switched to successfully\n" Printf
-
 	VCacheInit
 
 	VFSInit
@@ -65,12 +64,14 @@ fn AISIXInitialThread { -- }
 
 	VFSMountRoot
 
+	'\n' Putc
+
 	auto vnode
 	"/sys/bin/init" VFSPath vnode!
 
 	if (vnode@ iserr)
 		vnode@ abs vnode!
-		[vnode@]ErrorNames@ "couldn't open /sys/bin/init: %s\n" Printf
+		[vnode@]ErrorNames@ "couldn't open /sys/bin/init: %s\n" Panic
 	end else
 		vnode@ VNodeUnlock
 
@@ -80,7 +81,7 @@ fn AISIXInitialThread { -- }
 
 		if (InitProcess@ iserr)
 			InitProcess@ abs InitProcess!
-			[InitProcess@]ErrorNames@ "couldn't spawn /sys/bin/init: %s\n" Printf
+			[InitProcess@]ErrorNames@ "couldn't spawn /sys/bin/init: %s\n" Panic
 		end
 	end
 

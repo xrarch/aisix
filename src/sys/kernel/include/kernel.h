@@ -15,16 +15,10 @@
 #include "<inc>/exec.h"
 #include "<inc>/sys.h"
 #include "<inc>/fd.h"
+#include "<inc>/vm.h"
+#include "<inc>/halt.h"
 
 extern Panic { ... fmt -- }
-
-externptr Pages
-
-extern PMMFree { pages addr -- }
-
-extern PMMAlloc { pages -- addr }
-
-extern PMMCalloc { pages -- addr }
 
 extern AskUser { ... fmt anslen -- answer }
 

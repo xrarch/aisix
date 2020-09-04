@@ -19,13 +19,13 @@ var GCHeight 0
 const GConsoleBG 0x394C
 const GConsoleFG 0x7FFF
 
-const FontWidth 8
+const FontWidth 6
 const FontWidthA (FontWidth 1 -)
 
 const FontBytesPerRow 1
-const FontHeight 16
+const FontHeight 12
 
-const FontBitD 1
+const FontBitD 0
 
 const GConsoleMargin (FontWidth 2 *)
 const GConsoleMargin2 (GConsoleMargin 2 *)
@@ -155,18 +155,31 @@ fn VConsInit { -- }
 	vcw@ ThreadReady
 end
 
-fn VConsWorker { -- }
+fn VConsPump { sleep -- ok }
 	while (1)
 		auto c
-		VConsOBuffer@ 1 IOBufGetc c!
+		VConsOBuffer@ sleep@ IOBufGetc c!
+
+		if (c@ IOBUFEMPTY ==)
+			0 ok!
+			return
+		end
 
 		if (c@ iserr)
-			c@ abs c!
-			[c@]ErrorNames@ "vcons worker: %s\n" Panic
+			c@ ok!
+			return
 		end
 
 		c@ GConsolePutChar
 	end
+end
+
+fn VConsWorker { -- }
+	auto ok
+	1 VConsPump ok!
+
+	ok@ abs ok!
+	[ok@]ErrorNames "vcons worker: %s\n" Panic
 end
 
 fn GConsoleLongestLine { -- width }
@@ -509,7 +522,7 @@ asm "
 .section data
 
 Font:
-	.static font-terminus.raw
+	.static font-haiku.raw
 
 .section text
 

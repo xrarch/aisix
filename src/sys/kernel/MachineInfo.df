@@ -1,3 +1,4 @@
+#include "<inc>/kernel.h"
 #include "<df>/dragonfruit.h"
 
 var MachineType 0
@@ -15,11 +16,29 @@ public MachineRAMBase
 var MachineRAMSize 0
 public MachineRAMSize
 
-fn MachineInfo { -- }
-	MachineRAMBase@
-	MachineRAMSize@ 1024 /
-	MachineBus@ 
-	MachineCPU@
-	MachineType@
-	"machine: %s/%s/%s; mem: %dKB @ 0x%x\n" Printf
+fn private Trivia { trivia info -- }
+	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  %30s\[[0m\n" Printf
+end
+
+fn private TriviaD { trivia info -- }
+	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  %30d\[[0m\n" Printf
+end
+
+fn private TriviaX { trivia info -- }
+	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  0x%28x\[[0m\n" Printf
+end
+
+fn TriviaTable { -- }
+	"CONTENT" "KERNEL INFO" "\[[40m\[[97m %20s   %30s \[[0m\n" Printf
+
+	"Machine" MachineType@ Trivia
+	"CPU" MachineCPU@ Trivia
+	"Bus" MachineBus@ Trivia
+	"Available RAM (KB)" MachineRAMSize@ 1024 / TriviaD
+	"RAM address" MachineRAMBase@ TriviaX
+	"Block buffers" NBUF TriviaD
+	"Max processes" PROCMAX TriviaD
+	"Max threads" THREADMAX TriviaD
+
+	'\n' Putc
 end

@@ -10,6 +10,8 @@ var LinePoint 0
 
 var Jobs 0
 
+var LastRet 0
+
 fn String { m -- word }
 	256 Calloc word!
 
@@ -401,7 +403,7 @@ fn Command { -- done }
 					-1 wpid!
 
 					while (wpid@ pid@ ~=)
-						Wait drop wpid!
+						Wait LastRet! wpid!
 
 						if (wpid@ pid@ ~=)
 							wpid@ "sh: done: %d\n" STDERR FPrintf
@@ -460,7 +462,12 @@ fn Main { ... -- ret }
 	end
 	
 	while (1)
-		prmpt@ Puts
+		if (LastRet@)
+			prmpt@ LastRet@ "%d%s" Printf
+		end else
+			prmpt@ Puts
+		end
+
 		if (Prompt 255 Readline)
 			0 Exit
 		end
@@ -472,74 +479,5 @@ fn Main { ... -- ret }
 		Prompt LinePoint!
 
 		CommandLine
-	end
-end
-
-fn OldMain { ... -- ret }
-	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
-
-	0 ret!
-	
-	while (1)
-		"# " Printf
-		if (Prompt 255 Readline)
-			0 Exit
-		end
-
-		if (Prompt strlen 0 ==)
-			continue
-		end
-
-		Prompt LinePoint!
-
-		auto nt
-		Prompt PName ' ' 255 strntok nt!
-
-		if (PName strlen 0 ==)
-			continue
-		end
-
-		auto abuf
-		nt@ strlen 1 + Malloc abuf!
-
-		auto argcn
-		0 argcn!
-
-		auto p
-		abuf@ p!
-
-		auto q
-		Argvt q!
-
-		while (nt@ 0 ~=)
-			if (argcn@ 32 >=)
-				break
-			end
-
-			nt@ PComp ' ' 255 strntok nt!
-
-			p@ PComp strcpy
-
-			p@ q@ !
-
-			PComp strlen 1 + p +=
-
-			1 argcn +=
-			4 q +=
-		end
-
-		auto pid
-		argcn@ Argvt PName VSpawn pid!
-
-		abuf@ Free
-
-		if (pid@ iserr)
-			pid@ abs pid!
-			[pid@]ErrorNames@ PName "sh: couldn't spawn %s: %s\n" STDERR FPrintf
-		end else
-			auto pret
-
-			Wait pret! pid!
-		end
 	end
 end

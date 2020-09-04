@@ -60,6 +60,8 @@ end
 fn Getc { -- c }
 	if (KLogRead@)
 		KLogRead@ KLogReader c!
+	end else
+		ERR c!
 	end
 end
 
@@ -117,7 +119,7 @@ fn Readline { s max -- }
 end
 
 fn Gets { s max -- }
-	if (ConsIBuf@ ~~)
+	if (ConsIBuf@ ~~ Panicked@ ||)
 		s@ max@ PolledGets
 	end else
 		s@ max@ Readline
@@ -172,8 +174,18 @@ extern GetLink { -- }
 
 extern KDebug { -- }
 
+extern VConsPump { sleep -- ok }
+
+fn LogPump { -- }
+	if (ConsUseVid@)
+		0 VConsPump drop
+	end
+end
+
 fn Panic { ... fmt -- }
 	InterruptDisable drop
+
+	LogPump
 
 	GetLink
 

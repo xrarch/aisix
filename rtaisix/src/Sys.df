@@ -29,6 +29,7 @@ const SYSCHMOD 25
 const SYSSYNC 26
 const SYSSEEK 27
 const SYSGETCWD 28
+const SYSHALT 29
 
 asm "
 
@@ -227,6 +228,12 @@ _seek:
 _getcwd:
 	mov a1, a0
 	li a0, SYSGETCWD
+	sys
+	ret
+
+_halt:
+	mov a1, a0
+	li a0, SYSHALT
 	sys
 	ret
 
@@ -463,4 +470,10 @@ extern _getcwd { buf -- ok }
 
 fn GetCWD { buf -- ok }
 	buf@ _getcwd ok!
+end
+
+extern _halt { haltmode -- ok }
+
+fn Halt { haltmode -- ok }
+	haltmode@ _halt ok!
 end

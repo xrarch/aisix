@@ -24,8 +24,6 @@ const KERNELPID 1
 extern AISIXInitialThread { -- }
 
 fn ThreadInit { -- }
-	PROCMAX THREADMAX "max %d threads, %d processes\n" Printf
-
 	auto process
 	pointerof AISIXInitialThread 0 0 0 ProcessNew process!
 
@@ -191,9 +189,9 @@ fn ThreadExit { -- }
 	
 	if (process@ Process_MainThread + @ thread@ ==)
 		0 process@ Process_MainThread + !
-		0 ProcessExit
+		process@ Process_ReturnValue + @ ProcessExit
 	end	elseif (thr@ 0 ==)
-		0 ProcessExit
+		process@ Process_ReturnValue + @ ProcessExit
 	end
 
 	0 thread@ Thread_Status + !
@@ -258,8 +256,6 @@ var SchedulerContext 0
 
 (* scheduler *)
 fn Scheduler { -- }
-	"entering scheduler loop\n" Printf
-
 	auto thread
 
 	auto rs
@@ -363,7 +359,10 @@ fn WakeupTimer { uptime -- }
 			if (thr@ Thread_Status + @ TS_TIMER ==)
 				if (uptime@ thr@ Thread_WaitChan + @ >=)
 					0 thr@ Thread_WaitChan + !
-					TS_READY thr@ Thread_Status + !
+
+					if (thr@ Thread_Status + @ TS_SUSPEND ~= )
+						TS_READY thr@ Thread_Status + !
+					end
 				end
 			end
 		end
@@ -434,7 +433,9 @@ fn WakeQueue { evq -- }
 		return
 	end
 
-	TS_READY w@ Thread_Status + !
+	if (w@ Thread_Status + @ TS_SUSPEND ~=)
+		TS_READY w@ Thread_Status + !
+	end
 
 	auto nw
 	w@ Thread_NextWaiter + @ nw!
@@ -759,6 +760,7 @@ fn ProcessKill { ret process -- }
 		while (i@ OFILEMAX <)
 			if (ofile@@)
 				ofile@@ CloseP drop
+				0 ofile@!
 			end
 
 			4 ofile +=

@@ -15,7 +15,7 @@ fn DrvLSICFoundNode { node -- }
 	pointerof LSICInterruptGet InterruptGet!
 	pointerof LSICInterruptAck InterruptAck!
 
-	LSICBase@ "lsic @ 0x%x" Printf
+	LSICBase@ "0x%x" Printf
 
 	1 LSICFound!
 end

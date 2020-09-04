@@ -92,10 +92,11 @@ fn VFSMountRoot { -- }
 		[rootmount@]ErrorNames@ "couldn't mount root: %s\n" Panic
 	end
 
+	dp@ "mounted %s on / as aisixfs\n" Printf
+
 	rootmount@ Mount_Root + @ RootVNode!
 
 	RootVNode@ VNodeRef
-
 	RootVNode@ KernelProcess@ Process_CWDVNode + !
 	KernelProcess@ Process_CWDPathString + "/" CWDPATHLEN 1 - strncpy
 
@@ -105,6 +106,8 @@ fn VFSMountRoot { -- }
 		DevMount@ abs DevMount!
 		[DevMount@]ErrorNames@ "couldn't mount devfs: %s\n" Panic
 	end
+
+	"mounted devfs on /dev\n" Printf
 end
 
 fn VRead { buf len seek vnode -- bytes }
@@ -696,8 +699,6 @@ fn VFSMount { flags path fs dev devpath -- mount }
 	1 Mounted +=
 
 	UnlockMountList
-
-	fs@ Filesystem_Name + @ mount@ Mount_Path + devpath@ "mounted %s on %s as %s\n" Printf
 end
 
 fn UMount { path -- ok }
@@ -731,6 +732,22 @@ fn UMount { path -- ok }
 	end
 
 	mount@ VFSUnmount ok!
+end
+
+fn VFSUnmountAll { -- ok }
+	auto mount
+	auto nmount
+
+	0 ok!
+
+	while (MountListHead@)
+		MountListHead@ Mount_Path + "unmounting %s\n" Printf
+
+		MountListHead@ VFSUnmount ok!
+		if (ok@ iserr)
+			return
+		end
+	end
 end
 
 fn VFSUnmount { mount -- ok }
@@ -881,8 +898,8 @@ fn VFSSync { -- ok }
 		mount@ 0 SyncVNodes ok!
 
 		if (ok@ iserr)
-			UnlockMountList
-			return
+			ok@ abs ok!
+			[ok@]ErrorNames@ mount@ Mount_Path + "kernel: %s: vnode sync error: %s\n" Printf
 		end
 
 		mount@ Mount_Next + @ mount!
