@@ -128,7 +128,7 @@ fn Halt { haltmode -- ok }
 		[i@]Processes@ process!
 
 		if (process@)
-			(* if its a zombie it already this all this itself *)
+			(* if its a zombie it already did all this itself *)
 			if (process@ Process_Zombie + @ ~~)
 				process@ Process_CWDVNode + @ VNodeUnref
 
