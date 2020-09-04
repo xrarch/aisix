@@ -5,7 +5,26 @@
 
 extern AISIX { ksz args -- ret }
 
-const CompatibleFirmware 30502
+const CompatibleFirmware 30503
+
+var SavedEV 0
+
+asm "
+
+SaveEV:
+	la t0, SavedEV
+	s.l t0, zero, ev
+	ret
+
+RestoreEV:
+	la t0, SavedEV
+	l.l ev, t0, zero
+	ret
+
+"
+
+extern SaveEV { -- }
+extern RestoreEV { -- }
 
 fn Main { ksz args -- ret }
 	0 ret!
@@ -22,6 +41,8 @@ fn Main { ksz args -- ret }
 	pointerof _bss_end ptr@ -
 	0 memset
 
+	SaveEV
+
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	"\ninitial kernel log to a3x console\n" Printf
@@ -33,7 +54,7 @@ fn Main { ksz args -- ret }
 
 	if (vnum@ CompatibleFirmware <)
 		"aisix requires newer firmware!\n" Printf
-		return
+		-1 a3xReturn
 	end
 
 	"/platform" a3xDeviceSelect
@@ -191,6 +212,19 @@ fn PlatformUserToPhys { len user wr -- phys valid }
 	1 valid!
 end
 
+fn PlatformPrePanic { -- }
+	RestoreFWGFX
+end
+
+fn PlatformPanic { -- }
+	-1 FWReturn
+end
+
+fn FWReturn { ret -- }
+	RestoreEV
+	ret@ a3xReturn
+end
+
 extern RestoreFWGFX { -- }
 
 fn PlatformHalt { haltmode -- }
@@ -198,7 +232,7 @@ fn PlatformHalt { haltmode -- }
 
 	if (haltmode@ HALT_SHUTDOWN ==)
 		RestoreFWGFX
-		1024 a3xReturn
+		1024 FWReturn
 	end
 
 	if (haltmode@ HALT_REBOOT ==)
