@@ -17,15 +17,15 @@ var MachineRAMSize 0
 public MachineRAMSize
 
 fn private Trivia { trivia info -- }
-	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  %30s\[[0m\n" Printf
+	info@ trivia@ "\[[106m\[[30m  %20s \[[47m\[[0m  %30s\[[0m\n" Printf
 end
 
 fn private TriviaD { trivia info -- }
-	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  %30d\[[0m\n" Printf
+	info@ trivia@ "\[[106m\[[30m  %20s \[[47m\[[0m  %30d\[[0m\n" Printf
 end
 
 fn private TriviaX { trivia info -- }
-	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  0x%28x\[[0m\n" Printf
+	info@ trivia@ "\[[106m\[[30m  %20s \[[47m\[[0m  0x%28x\[[0m\n" Printf
 end
 
 externptr KHeapSize

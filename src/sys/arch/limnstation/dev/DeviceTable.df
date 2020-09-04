@@ -116,7 +116,7 @@ fn private CheckDevTable { -- }
 			ans@ Free
 		end
 
-		model@ "\[[107m\[[30m  %20s \[[0m  " Printf
+		model@ "\[[106m\[[30m  %20s \[[0m  " Printf
 
 		a3xDGetCurrent [tbase@ 4 +]DeviceTable@ FoundNode
 
