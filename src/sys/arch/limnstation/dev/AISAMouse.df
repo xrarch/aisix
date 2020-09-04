@@ -47,7 +47,7 @@ fn DrvMouseFoundNode { node -- }
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
-	intn@ MouseID@ "amtsu:%d int:%d" Printf
+	intn@ MouseID@ "amtsu:%d irq:%d" Printf
 
 	pointerof MouseIntr intn@ InterruptRegister
 

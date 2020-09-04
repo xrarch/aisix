@@ -79,13 +79,13 @@ fn LGFXExclude { -- }
 end
 
 fn RestoreFWGFX { -- }
-	if (FWGFXOff@)
+	if (FWGFXOff@ FWGFXNode@ &&)
 		FWGFXNode@ a3xDeviceSelectNode
 			"enable" a3xDCallMethod drop drop drop drop
 		a3xDeviceExit
-	end
 
-	0 FWGFXOff!
+		0 FWGFXOff!
+	end
 end
 
 const LGCommandOffset 0x2000

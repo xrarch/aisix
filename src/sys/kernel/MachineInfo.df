@@ -28,17 +28,22 @@ fn private TriviaX { trivia info -- }
 	info@ trivia@ "\[[107m\[[30m  %20s \[[47m\[[0m  0x%28x\[[0m\n" Printf
 end
 
+externptr KHeapSize
+externptr KHeapStart
+
 fn TriviaTable { -- }
 	"CONTENT" "KERNEL INFO" "\[[40m\[[97m %20s   %30s \[[0m\n" Printf
 
 	"Machine" MachineType@ Trivia
 	"CPU" MachineCPU@ Trivia
 	"Bus" MachineBus@ Trivia
-	"Available RAM (KB)" MachineRAMSize@ 1024 / TriviaD
+	"Available RAM" MachineRAMSize@ TriviaD
 	"RAM address" MachineRAMBase@ TriviaX
 	"Block buffers" NBUF TriviaD
 	"Max processes" PROCMAX TriviaD
 	"Max threads" THREADMAX TriviaD
+	"Heap size" KHeapSize@ TriviaD
+	"Heap address" KHeapStart@ TriviaX
 
 	'\n' Putc
 end

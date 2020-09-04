@@ -5,6 +5,8 @@
 
 var KHeapStart 0
 var KHeapSize 0
+public KHeapSize
+public KHeapStart
 var KHeapLast 0
 
 const MAGIC 0xCAFEBABE

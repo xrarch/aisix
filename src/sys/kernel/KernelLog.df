@@ -141,16 +141,19 @@ fn FPutc { fd c -- }
 	c@ Putc
 end
 
-extern PlatformAlertUser { -- }
+extern PlatformAlertUser { early -- }
+extern PlatformUnalertUser { -- }
 
 fn AskUser { ... fmt anslen -- answer }
-	PlatformAlertUser
+	1 PlatformAlertUser
 
 	argv argc@ fmt@ VPrintf
 
 	anslen@ 1 + Calloc answer!
 
 	answer@ anslen@ Gets
+
+	PlatformUnalertUser
 end
 
 extern PlatformPanic { -- }
@@ -209,7 +212,7 @@ fn Panic { ... fmt -- }
 		CurrentThread@ Thread_Name + thn!
 	end
 
-	PlatformAlertUser
+	0 PlatformAlertUser
 
 	pointerof Panic PanicLink@ Trace
 

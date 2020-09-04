@@ -50,7 +50,7 @@ fn DrvKeybdFoundNode { node -- }
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
-	intn@ KeybdID@ "amtsu:%d int:%d" Printf
+	intn@ KeybdID@ "amtsu:%d irq:%d" Printf
 
 	pointerof KeybdIntr intn@ InterruptRegister
 

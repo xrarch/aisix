@@ -106,19 +106,25 @@ fn PlatformGetc { -- c }
 	rs@ InterruptRestore
 end
 
-fn PlatformAlertUser { -- }
+fn PlatformAlertUser { early -- }
+	RestoreFWGFX
+
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	auto gc
 	"/gconsole" a3xDevTreeWalk gc!
 
-	if (gc@)
+	if (gc@ early@ ~~ &&)
 		gc@ a3xDeviceSelectNode
 			"nodraw" a3xDCallMethod drop drop drop drop
 		a3xDeviceExit
 	end
 
 	a3xConsoleUserOut
+end
+
+fn PlatformUnalertUser { -- }
+	LGFXExclude
 end
 
 fn PlatformSwitchSeg { proc -- }
