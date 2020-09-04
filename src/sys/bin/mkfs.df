@@ -137,6 +137,8 @@ fn Main { ... -- ret }
 	if (SFlag@ ~~)
 		"mkfs: enjoy your new filesystem :)\n" Printf
 	end
+
+	0 ret!
 end
 
 buffer StatB Stat_SIZEOF
