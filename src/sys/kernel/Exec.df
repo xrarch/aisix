@@ -365,7 +365,9 @@ fn private VNewProcess1 { vnode name udvec udcnt -- process }
 	p@ Process_UID + @ process@ Process_UID + !
 
 	if (vnode@ VNode_Permissions + @ SUID &)
-		vnode@ VNode_UID + @ process@ Process_EUID + !
+		if (vnode@ VNode_Mount + @ Mount_Flags + @ FS_NOUID & ~~)
+			vnode@ VNode_UID + @ process@ Process_EUID + !
+		end
 	end else
 		p@ Process_UID + @ process@ Process_EUID + !
 	end

@@ -10,6 +10,8 @@ extern ArgsCheck { arg -- present }
 extern AFSLoadFile { count name destptr -- size ok }
 extern AFSPrintList { path -- }
 
+externptr IDiskBD
+
 var Mounted 0
 
 var TotalRAM 0
@@ -237,7 +239,7 @@ fn DoFile { arg buf -- ret }
 		(* also the base is 0x80000 instead of 0x40000 *)
 
 
-		sz@ a3xCIPtr@ a3xMyDevice@ arg@ LoadBase 4 + @ StandaloneEntry ret!
+		sz@ a3xCIPtr@ IDiskBD@ arg@ LoadBase 4 + @ StandaloneEntry ret!
 
 		ret@ "DoFile (%i)\n" Printf
 	end

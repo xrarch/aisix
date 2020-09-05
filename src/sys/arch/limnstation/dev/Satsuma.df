@@ -120,7 +120,7 @@ fn DrvDKSFoundNode { node -- }
 	end
 
 	if (node@ w@ ==)
-		" (root!)" Printf
+		" (boot device)" Printf
 		devn@ RootDevice!
 	end
 

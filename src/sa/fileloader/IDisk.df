@@ -1,6 +1,7 @@
 #include "<ll>/rta3x/a3x.h"
 
 var IDiskBD 0
+public IDiskBD
 
 extern Panic { ... fmt -- }
 

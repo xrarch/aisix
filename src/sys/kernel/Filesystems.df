@@ -66,7 +66,20 @@ fn VFSInit { -- }
 end
 
 fn VFSMountRoot { -- }
-	if (RootDevice@ ~~)
+	auto rd
+	auto rdt
+	"root" ArgsValue rdt!
+
+	if (rdt@)
+		rdt@ DevByName rd!
+		rdt@ Free
+	end
+
+	if (rd@ ~~)
+		RootDevice@ rd!
+	end
+
+	if (rd@ ~~)
 		"couldn't find root device!\n" Panic
 	end
 
@@ -81,9 +94,9 @@ fn VFSMountRoot { -- }
 
 	dp@ "/dev/" strcpy
 
-	dp@ 5 + RootDevice@ Device_Name + strcpy
+	dp@ 5 + rd@ Device_Name + strcpy
 
-	0 0 "aisixfs" FSByName RootDevice@ dp@ VFSMount rootmount!
+	0 0 "aisixfs" FSByName rd@ dp@ VFSMount rootmount!
 
 	dp@ Free
 
