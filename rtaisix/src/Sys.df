@@ -1,35 +1,35 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/aisix.h"
 
-const SYSOPEN 1
-const SYSWRITE 2
-const SYSCLOSE 3
-const SYSREAD 4
+const SYSOPEN    1
+const SYSWRITE   2
+const SYSCLOSE   3
+const SYSREAD    4
 const SYSNEWPROC 5
-const SYSEXIT 6
-const SYSDUP 7
-const SYSIGN 8
-const SYSWAIT 9
-const SYSSETUID 10
-const SYSGETPID 11
-const SYSGETUID 12
+const SYSEXIT    6
+const SYSDUP     7
+const SYSIGN     8
+const SYSWAIT    9
+const SYSSETUID  10
+const SYSGETPID  11
+const SYSGETUID  12
 const SYSGETEUID 13
 const SYSREADDIR 14
-const SYSPSTAT 15
-const SYSFSTAT 16
-const SYSCHDIR 17
-const SYSUNLINK 18
-const SYSUNAME 19
-const SYSMKDIR 20
-const SYSUMASK 21
-const SYSMOUNT 22
-const SYSUMOUNT 23
-const SYSCHOWN 24
-const SYSCHMOD 25
-const SYSSYNC 26
-const SYSSEEK 27
-const SYSGETCWD 28
-const SYSHALT 29
+const SYSPSTAT   15
+const SYSFSTAT   16
+const SYSCHDIR   17
+const SYSUNLINK  18
+const SYSUNAME   19
+const SYSMKDIR   20
+const SYSUMASK   21
+const SYSMOUNT   22
+const SYSUMOUNT  23
+const SYSCHOWN   24
+const SYSCHMOD   25
+const SYSSYNC    26
+const SYSSEEK    27
+const SYSGETCWD  28
+const SYSHALT    29
 
 asm "
 

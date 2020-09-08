@@ -5,7 +5,7 @@
 
 extern AISIX { ksz args -- ret }
 
-const CompatibleFirmware 30503
+const CompatibleFirmware 30504
 
 var SavedEV 0
 
@@ -54,7 +54,7 @@ fn Main { ksz args -- ret }
 
 	if (vnum@ CompatibleFirmware <)
 		"aisix requires newer firmware!\n" Printf
-		-1 a3xReturn
+		0 a3xReturn
 	end
 
 	"/platform" a3xDeviceSelect
@@ -90,7 +90,6 @@ externptr LIMN2KTimeslice
 
 extern DeviceTree { -- }
 extern ExceptionInit { -- }
-extern LGFXExclude { -- }
 fn PlatformInit { -- }
 	ExceptionInit
 
@@ -105,8 +104,6 @@ fn PlatformInit { -- }
 	DeviceTree
 
 	'\n' Putc
-
-	LGFXExclude
 end
 
 fn PlatformPutc { c -- }
@@ -128,8 +125,6 @@ fn PlatformGetc { -- c }
 end
 
 fn PlatformAlertUser { early -- }
-	RestoreFWGFX
-
 	pointerof PlatformGetc pointerof PlatformPutc KLogAttach
 
 	auto gc
@@ -145,7 +140,6 @@ fn PlatformAlertUser { early -- }
 end
 
 fn PlatformUnalertUser { -- }
-	LGFXExclude
 end
 
 fn PlatformSwitchSeg { proc -- }
@@ -213,7 +207,6 @@ fn PlatformUserToPhys { len user wr -- phys valid }
 end
 
 fn PlatformPrePanic { -- }
-	RestoreFWGFX
 end
 
 fn PlatformPanic { -- }
@@ -225,13 +218,10 @@ fn FWReturn { ret -- }
 	ret@ a3xReturn
 end
 
-extern RestoreFWGFX { -- }
-
 fn PlatformHalt { haltmode -- }
 	InterruptDisable drop
 
 	if (haltmode@ HALT_SHUTDOWN ==)
-		RestoreFWGFX
 		1024 FWReturn
 	end
 

@@ -13,20 +13,12 @@ const LGRegMode   0x3018
 const LGRegCause  0x301C
 const LGRegCurPos 0x3020
 
-var FWGFXOff 0
-
-var FWGFXNode 0
-
 fn DrvLGFXFoundNode { node -- }
 	auto gfx
 	AllocGFX gfx!
 
 	if (gfx@ iserr)
 		return
-	end
-
-	if ("fwuse" a3xDGetProperty)
-		node@ FWGFXNode!
 	end
 
 	"framebuffer" a3xDGetProperty gfx@ GFX_FBAddr + !
@@ -57,35 +49,10 @@ fn DrvLGFXFoundNode { node -- }
 	pointerof LGFXScroll gfx@ GFX_Scroll + !
 	pointerof LGFXInvert gfx@ GFX_Invert + !
 
-	auto rs
-	InterruptDisable rs!
-
 	0 sbe@ LGRegWrite + !
 	0 sbe@ LGRegRead + !
 
-	rs@ InterruptRestore
-
 	gfx@ GFXRegister
-end
-
-fn LGFXExclude { -- }
-	if (FWGFXNode@)
-		FWGFXNode@ a3xDeviceSelectNode
-			1 FWGFXOff!
-
-			"disable" a3xDCallMethod drop drop drop drop
-		a3xDeviceExit
-	end
-end
-
-fn RestoreFWGFX { -- }
-	if (FWGFXOff@ FWGFXNode@ &&)
-		FWGFXNode@ a3xDeviceSelectNode
-			"enable" a3xDCallMethod drop drop drop drop
-		a3xDeviceExit
-
-		0 FWGFXOff!
-	end
 end
 
 const LGCommandOffset 0x2000
@@ -128,11 +95,11 @@ fn private Go { gfx -- }
 	auto writep
 	sbe@ LGRegWrite + writep!
 
+	while (readp@@ writep@@ ~=) end
+
 	WriteDelta@ writep@ +=
 
 	0 WriteDelta!
-
-	while (readp@@ writep@@ ~=) end
 end
 
 fn private Put { cmd gfx -- }
@@ -157,9 +124,6 @@ fn private Put { cmd gfx -- }
 end
 
 fn (GFXInvert) LGFXInvert { x y w h gfx -- }
-	auto rs
-	InterruptDisable rs!
-
 	gfx@ GFX_Height + @ 20 << gfx@ GFX_Width + @ 8 << | TEXDESTDIM | gfx@ Put
 	0 TEXDESTVRAM | gfx@ Put
 	h@ 20 << w@ 8 << | ORDESTDIM | gfx@ Put
@@ -167,14 +131,9 @@ fn (GFXInvert) LGFXInvert { x y w h gfx -- }
 	0x7FFF 12 << MODEXOR | OPRECT | gfx@ Put
 
 	gfx@ Go
-
-	rs@ InterruptRestore
 end
 
 fn (GFXRect) LGFXRectangle { x y w h color gfx -- }
-	auto rs
-	InterruptDisable rs!
-
 	gfx@ GFX_Height + @ 20 << gfx@ GFX_Width + @ 8 << | TEXDESTDIM | gfx@ Put
 	0 TEXDESTVRAM | gfx@ Put
 	h@ 20 << w@ 8 << | ORDESTDIM | gfx@ Put
@@ -182,8 +141,6 @@ fn (GFXRect) LGFXRectangle { x y w h color gfx -- }
 	color@ 12 << MODECOPY | OPRECT | gfx@ Put
 
 	gfx@ Go
-
-	rs@ InterruptRestore
 end
 
 
@@ -221,9 +178,6 @@ fn (GFXBlit) LGFXBlit { x y w h ptr gfx -- }
 end
 
 fn private LGFXVBlit { xd yd wd hd xs ys ws hs gfx -- }
-	auto rs
-	InterruptDisable rs!
-
 	auto w
 	gfx@ GFX_Width + @ w!
 
@@ -241,8 +195,6 @@ fn private LGFXVBlit { xd yd wd hd xs ys ws hs gfx -- }
 	MODECOPY BLITRECT | gfx@ Put
 
 	gfx@ Go
-
-	rs@ InterruptRestore
 end
 
 fn (GFXScroll) LGFXScroll { x y w h color rows gfx -- }
