@@ -371,6 +371,19 @@ fn private BMap { bn reading vnode -- buf }
 	auto bm
 	vd@ AVData_BNCache + @ bm!
 
+	if (bm@ 0 ==)
+		1 PMMAlloc bm!
+
+		if (bm@ iserr)
+			bm@ buf!
+			return
+		end
+
+		vd@ AVData_Entry + @ bm@ !
+
+		bm@ vd@ AVData_BNCache + !
+	end
+
 	auto bno
 	auto cnt
 	auto cache
@@ -1092,17 +1105,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 
 	buf@ brelse
 
-	1 PMMAlloc buf!
-
-	if (buf@ iserr)
-		vd@ Free
-		buf@ ok!
-		return
-	end
-
-	inode@ INode_startblock + @ buf@ !
-
-	buf@ vd@ AVData_BNCache + !
+	0 vd@ AVData_BNCache + !
 	0 vd@ AVData_FirstBN + !
 	0 vd@ AVData_NextBN + !
 
@@ -1112,7 +1115,10 @@ end
 fn (FSPutNode) AISIXFSPutNode { vnode -- ok }
 	vnode@ UpdateNode ok!
 
-	1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
+		1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+	end
+
 	vnode@ VNode_FSData + @ Free
 end
 

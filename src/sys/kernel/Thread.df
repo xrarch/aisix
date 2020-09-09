@@ -27,7 +27,12 @@ fn ThreadInit { -- }
 	auto process
 	pointerof AISIXInitialThread 0 0 0 ProcessNew process!
 
-	if (process@ iserr KernelProcess@ process@ ~= ||)
+	if (process@ iserr)
+		process@ abs process!
+		[process@]ErrorNames@ "couldn't set up kernel process: %s\n" Panic
+	end
+
+	if (KernelProcess@ process@ ~=)
 		"couldn't set up kernel process\n" Panic
 	end
 
@@ -577,6 +582,9 @@ fn ProcessNew { entry name udata udatasz -- process }
 	ProcessAllocate process!
 
 	if (process@ iserr)
+		if (canon@)
+			name@ Free
+		end
 		return
 	end
 

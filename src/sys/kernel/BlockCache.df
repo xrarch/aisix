@@ -47,7 +47,15 @@ fn BlockInit { -- }
 
 		b@ BufferHead Buffer_Next + !
 
-		1 PMMAlloc b@ Buffer_Data + !
+		auto bd
+		1 PMMAlloc bd!
+
+		if (bd@ iserr)
+			bd@ abs bd!
+			[bd@]ErrorNames@ "couldn't allocate block buffer: %s\n" Panic
+		end
+
+		bd@ b@ Buffer_Data + !
 
 		Buffer_SIZEOF b +=
 	end

@@ -31,7 +31,7 @@ end
 externptr KHeapSize
 externptr KHeapStart
 
-fn TriviaTable { -- }
+fn TriviaTable { ksz -- }
 	"CONTENT" "KERNEL INFO" "\[[40m\[[97m %20s   %30s \[[0m\n" Printf
 
 	"Machine" MachineType@ Trivia
@@ -44,6 +44,7 @@ fn TriviaTable { -- }
 	"Max threads" THREADMAX TriviaD
 	"Heap size" KHeapSize@ TriviaD
 	"Heap address" KHeapStart@ TriviaX
+	"Kernel image size" ksz@ TriviaD
 
 	'\n' Putc
 end

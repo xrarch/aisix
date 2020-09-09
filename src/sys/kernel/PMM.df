@@ -42,7 +42,7 @@ fn private CheckRow { pages start -- real }
 	start@ real!
 
 	if (max@ Pages@ >=)
-		"CheckRow\n" Panic
+		pages@ start@ max@ "max=%d start=%d pages=%d CheckRow\n" Panic
 	end
 
 	while (start@ max@ <)

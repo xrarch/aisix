@@ -449,6 +449,8 @@ fn CommandLine { -- }
 	while (Command ~~) end
 end
 
+buffer PWDBuf 512
+
 fn Main { ... -- ret }
 	TTYI_IGN TTYI_CHILD_ALL | SetTTYIgnore drop
 
@@ -462,10 +464,12 @@ fn Main { ... -- ret }
 	end
 	
 	while (1)
+		PWDBuf GetCWD drop
+
 		if (LastRet@)
-			prmpt@ LastRet@ "%d%s" Printf
+			prmpt@ PWDBuf LastRet@ "%3d %s %s" Printf
 		end else
-			prmpt@ Puts
+			prmpt@ PWDBuf "%s %s" Printf
 		end
 
 		if (Prompt 255 Readline)
