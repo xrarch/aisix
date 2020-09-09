@@ -234,13 +234,6 @@ fn EInfo { name -- }
 				break
 			end
 		end
-
-		if (ItemsLeft@ 0 ==)
-			ItemPerRow@ ItemsLeft!
-			'\n' Putc
-		end
-
-		1 ItemsLeft -=
 	end
 
 	ind@ name@ [q@]TypeColors@ "%s%s\[[0m%s" Printf
@@ -248,12 +241,19 @@ fn EInfo { name -- }
 	if (LFlag@)
 		'\n' Putc
 	end else
-		auto spaces
-		Gap@ nl@ - spaces!
+		1 ItemsLeft -=
 
-		while (spaces@)
-			' ' Putc
-			1 spaces -=
+		if (ItemsLeft@ 0 ==)
+			ItemPerRow@ ItemsLeft!
+			'\n' Putc
+		end else
+			auto spaces
+			Gap@ nl@ - spaces!
+
+			while (spaces@)
+				' ' Putc
+				1 spaces -=
+			end
 		end
 	end
 end

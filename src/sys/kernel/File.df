@@ -564,6 +564,12 @@ fn Chdir { path -- ok }
 		return
 	end
 
+	if (vnode@ VNode_Type + @ VNODE_DIR ~=)
+		vnode@ VNodePut
+		-ENOTDIR ok!
+		return
+	end
+
 	auto p
 	CurrentThread@ Thread_Process + @ p!
 
