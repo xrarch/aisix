@@ -978,6 +978,12 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	buf@ bwrite
 
 	buf@ brelse
+
+	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
+		1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+	end
+
+	vnode@ VNode_FSData + @ Free
 end
 
 fn (FSMount) AISIXFSMount { mount -- root }
