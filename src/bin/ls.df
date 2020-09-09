@@ -78,11 +78,17 @@ fn Ls { path -- }
 	if (StatB Stat_Type + @ VNODE_DIR ==)
 		if (DFlag@)
 			path@ EInfo
+			if (LFlag@ ~~)
+				'\n' Putc
+			end
 		end else
 			path@ fd@ ListDir
 		end
 	end else
 		path@ EInfo
+		if (LFlag@ ~~)
+			'\n' Putc
+		end
 	end
 
 	fd@ Close drop
