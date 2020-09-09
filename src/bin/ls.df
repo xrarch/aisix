@@ -195,12 +195,16 @@ fn EInfo { name -- }
 	auto pad
 	0 pad!
 
+	auto auxc
+	"" auxc!
+
 	auto ind
 	if (q@ VNODE_DIR ==)
 		"/" ind!
 		1 pad!
 	end elseif (mode@ ANYX &)
-		"@" ind!
+		"\[[91m" auxc!
+		"*" ind!
 		1 pad!
 	end else
 		"" ind!
@@ -242,7 +246,7 @@ fn EInfo { name -- }
 		end
 	end
 
-	ind@ name@ [q@]TypeColors@ "%s%s\[[0m%s" Printf
+	ind@ name@ auxc@ [q@]TypeColors@ "%s%s%s\[[0m%s" Printf
 
 	if (LFlag@)
 		'\n' Putc
