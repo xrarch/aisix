@@ -88,6 +88,10 @@ fn Ls { path -- }
 	fd@ Close drop
 end
 
+var Gap 16
+var ItemPerRow 5
+var ItemsLeft 5
+
 buffer DirentB Dirent_SIZEOF
 
 fn ListDir { path fd -- }
@@ -140,6 +144,10 @@ fn ListDir { path fd -- }
 			buf@ Free
 		end
 	end
+
+	if (ItemsLeft@ ItemPerRow@ ~=)
+		'\n' Putc
+	end
 end
 
 table TypeNames
@@ -148,6 +156,14 @@ table TypeNames
 	'd'
 	'c'
 	'b'
+endtable
+
+table TypeColors
+	0
+	""
+	"\[[94m"
+	"\[[102m\[[30m"
+	"\[[46m\[[30m"
 endtable
 
 table ModeNames
@@ -161,14 +177,30 @@ table ModeNames
 	"rwx"
 endtable
 
+const ANYX 73
+
 fn EInfo { name -- }
+	auto q
+	StatB Stat_Type + @ q!
+
+	auto mode
+	StatB Stat_Mode + @ mode!
+
+	auto pad
+	0 pad!
+
+	auto ind
+	if (q@ VNODE_DIR ==)
+		"/" ind!
+		1 pad!
+	end elseif (mode@ ANYX &)
+		"@" ind!
+		1 pad!
+	end else
+		"" ind!
+	end
+
 	if (LFlag@)
-		auto mode
-		StatB Stat_Mode + @ mode!
-
-		auto q
-		StatB Stat_Type + @ q!
-
 		if (mode@ SUID &)
 			's' Putc
 		end else
@@ -187,7 +219,41 @@ fn EInfo { name -- }
 
 		StatB Stat_UID + @ "%4d " Printf
 		StatB Stat_Size + @ "%8d " Printf
+	end else
+		auto nl
+		name@ strlen nl!
+		pad@ nl +=
+
+		while (nl@ Gap@ >=)
+			16 Gap +=
+			1 ItemPerRow -=
+
+			if (ItemPerRow@ 1 <=)
+				16 Gap!
+				5 ItemPerRow!
+				break
+			end
+		end
+
+		if (ItemsLeft@ 0 ==)
+			ItemPerRow@ ItemsLeft!
+			'\n' Putc
+		end
+
+		1 ItemsLeft -=
 	end
 
-	name@ "%s\n" Printf
+	ind@ name@ [q@]TypeColors@ "%s%s\[[0m%s" Printf
+
+	if (LFlag@)
+		'\n' Putc
+	end else
+		auto spaces
+		Gap@ nl@ - spaces!
+
+		while (spaces@)
+			' ' Putc
+			1 spaces -=
+		end
+	end
 end

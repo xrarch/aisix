@@ -54,8 +54,6 @@ fn Main { ... -- ret }
 
 
 	while (1)
-		"init: spawning shell\n" Printf
-
 		auto shpid
 		"/bin/sh" Spawn shpid!
 

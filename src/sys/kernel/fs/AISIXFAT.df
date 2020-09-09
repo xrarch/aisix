@@ -277,6 +277,10 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 
 		b@ Buffer_BlockNum + @ ent! 
 
+		if (ent@ 0 ==)
+			"balloc'd entry as superblock!\n" Panic
+		end
+
 		b@ brelse
 
 		ent@ vnode@ VNode_FSData + @ AVData_Entry + !
@@ -337,6 +341,10 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 			end
 
 			buf@ Buffer_BlockNum + @ ent!
+
+			if (ent@ 0 ==)
+				"balloc'd as superblock!\n" Panic
+			end
 
 			buf@ brelse
 
@@ -431,6 +439,10 @@ fn private BMap { bn reading vnode -- buf }
 		end
 	end
 
+	if (bno@ 0 ==)
+		"BMap: got superblock as part of file\n" Panic
+	end
+
 	bno@ vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
 end
 
@@ -474,6 +486,10 @@ fn private TruncNode { vnode -- ok }
 			if (fatbuf@ iserr)
 				fatbuf@ ok!
 				return
+			end
+
+			if (fatbuf@ Buffer_BlockNum + @ 0 ==)
+				"TruncNode: got superblock as part of file!\n" Panic
 			end
 		end
 

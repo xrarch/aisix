@@ -466,11 +466,7 @@ fn Main { ... -- ret }
 	while (1)
 		PWDBuf GetCWD drop
 
-		if (LastRet@)
-			prmpt@ PWDBuf LastRet@ "%3d %s %s" Printf
-		end else
-			prmpt@ PWDBuf "%s %s" Printf
-		end
+		prmpt@ PWDBuf "\[[96m%s\[[0m %s" Printf
 
 		if (Prompt 255 Readline)
 			0 Exit
