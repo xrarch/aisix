@@ -23,4 +23,4 @@ obj/rtaisix.o: $(OBJ) ./src/_start.o ./src/end.o
 	$(AS) ./src/end.s ./src/end.o
 
 cleanup:
-	rm $(OBJ) ./src/_start.o ./src/end.o obj/rtaisix.o
+	rm -f $(OBJ) ./src/_start.o ./src/end.o obj/rtaisix.o
