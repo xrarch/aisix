@@ -19,13 +19,13 @@ var GCHeight 0
 const GConsoleBG 0x394C
 const GConsoleFG 0x7FFF
 
-const FontWidth 6
+const FontWidth 8
 const FontWidthA (FontWidth 1 -)
 
 const FontBytesPerRow 1
-const FontHeight 12
+const FontHeight 16
 
-const FontBitD 0
+const FontBitD 1
 
 const GConsoleMargin (FontWidth 2 *)
 const GConsoleMargin2 (GConsoleMargin 2 *)
@@ -522,7 +522,7 @@ asm "
 .section data
 
 Font:
-	.static font-haiku.raw
+	.static font-terminus.raw
 
 .section text
 
