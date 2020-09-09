@@ -70,47 +70,7 @@ struct INode
 	4 bytesize
 endstruct
 
-fn private GetBlockStatus { block mount -- ok status }
-	auto fb
-	block@ 1024 / fb!
-	mount@ Mount_FSData + @ AFSData_FATStart + @ fb +=
-
-	fb@ mount@ Mount_Device + @ bread fb!
-
-	if (fb@ iserr)
-		fb@ ok!
-		return
-	end
-
-	fb@ Buffer_Data + @ block@ 4 * 4096 % + @ status!
-
-	fb@ brelse
-
-	0 ok!
-end
-
-fn private SetBlockStatus { status block mount -- ok }
-	auto fb
-	block@ 1024 / fb!
-	mount@ Mount_FSData + @ AFSData_FATStart + @ fb +=
-
-	fb@ mount@ Mount_Device + @ bread fb!
-
-	if (fb@ iserr)
-		fb@ ok!
-		return
-	end
-
-	status@ fb@ Buffer_Data + @ block@ 4 * 4096 % + !
-
-	0 ok!
-
-	fb@ bwrite
-
-	fb@ brelse
-end
-
-fn private BAlloc { link mount -- buf }
+fn private BAlloc { link mount prefatbuf -- buf }
 	auto fsd
 	mount@ Mount_FSData + @ fsd!
 
@@ -125,9 +85,31 @@ fn private BAlloc { link mount -- buf }
 
 	auto bn
 
-	auto r
+	auto prefatbn
 
-	auto rs
+	if (prefatbuf@)
+		prefatbuf@ Buffer_BlockNum + @ prefatbn!
+	end else
+		-1 prefatbn!
+	end
+
+	auto fatb
+
+	lfb@ 1024 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
+
+	0 buf!
+
+	if (lfb@ 1024 %)
+		if (fatb@ prefatbn@ ~=)
+			fatb@ mount@ Mount_Device + @ bread buf!
+
+			if (buf@ iserr)
+				return
+			end
+		end else
+			prefatbuf@ buf!
+		end
+	end
 
 	auto search
 	0 search!
@@ -138,36 +120,58 @@ fn private BAlloc { link mount -- buf }
 				break
 			end else
 				1 search!
+				mount@ Mount_FSData + @ AFSData_FATStart + @ fatb!
 				lfb@ 1 + top!
 				0 i!
 			end
 		end
 
-		InterruptDisable rs!
-		i@ mount@ GetBlockStatus bn! r!
+		if (i@ 1024 % 0 ==)
+			if (buf@)
+				if (buf@ prefatbuf@ ~=)
+					buf@ brelse
+				end
+			end
 
-		if (r@ iserr)
-			rs@ InterruptRestore
-			r@ buf!
-			return
+			i@ 1024 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
+
+			if (fatb@ prefatbn@ ~=)
+				fatb@ mount@ Mount_Device + @ bread buf!
+
+				if (buf@ iserr)
+					return
+				end
+			end else
+				prefatbuf@ buf!
+			end
 		end
 
+		buf@ Buffer_Data + @ i@ 4 * 4096 % + @ bn!
+
+		auto rq
+
 		if (bn@ 0 ==)
+			i@ mount@ Mount_Device + @ bread rq!
+
+			if (rq@ iserr)
+				if (buf@ prefatbuf@ ~=)
+					buf@ brelse
+				end
+
+				rq@ buf!
+				return
+			end
+
 			(* allocate *)
-			link@ i@ mount@ SetBlockStatus r!
-			rs@ InterruptRestore
+			link@ buf@ Buffer_Data + @ i@ 4 * 4096 % + !
 
-			if (r@ iserr)
-				r@ buf!
-				return
+			buf@ bwrite
+
+			if (buf@ prefatbuf@ ~=)
+				buf@ brelse
 			end
 
-			i@ mount@ Mount_Device + @ bread buf!
-
-			if (buf@ iserr)
-				0 i@ mount@ SetBlockStatus drop
-				return
-			end
+			rq@ buf!
 
 			buf@ Buffer_Data + @ 4096 0 memset
 
@@ -176,18 +180,18 @@ fn private BAlloc { link mount -- buf }
 			i@ fsd@ AFSData_LastFreeBlock + !
 
 			return
-		end else
-			rs@ InterruptRestore
 		end
 
 		1 i +=
 	end
 
-	-ENOSPC buf!
-end
+	if (buf@)
+		if (buf@ prefatbuf@ ~=)
+			buf@ brelse
+		end
+	end
 
-fn private BFree { block mount -- ok }
-	0 block@ mount@ SetBlockStatus ok!
+	-ENOSPC buf!
 end
 
 fn private UpdateNode { vnode -- ok }
@@ -265,7 +269,7 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 			"balloc entry on read\n" Panic
 		end
 
-		0xFFFFFFFF mount@ BAlloc b!
+		0xFFFFFFFF mount@ 0 BAlloc b!
 
 		if (b@ iserr)
 			return
@@ -289,27 +293,45 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 
 	ent@ b!
 
-	auto t
+	auto fatb
+	b@ 1024 / fatb!
+
+	auto fatbuf
+	fatb@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
+
+	if (fatbuf@ iserr)
+		fatbuf@ b!
+		return
+	end
 
 	auto i
 	0 i!
 
 	while (i@ count@ <)
-		b@ mount@ GetBlockStatus ent! t!
+		if (b@ 1024 / fatb@ ~=)
+			fatbuf@ brelse
 
-		if (t@ iserr)
-			t@ b!
-			return
+			b@ 1024 / fatb!
+
+			fatb@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
+
+			if (fatbuf@ iserr)
+				fatbuf@ b!
+				return
+			end
 		end
+
+		fatbuf@ Buffer_Data + @ b@ 4 * 4096 % + @ ent!
 
 		if (ent@ 0xFFFFFFFF ==)
 			if (reading@)
 				i@ "balloc on read: %d\n" Panic
 			end
 
-			0xFFFFFFFF mount@ BAlloc buf!
+			0xFFFFFFFF mount@ fatbuf@ BAlloc buf!
 
 			if (buf@ iserr)
+				fatbuf@ brelse
 				buf@ b!
 				return
 			end
@@ -318,12 +340,9 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 
 			buf@ brelse
 
-			ent@ b@ mount@ SetBlockStatus t!
+			ent@ fatbuf@ Buffer_Data + @ b@ 4 * 4096 % + !
 
-			if (t@ iserr)
-				t@ b!
-				return
-			end
+			fatbuf@ bwrite
 		end
 
 		if (cache@)
@@ -335,6 +354,8 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 
 		1 i +=
 	end
+
+	fatbuf@ brelse
 end
 
 fn private BMap { bn reading vnode -- buf }
@@ -417,22 +438,41 @@ fn private TruncNode { vnode -- ok }
 	0xFFFFFFFF vd@ AVData_Entry + !
 	1 vnode@ VNode_Dirty + !
 
+	auto fatbuf
+	0 fatbuf!
+
+	auto fatbn
+	-1 fatbn!
+
 	auto le
 
 	while (ent@ 0xFFFFFFFF ~=)
 		ent@ le!
 
-		ent@ mount@ GetBlockStatus ent! ok!
+		if (ent@ 1024 / fatbn@ ~=)
+			if (fatbuf@)
+				fatbuf@ brelse
+			end
 
-		if (ok@ iserr)
-			return
+			ent@ 1024 / fatbn!
+
+			fatbn@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
+
+			if (fatbuf@ iserr)
+				fatbuf@ ok!
+				return
+			end
 		end
 
-		le@ mount@ BFree ok!
+		fatbuf@ Buffer_Data + @ ent@ 4 * 4096 % + @ ent!
 
-		if (ok@ iserr)
-			return
-		end
+		0 fatbuf@ Buffer_Data + @ le@ 4 * 4096 % + !
+
+		fatbuf@ bwrite
+	end
+
+	if (fatbuf@)
+		fatbuf@ brelse
 	end
 
 	0 ok!

@@ -710,14 +710,6 @@ fn ProcessKill { ret process -- }
 
 			1 i +=
 		end
-
-		(* all of the userspace threads will never run again, and the kernel ones will exit
-		instead of returning home, so it's safe to free the process image now *)
-		if (process@ Process_Mapped + @)
-			process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
-			process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
-			0 process@ Process_Mapped + !
-		end
 	end
 
 	auto thleft
@@ -765,6 +757,12 @@ fn ProcessKill { ret process -- }
 
 			4 ofile +=
 			1 i +=
+		end
+
+		if (process@ Process_Mapped + @)
+			process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
+			process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
+			0 process@ Process_Mapped + !
 		end
 
 		parent@ Process_WaitQ + WakeQueue

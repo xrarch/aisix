@@ -271,7 +271,6 @@ fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages e
 	end
 
 	datasize@ bsssize@ + datapages!
-
 	udvec@ udcnt@ VecSize datapages +=
 
 	if (datapages@ 0xFFF &)
@@ -310,18 +309,14 @@ fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages e
 		return
 	end
 
-	datasize@ bsssize@ + bytes!
-
-	while (datasize@ bytes@ <)
-		0 data@ datasize@ + !
-
-		4 datasize +=
-	end
+	data@ datasize@ +
+	bsssize@
+	0 memset
 
 	if (udcnt@)
-		bytes@ DATA + udata!
+		DATA datasize@ + bsssize@ + udata!
 
-		udvec@ udcnt@ data@ datasize@ + udata@ VecCopy
+		udvec@ udcnt@ data@ datasize@ + bsssize@ + udata@ VecCopy
 	end else
 		0 udata!
 	end

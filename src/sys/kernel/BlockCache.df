@@ -205,13 +205,11 @@ fn bsync { -- ok }
 	BufferHead Buffer_Next + @ buf!
 
 	while (buf@ BufferHead ~=)
+		UnlockBCache
+
 		buf@ bupdate ok!
 
-		if (ok@ iserr)
-			UnlockBCache
-			return
-		end
-
+		LockBCache
 		buf@ Buffer_Next + @ buf!
 	end
 

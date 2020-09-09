@@ -192,16 +192,11 @@ fn (DevRead) DKSRead { buf len unit seek -- bytes }
 		return
 	end
 
-	auto rs
-	InterruptDisable rs!
-
 	dks@ DKS_Unit + @ DKSPortA DCitronOutl
 	DKSCmdSelect DKSCmdPort DCitronCommand
 
 	seek@ DKSPortA DCitronOutl
 	DKSCmdRead DKSCmdPort DCitronCommand
-
-	rs@ InterruptRestore
 
 	DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
 
@@ -245,18 +240,13 @@ fn (DevWrite) DKSWrite { buf len unit seek -- bytes }
 		return
 	end
 
-	DKSBuffer buf@ 4096 memcpy
-
-	auto rs
-	InterruptDisable rs!
+	buf@ DKSBuffer 4 4 1024 2 1 0 0 DMATransfer
 
 	dks@ DKS_Unit + @ DKSPortA DCitronOutl
 	DKSCmdSelect DKSCmdPort DCitronCommand
 
 	seek@ DKSPortA DCitronOutl
 	DKSCmdWrite DKSCmdPort DCitronCommand
-
-	rs@ InterruptRestore
 
 	UnlockDKS
 

@@ -925,7 +925,7 @@ end
 
 fn VFSSyncWorker { -- }
 	while (1)
-		if (3000 SleepFor)
+		if (5000 SleepFor)
 			"sync thread killed in its sleep\n" Panic
 		end
 
