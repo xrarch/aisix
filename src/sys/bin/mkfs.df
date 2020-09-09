@@ -228,33 +228,54 @@ fn InitializeFAT { fd -- }
 	auto cantalloc
 	1 RESERVEDBLOCKS + FATSize@ + ISize@ + cantalloc!
 
-	auto buf
-	BlockBuf buf!
+	auto blocks
+	cantalloc@ 1024 / blocks!
 
-	buf@ BLOCKSZ 0 memset
+	if (cantalloc@ 4096 %)
+		1 blocks +=
+	end
+
+	auto block
+	FATStart@ block!
 
 	auto i
 	0 i!
 
-	while (i@ cantalloc@ <)
-		0xFFFFFFFF buf@ i@ 4 * + !
+	while (i@ blocks@ <)
+		auto buf
+		BlockBuf buf!
+
+		buf@ BLOCKSZ 0 memset
+
+		auto m
+		cantalloc@ 1024 min m!
+
+		m@ cantalloc -=
+
+		auto j
+		0 j!
+
+		while (j@ m@ <)
+			0xFFFFFFFF buf@ j@ 4 * + !
+
+			1 j +=
+		end
+
+		block@ buf@ fd@ bwrite
+		1 block +=
 
 		1 i +=
 	end
 
-	FATStart@ buf@ fd@ bwrite
-
-	FATStart@ 1 + i!
-
 	auto max
-	i@ FATSize@ + max!
+	block@ FATSize@ + max!
 
 	ZeroBlock buf!
 
-	while (i@ max@ <)
-		i@ buf@ fd@ bwrite
+	while (block@ max@ <)
+		block@ buf@ fd@ bwrite
 
-		1 i +=
+		1 block +=
 	end
 end
 

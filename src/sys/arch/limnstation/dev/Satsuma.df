@@ -157,15 +157,7 @@ fn private UnlockDKS { -- }
 	DKSLock UnlockMutex
 end
 
-fn (DevRead) DKSRead { buf len unit seek -- bytes }
-	if (len@ 4096 ~=)
-		len@ "dksread: bad len %d\n" Panic
-	end
-
-	if (seek@ 0xFFF &)
-		"dksread: bad seek\n" Panic
-	end
-
+fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 	if (unit@ DKSMAX >=)
 		unit@ "dksread: unit too big %x\n" Panic
 	end
@@ -177,43 +169,40 @@ fn (DevRead) DKSRead { buf len unit seek -- bytes }
 		unit@ "dksread: no such drive %x\n" Panic
 	end
 
-	12 seek >>=
-
 	if (seek@ dks@ DKS_Blocks + @ >=)
 		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
-		-EIO bytes!
+		-EIO blocks!
 		return
 	end
 
 	dks@ DKS_Offset + @ seek +=
 
-	if (LockDKS)
-		-EINTR bytes!
-		return
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		if (LockDKS)
+			-EINTR blocks!
+			return
+		end
+
+		dks@ DKS_Unit + @ DKSPortA DCitronOutl
+		DKSCmdSelect DKSCmdPort DCitronCommand
+
+		seek@ DKSPortA DCitronOutl
+		DKSCmdRead DKSCmdPort DCitronCommand
+
+		DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
+
+		UnlockDKS
+
+		1 i +=
 	end
 
-	dks@ DKS_Unit + @ DKSPortA DCitronOutl
-	DKSCmdSelect DKSCmdPort DCitronCommand
-
-	seek@ DKSPortA DCitronOutl
-	DKSCmdRead DKSCmdPort DCitronCommand
-
-	DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
-
-	UnlockDKS
-
-	4096 bytes!
+	len@ blocks!
 end
 
-fn (DevWrite) DKSWrite { buf len unit seek -- bytes }
-	if (len@ 4096 ~=)
-		len@ "dkswrite: bad len %d\n" Panic
-	end
-
-	if (seek@ 0xFFF &)
-		"dkswrite: bad seek\n" Panic
-	end
-
+fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 	if (unit@ DKSMAX >=)
 		unit@ "dkswrite: unit too big %x\n" Panic
 	end
@@ -224,31 +213,36 @@ fn (DevWrite) DKSWrite { buf len unit seek -- bytes }
 	if (dks@ DKS_Exists + @ ~~)
 		unit@ "dkswrite: no such drive %x\n" Panic
 	end
-
-	12 seek >>=
 	
 	if (seek@ dks@ DKS_Blocks + @ >=)
 		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
-		-EIO bytes!
+		-EIO blocks!
 		return
 	end
 
 	dks@ DKS_Offset + @ seek +=
 
-	if (LockDKS)
-		-EINTR bytes!
-		return
+	auto i
+	0 i!
+
+	while (i@ len@ <)
+		if (LockDKS)
+			-EINTR blocks!
+			return
+		end
+
+		buf@ DKSBuffer 4 4 1024 2 1 0 0 DMATransfer
+
+		dks@ DKS_Unit + @ DKSPortA DCitronOutl
+		DKSCmdSelect DKSCmdPort DCitronCommand
+
+		seek@ DKSPortA DCitronOutl
+		DKSCmdWrite DKSCmdPort DCitronCommand
+
+		UnlockDKS
+
+		1 i +=
 	end
 
-	buf@ DKSBuffer 4 4 1024 2 1 0 0 DMATransfer
-
-	dks@ DKS_Unit + @ DKSPortA DCitronOutl
-	DKSCmdSelect DKSCmdPort DCitronCommand
-
-	seek@ DKSPortA DCitronOutl
-	DKSCmdWrite DKSCmdPort DCitronCommand
-
-	UnlockDKS
-
-	4096 bytes!
+	len@ blocks!
 end

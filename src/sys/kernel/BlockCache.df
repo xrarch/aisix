@@ -150,8 +150,8 @@ fn bread { blockno dev -- buf }
 
 	if (buf@ Buffer_Valid + @ ~~)
 		buf@ Buffer_Data + @
-		BLOCKSZ
-		blockno@ BLOCKSZ *
+		1
+		blockno@
 		dev@ DeviceRead ok!
 
 		if (ok@ iserr)
@@ -194,8 +194,8 @@ fn bupdate { buf -- ok }
 
 	if (buf@ Buffer_Valid + @ buf@ Buffer_Dirty + @ &&)
 		buf@ Buffer_Data + @
-		BLOCKSZ
-		buf@ Buffer_BlockNum + @ BLOCKSZ *
+		1
+		buf@ Buffer_BlockNum + @
 		buf@ Buffer_Device + @ DeviceWrite ok!
 
 		0 buf@ Buffer_Dirty + !
