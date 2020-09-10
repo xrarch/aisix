@@ -210,6 +210,9 @@ fn EInfo { name -- }
 		"" ind!
 	end
 
+	auto mygap
+	Gap@ mygap!
+
 	if (LFlag@)
 		if (mode@ SUID &)
 			's' Putc
@@ -234,13 +237,11 @@ fn EInfo { name -- }
 		name@ strlen nl!
 		pad@ nl +=
 
-		while (nl@ Gap@ >=)
-			16 Gap +=
-			1 ItemPerRow -=
+		while (nl@ mygap@ >=)
+			16 mygap +=
+			1 ItemsLeft -=
 
-			if (ItemPerRow@ 1 <=)
-				16 Gap!
-				5 ItemPerRow!
+			if (ItemsLeft@ 1 <=)
 				break
 			end
 		end
@@ -257,12 +258,14 @@ fn EInfo { name -- }
 			ItemPerRow@ ItemsLeft!
 			'\n' Putc
 		end else
-			auto spaces
-			Gap@ nl@ - spaces!
+			if (mygap@ nl@ >=)
+				auto spaces
+				mygap@ nl@ - spaces!
 
-			while (spaces@)
-				' ' Putc
-				1 spaces -=
+				while (spaces@)
+					' ' Putc
+					1 spaces -=
+				end
 			end
 		end
 	end
