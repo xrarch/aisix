@@ -275,19 +275,19 @@ fn Scheduler { -- }
 				KDebug
 			end
 
+			[i@]Threads@ thread!
+
+			if (thread@ 0 ==)
+				1 i +=
+				continue
+			end
+
 			auto kt
 			TTYKill@ kt!
 
 			if (kt@)
 				0 TTYKill!
 				kt@ KillTTY
-			end
-
-			[i@]Threads@ thread!
-
-			if (thread@ 0 ==)
-				1 i +=
-				continue
 			end
 
 			if (thread@ Thread_Status + @ TS_READY ~=)

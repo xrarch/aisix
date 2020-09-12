@@ -241,6 +241,8 @@ fn DoFile { arg buf -- ret }
 
 		sz@ a3xCIPtr@ IDiskBD@ arg@ LoadBase 4 + @ StandaloneEntry ret!
 
+		"\[[0m" Printf
+
 		ret@ "DoFile (%i)\n" Printf
 	end
 end

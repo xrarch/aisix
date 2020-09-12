@@ -16,6 +16,7 @@ struct GFX
 	4 Blit
 	4 Scroll
 	4 Invert
+	4 VBlit
 endstruct
 
 fnptr GFXRect { x y w h color gfx -- }
@@ -23,6 +24,8 @@ fnptr GFXRect { x y w h color gfx -- }
 fnptr GFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
 
 fnptr GFXBlit { x y w h ptr gfx -- }
+
+fnptr GFXVBlit { xd yd wd hd xs ys ws hs gfx -- }
 
 fnptr GFXScroll { x y w h color rows gfx -- }
 

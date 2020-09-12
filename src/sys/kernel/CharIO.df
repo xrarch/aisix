@@ -1,6 +1,31 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
+fn ChangeIOBufSize { iobuf newsize -- ok }
+	auto rs
+	InterruptDisable rs!
+
+	iobuf@ IOBuffer_Data + @ Free
+
+	newsize@ Malloc ok!
+
+	if (ok@ iserr)
+		rs@ InterruptRestore
+		return
+	end
+
+	ok@ iobuf@ IOBuffer_Data + !
+
+	0 iobuf@ IOBuffer_ReadP + !
+	0 iobuf@ IOBuffer_WriteP + !
+
+	newsize@ iobuf@ IOBuffer_Size + !
+
+	rs@ InterruptRestore
+
+	0 ok!
+end
+
 fn AllocIOBuf { size -- iobuf }
 	IOBuffer_SIZEOF Calloc iobuf!
 
@@ -12,7 +37,7 @@ fn AllocIOBuf { size -- iobuf }
 	auto dat
 
 	if (size@)
-		size@ Calloc dat!
+		size@ Malloc dat!
 
 		if (dat@ iserr)
 			iobuf@ Free
@@ -85,16 +110,22 @@ fn IOBufPutc { c buf sleeponfull -- ok }
 
 	if (wp@ rp@ - sz@ >=)
 		if (sleeponfull@)
-			if (buf@ IOBuffer_WriteQ + WaitQueue)
-				-EINTR ok!
-				rs@ InterruptRestore
-				return
+			while (wp@ rp@ - sz@ >=)
+				if (buf@ IOBuffer_WriteQ + WaitQueue)
+					-EINTR ok!
+					rs@ InterruptRestore
+					return
+				end
+
+				(* it changed since we slept, so, update these *)
+
+				buf@ IOBuffer_WriteP + @ wp!
+				buf@ IOBuffer_ReadP + @ rp!
+
+				(* believe it or not this can change too *)
+
+				buf@ IOBuffer_Size + @ sz!
 			end
-
-			(* it changed since we slept, so, update these *)
-
-			buf@ IOBuffer_WriteP + @ wp!
-			buf@ IOBuffer_ReadP + @ rp!
 		end else
 			if (buf@ IOBuffer_Overwrite + @)
 				1 rp +=
@@ -167,16 +198,22 @@ fn IOBufGetc { buf sleeponempty -- c }
 		rp@ buf@ IOBuffer_ReadP + !
 
 		if (sleeponempty@)
-			if (buf@ IOBuffer_ReadQ + WaitQueue)
-				-EINTR c!
-				rs@ InterruptRestore
-				return
+			while (wp@ rp@ ==)
+				if (buf@ IOBuffer_ReadQ + WaitQueue)
+					-EINTR c!
+					rs@ InterruptRestore
+					return
+				end
+
+				(* it changed since we slept, so, update these *)
+
+				buf@ IOBuffer_WriteP + @ wp!
+				buf@ IOBuffer_ReadP + @ rp!
+
+				(* believe it or not this can change too *)
+
+				buf@ IOBuffer_Size + @ sz!
 			end
-
-			(* it changed since we slept, so, update these *)
-
-			buf@ IOBuffer_WriteP + @ wp!
-			buf@ IOBuffer_ReadP + @ rp!
 		end else
 			rs@ InterruptRestore
 			IOBUFEMPTY c!

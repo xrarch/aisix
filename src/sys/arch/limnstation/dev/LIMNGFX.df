@@ -48,6 +48,7 @@ fn DrvLGFXFoundNode { node -- }
 	pointerof LGFXBlit gfx@ GFX_Blit + !
 	pointerof LGFXScroll gfx@ GFX_Scroll + !
 	pointerof LGFXInvert gfx@ GFX_Invert + !
+	pointerof LGFXVBlit gfx@ GFX_VBlit + !
 
 	0 sbe@ LGRegWrite + !
 	0 sbe@ LGRegRead + !
@@ -95,9 +96,9 @@ fn private Go { gfx -- }
 	auto writep
 	sbe@ LGRegWrite + writep!
 
-	while (readp@@ writep@@ ~=) end
-
 	WriteDelta@ writep@ +=
+
+	while (readp@@ writep@@ ~=) end
 
 	0 WriteDelta!
 end
@@ -177,7 +178,7 @@ fn (GFXBlit) LGFXBlit { x y w h ptr gfx -- }
 	DMATransfer
 end
 
-fn private LGFXVBlit { xd yd wd hd xs ys ws hs gfx -- }
+fn LGFXVBlit { xd yd wd hd xs ys ws hs gfx -- }
 	auto w
 	gfx@ GFX_Width + @ w!
 

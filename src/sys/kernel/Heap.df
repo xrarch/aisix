@@ -12,7 +12,7 @@ var KHeapLast 0
 const MAGIC 0xCAFEBABE
 const BADMAGIC 0xACA7BABE
 
-const FRACTION 16
+const FRACTION 40
 
 const MINSIZE 32
 

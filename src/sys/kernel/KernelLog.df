@@ -46,15 +46,10 @@ fn Putc { c -- }
 	end
 end
 
+extern VConsPump { sleep buffer -- ok }
+
 fn KLogDumpEarly { -- }
-	auto c
-	EarlyLogBuf@ 0 IOBufGetc c!
-
-	while (c@ IOBUFEMPTY ~=)
-		c@ Putc
-
-		EarlyLogBuf@ 0 IOBufGetc c!
-	end
+	0 EarlyLogBuf@ VConsPump drop
 end
 
 fn Getc { -- c }
@@ -177,11 +172,9 @@ extern GetLink { -- }
 
 extern KDebug { -- }
 
-extern VConsPump { sleep -- ok }
-
 fn LogPump { -- }
 	if (ConsUseVid@)
-		0 VConsPump drop
+		0 VConsOBuffer@ VConsPump drop
 	end
 end
 
@@ -213,6 +206,10 @@ fn Panic { ... fmt -- }
 	end
 
 	0 PlatformAlertUser
+
+	"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" Puts
+
+	"\[[41m\[c!!! AISIX PANIC !!!\n" Printf
 
 	pointerof Panic PanicLink@ Trace
 

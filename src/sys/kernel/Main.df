@@ -53,6 +53,8 @@ extern VConsInit { -- }
 
 extern CPUHlt { -- }
 
+externptr Alloced
+
 fn AISIXInitialThread { -- }
 	VCacheInit
 

@@ -30,3 +30,5 @@ extern IOBufGetc { buf sleeponempty -- c }
 extern IOBufPutBack { c buf -- }
 
 extern IOBufRubout { buf -- c }
+
+extern ChangeIOBufSize { iobuf newsize -- ok }

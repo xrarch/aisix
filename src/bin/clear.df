@@ -4,5 +4,5 @@
 fn Main { ... -- ret }
 	0 ret!
 
-	"\[[c" Printf
+	"\[[0m\[[c" Printf
 end

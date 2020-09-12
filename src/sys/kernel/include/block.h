@@ -1,4 +1,4 @@
-const NBUF 64
+const NBUF 72
 
 const BLOCKSZ 4096
 

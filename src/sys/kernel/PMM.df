@@ -4,6 +4,9 @@
 var Pages 0
 public Pages
 
+var Alloced 0
+public Alloced
+
 buffer PMMBitmap 8192
 
 fn PMMInit { -- }
@@ -94,11 +97,13 @@ fn PMMFree { pages addr -- }
 	end
 
 	if (pages@ 0 ==)
-		return
+		"PMMFree: zero pages freed\n" Panic
 	end
 
 	auto rs
 	InterruptDisable rs!
+
+	pages@ Alloced -=
 
 	0
 	pages@
@@ -147,6 +152,8 @@ fn PMMAlloc { pages -- addr }
 				1 pages@ start@ PMMSetString
 
 				start@ 4096 * MachineRAMBase@ + addr!
+
+				pages@ Alloced +=
 
 				rs@ InterruptRestore
 

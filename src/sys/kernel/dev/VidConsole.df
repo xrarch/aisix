@@ -46,6 +46,7 @@ var GCInitialConfig 1
 var GCEscape 0
 
 var GCLineLenBuf 0
+var GCLSkip 0
 
 var GCRectP 0
 var GCScrollP 0
@@ -114,6 +115,8 @@ fn GConsoleDefault { -- }
 
 	1 GCInitialConfig!
 	1 GCNeedsDraw!
+
+	0 GCLSkip!
 end
 
 fn VConsInit { -- }
@@ -124,7 +127,7 @@ fn VConsInit { -- }
 		return
 	end
 
-	4096 AllocIOBuf VConsOBuffer!
+	192 AllocIOBuf VConsOBuffer!
 
 	if (VConsOBuffer@ iserr)
 		"couldn't allocate VConsOBuffer\n" Panic
@@ -155,10 +158,10 @@ fn VConsInit { -- }
 	vcw@ ThreadReady
 end
 
-fn VConsPump { sleep -- ok }
+fn VConsPump { sleep buf -- ok }
 	while (1)
 		auto c
-		VConsOBuffer@ sleep@ IOBufGetc c!
+		buf@ sleep@ IOBufGetc c!
 
 		if (c@ IOBUFEMPTY ==)
 			0 ok!
@@ -176,7 +179,8 @@ end
 
 fn VConsWorker { -- }
 	auto ok
-	1 VConsPump ok!
+
+	1 VConsOBuffer@ VConsPump ok!
 
 	ok@ abs ok!
 	[ok@]ErrorNames "vcons worker: %s\n" Panic
@@ -210,6 +214,8 @@ fn GConsoleClear { -- }
 
 	GCLineLenBuf@ GCHeight@ 4 * 0 memset
 
+	0 GCLSkip!
+
 	1 GConsoleModified!
 end
 
@@ -229,38 +235,81 @@ fn GConsoleInvert { x y w h -- }
 	x@ GConsoleX@ + y@ GConsoleY@ + w@ h@ GCGFX@ GCInvertP@ GFXInvert
 end
 
-fn GConsoleScroll { rows -- }
-	GConsoleX@ GConsoleY@
-	GConsoleLongestLine FontWidth *
-	FontHeight GCHeight@ *
-	GCColorDefBG@
-	rows@ FontHeight *
-	GCGFX@ GCScrollP@ GFXScroll
+asm "
 
-	auto k
-	GCHeight@ k!
+hlt:
+	.dl 0xFE
+	ret
+
+"
+
+extern hlt { a3 a2 a1 a0 -- }
+
+fn GConsoleScroll { rows -- }
+	auto i
+	0 i!
 
 	auto gclb
 	GCLineLenBuf@ gclb!
 
-	auto r
-	gclb@ r!
+	auto k
+	GCHeight@ 1 - k!
 
-	auto max
-	GCHeight@ rows@ - 4 * gclb@ + max!
+	auto y
+	GConsoleY@ y!
 
-	while (r@ max@ <)
-		r@ rows@ 4 * + @ r@ !
-		4 r +=
+	auto gcx
+	GConsoleX@ gcx!
+
+	auto bg
+	GCColorDefBG@ bg!
+
+	auto gfx
+	GCGFX@ gfx!
+
+	auto scrollp
+	GCScrollP@ scrollp!
+
+	auto tll
+	auto nll
+
+	auto h
+	GCHeight@ h!
+
+	while (i@ k@ <)
+		gclb@@ tll!
+		gclb@ 4 + @ nll!
+
+		gcx@ y@
+		tll@ nll@ max FontWidth *
+		FontHeight rows@ 1 + *
+		-1
+		rows@ FontHeight *
+		gfx@ scrollp@ GFXScroll
+
+		if (tll@ nll@ >)
+			gcx@ tll@ FontWidth * + y@
+			tll@ nll@ - FontWidth *
+			FontHeight
+			bg@
+			GConsoleRRect
+		end
+
+		rows@ FontHeight * y +=
+		1 i +=
+
+		nll@ gclb@!
+
+		4 gclb +=
 	end
 
-	GCHeight@ rows@ - 4 * gclb@ + r!
-	GCHeight@ 4 * gclb@ + max!
+	GCLineLenBuf@ gclb!
 
-	while (r@ max@ <)
-		0 r@ !
-		4 r +=
-	end
+	GConsoleX@
+	GConsoleY@ h@ FontHeight * + FontHeight -
+	GCHeight@ 1 - 4 * gclb@ + @ FontWidth * FontHeight bg@ GConsoleRRect
+
+	0 GCHeight@ 1 - 4 * gclb@ + !
 end
 
 fn GConsoleDoCur { -- }
@@ -429,11 +478,6 @@ fn GConsoleClearLine { -- }
 end
 
 fn GConsoleReset { -- }
-	GCColorDefFG@ GCColorFG!
-	GCColorDefBG@ GCColorBG!
-
-	0 GCInverted!
-
 	GConsoleClear
 end
 
