@@ -66,7 +66,9 @@ fn Halt { haltmode -- ok }
 		if (process@)
 			if (process@ KernelProcess@ ~=)
 				if (process@ InitProcess@ ~=)
-					0 process@ ProcessKill
+					if (process@ Process_Zombie + @ ~~)
+						0 process@ ProcessKill
+					end
 				end
 			end
 		end

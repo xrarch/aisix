@@ -171,7 +171,10 @@ fn ThreadKill { thread -- }
 		end
 
 		1 thread@ Thread_Killed + !
-		TS_READY thread@ Thread_Status + !
+
+		if (thread@ CurrentThread@ ~=)
+			TS_READY thread@ Thread_Status + !
+		end
 	end
 
 	rs@ InterruptRestore
@@ -659,7 +662,7 @@ fn ParentUnlock { proc -- }
 	proc@ Process_ParentLock + UnlockMutex
 end
 
-fn private ReparentChildren { process -- }
+fn ReparentChildren { process -- }
 	auto i
 	0 i!
 

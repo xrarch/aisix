@@ -13,6 +13,14 @@ fn GetSym { pc -- symbase symname }
 	0 symbase!
 	0 symname!
 
+	if (pc@ pointerof _text <)
+		return
+	end
+
+	if (pc@ pointerof _text_end >=)
+		return
+	end
+
 	auto i
 	0 i!
 

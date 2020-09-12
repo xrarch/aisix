@@ -23,7 +23,9 @@ fn MutexOwned { mutex -- owned }
 	rs@ InterruptRestore
 end
 
-fn private LockMutex1 { mutex uninterruptible -- killed }
+extern GetSym { pc -- symbase symname }
+
+fn private LockMutex1 { mutex uninterruptible caller -- killed }
 	if (CurrentThread@ Thread_Killed + @)
 		if (uninterruptible@ ~~)
 			1 killed!
@@ -50,7 +52,11 @@ fn private LockMutex1 { mutex uninterruptible -- killed }
 				mutex@ Mutex_Name + @ mn!
 			end
 
-			mn@ "LockMutex: '%s' already owned\n" Panic
+			auto syname
+
+			mutex@ Mutex_Caller + @ GetSym syname! drop
+
+			syname@ mn@ "LockMutex: '%s' already owned, locked at <%s>\n" Panic
 		end
 
 		if (uninterruptible@)
@@ -66,16 +72,27 @@ fn private LockMutex1 { mutex uninterruptible -- killed }
 
 	1 mutex@ Mutex_Locked + !
 	CurrentThread@ mutex@ Mutex_OwnerThread + !
+	caller@ mutex@ Mutex_Caller + !
 
 	rs@ InterruptRestore
 end
 
+asm "
+
+GetCaller:
+	lio.l v0, sp, 4
+	ret
+
+"
+
+extern GetCaller { -- pc }
+
 fn LockMutex { mutex -- killed }
-	mutex@ 0 LockMutex1 killed!
+	mutex@ 0 GetCaller LockMutex1 killed!
 end
 
 fn LockMutexUninterruptible { mutex -- }
-	mutex@ 1 LockMutex1 drop
+	mutex@ 1 GetCaller LockMutex1 drop
 end
 
 fn UnlockMutex { mutex -- }

@@ -191,7 +191,7 @@ fn Exception { badaddr ecause tf -- }
 		1 CurrentThread@ Thread_Killed + !
 	end
 
-	if (CurrentThread@ Thread_Killed + @)
+	if (mode@ CurrentThread@ Thread_Killed + @ &&)
 		ThreadExit
 	end
 end

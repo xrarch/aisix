@@ -18,5 +18,6 @@ struct Mutex
 	4 Locked
 	4 OwnerThread
 	4 Name
+	4 Caller
 	EventQueue_SIZEOF LockQ
 endstruct
