@@ -147,7 +147,7 @@ fn FilDup { fd1 -- fd2 }
 	fd1@ fd2@ 4 * ofile@ + !
 end
 
-fn private VOpen { path rwx mode pbits -- vnode }
+fn VOpen { path rwx mode pbits -- vnode }
 	auto dirvnode
 	auto name
 	auto sook

@@ -127,7 +127,7 @@ fn VConsInit { -- }
 		return
 	end
 
-	192 AllocIOBuf VConsOBuffer!
+	512 AllocIOBuf VConsOBuffer!
 
 	if (VConsOBuffer@ iserr)
 		"couldn't allocate VConsOBuffer\n" Panic
@@ -288,7 +288,7 @@ fn GConsoleScroll { rows -- }
 		gfx@ scrollp@ GFXScroll
 
 		if (tll@ nll@ >)
-			gcx@ tll@ FontWidth * + y@
+			gcx@ nll@ FontWidth * + y@
 			tll@ nll@ - FontWidth *
 			FontHeight
 			bg@

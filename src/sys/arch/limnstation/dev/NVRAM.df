@@ -1,0 +1,109 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+
+var NVRAMBase 0
+
+var NVRAMSize 0
+
+fn DrvNVRAMFoundNode { node -- }
+	"address" a3xDGetProperty NVRAMBase!
+	"size" a3xDGetProperty NVRAMSize!
+
+	NVRAMBase@ NVRAMSize@ "%d bytes @ 0x%x" Printf
+
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "nvram" NVRAMDriver 0 DeviceRegister drop
+end
+
+table NVRAMDriver
+	"nvram"
+	DEV_CHAR
+	pointerof NVRAMOpen
+	pointerof NVRAMClose
+	pointerof NVRAMIoctl
+	pointerof NVRAMRead
+	pointerof NVRAMWrite
+	pointerof NVRAMSysctl
+endtable
+
+fn (DevSysctl) NVRAMSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) NVRAMOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) NVRAMClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) NVRAMIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) NVRAMRead { buf len unit seek -- bytes }
+	auto sz
+	NVRAMSize@ sz!
+
+	if (sz@ 0 ==)
+		-ENOTBLK bytes!
+		return
+	end
+
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ sz@ >=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
+	end
+
+	buf@ NVRAMBase@ seek@ + len@ memcpy
+
+	len@ bytes!
+end
+
+fn (DevWrite) NVRAMWrite { buf len unit seek -- bytes }
+	auto sz
+	NVRAMSize@ sz!
+
+	if (sz@ 0 ==)
+		-ENOTBLK bytes!
+		return
+	end
+
+	if (seek@ 0 s<)
+		0 bytes!
+		return
+	end
+
+	if (len@ 0 s<=)
+		0 bytes!
+		return
+	end
+
+	if (seek@ sz@ >=)
+		-ENOSPC bytes!
+		return
+	end
+
+	if (seek@ len@ + sz@ >)
+		sz@ seek@ - len!
+	end
+
+	NVRAMBase@ seek@ + buf@ len@ memcpy
+
+	len@ bytes!
+end
