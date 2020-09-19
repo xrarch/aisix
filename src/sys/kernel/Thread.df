@@ -132,13 +132,8 @@ fn ThreadKill { thread -- }
 
 		1 process@ Process_Threads + -=
 
-		auto thr
-		process@ Process_Threads + @ thr!
-
 		if (process@ Process_MainThread + @ thread@ ==)
 			0 process@ Process_MainThread + !
-			0 process@ ProcessKill
-		end elseif (thr@ 0 ==)
 			0 process@ ProcessKill
 		end
 	end else
@@ -191,14 +186,9 @@ fn ThreadExit { -- }
 	thread@ Thread_Process + @ process!
 
 	1 process@ Process_Threads + -=
-
-	auto thr
-	process@ Process_Threads + @ thr!
 	
 	if (process@ Process_MainThread + @ thread@ ==)
 		0 process@ Process_MainThread + !
-		process@ Process_ReturnValue + @ ProcessExit
-	end	elseif (thr@ 0 ==)
 		process@ Process_ReturnValue + @ ProcessExit
 	end
 
