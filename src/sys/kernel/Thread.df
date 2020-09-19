@@ -704,6 +704,13 @@ fn ProcessKill { ret process -- }
 	auto i
 	0 i!
 
+	auto zomb
+	process@ Process_Zombie + @ zomb!
+
+	if (zomb@)
+		process@ Process_Name + "%s already zombie\n" Panic
+	end
+
 	if (process@ Process_Exited + @ ~~)
 		ret@ process@ Process_ReturnValue + !
 
@@ -723,15 +730,16 @@ fn ProcessKill { ret process -- }
 		end
 	end
 
+	if (process@ Process_Zombie + @)
+		rs@ InterruptRestore
+		return
+	end
+
 	auto thleft
 	process@ Process_Threads + @ thleft!
 
 	(* do the stuff the last kernel thread would have done if there were any left, which there aren't *)
 	if (thleft@ 0 ==)
-		if (process@ Process_Zombie + @)
-			process@ Process_Name + "%s already zombie\n" Panic
-		end
-
 		1 process@ Process_Zombie + !
 
 		auto parent
