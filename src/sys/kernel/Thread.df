@@ -258,6 +258,9 @@ fn Scheduler { -- }
 
 	auto rs
 
+	auto lastproc
+	-1 lastproc!
+
 	while (1)
 		auto i
 		0 i!
@@ -295,8 +298,12 @@ fn Scheduler { -- }
 			auto proc
 			thread@ Thread_Process + @ proc!
 
-			if (proc@ Process_Mapped + @)
-				proc@ PlatformSwitchSeg
+			if (proc@ lastproc@ ~=)
+				if (proc@ Process_Mapped + @)
+					proc@ PlatformSwitchSeg
+
+					proc@ lastproc!
+				end
 			end
 
 			SchedulerContext thread@ Thread_Context + @ cswtch

@@ -63,6 +63,36 @@ forkret:
 
 	rfe ; give control back to the thread
 
+;k3 = CurrentThread@ Thread_Process + @ Process_TextPhysical + @
+limn2k_refill_seg:
+	blt.s badaddr, zero, .baddr ; is it in a bad segment?
+
+	rshi  k0, badaddr, 30       ; k0 = segment number
+	lshi  k0, k0, 3
+	l.l   k1, k3, k0            ; k1 = segment physical address
+	addi  k0, k0, 4
+	l.l   k2, k3, k0            ; k2 = segment size in pages
+
+	lshi  k2, k2, 12            ; k2 = segment size in bytes
+
+	la    k0, 0x3FFFFFFF
+	and   k0, badaddr, k0       ; k0 = offset within segment
+
+	slt   k2, k0, k2            ; k2 = !(offset < size) = offset >= size
+	beq   k2, zero, .baddr      ; is it beyond the segment boundary?
+
+	add   k0, k0, k1            ; k0 = physical address
+	rshi  k0, k0, 12
+	lshi  k0, k0, 4
+	ori   k0, k0, 3
+
+	wtlb  badaddr, k0
+
+	rfe
+
+.baddr: 
+	b limn2k_exception
+
 ; old new -- 
 cswtch:
 .global cswtch
@@ -107,6 +137,7 @@ PlatformSetTimer:
 ExceptionInit:
 .global ExceptionInit
 	la ev, limn2k_exception
+	la tlbv, limn2k_refill_seg
 	ret
 
 "

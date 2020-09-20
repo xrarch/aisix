@@ -5,7 +5,7 @@
 
 extern AISIX { ksz args -- ret }
 
-const CompatibleFirmware 30504
+const CompatibleFirmware 30505
 
 var SavedEV 0
 
@@ -142,67 +142,63 @@ end
 fn PlatformUnalertUser { -- }
 end
 
+asm "
+
+SwitchK3:
+	mov k3, a0
+	ftlb t0
+	ret
+
+"
+
+extern SwitchK3 { newk3 -- }
+
 fn PlatformSwitchSeg { proc -- }
-	auto base
-	MMUSEGBASE base!
-
-	auto flag
-
-	proc@ Process_TextPhysical + @ MMUPSHIFT >> flag!
-	MMUPBIT flag |=
-	flag@ base@ MMUSEG0FLAG + !
-	proc@ Process_TextPages + @ base@ MMUSEG0SIZE + !
-
-	proc@ Process_DataPhysical + @ MMUPSHIFT >> flag!
-	MMUPBIT flag |=
-	MMURWBIT flag |=
-	flag@ base@ MMUSEG1FLAG + !
-	proc@ Process_DataPages + @ base@ MMUSEG1SIZE + !
-
-	0 flag!
-	if (proc@ Process_UPhysical + @)
-		proc@ Process_UPhysical + @ MMUPSHIFT >> flag!
-		MMUPBIT flag |=
-		MMURWBIT flag |=
-	end
-	flag@ base@ MMUSEG2FLAG + !
-	proc@ Process_UPages + @ base@ MMUSEG2SIZE + !
-
-	0 base@ MMUSEG3FLAG + !
+	proc@ Process_TextPhysical + SwitchK3
 end
 
 fn PlatformUserToPhys { len user wr -- phys valid }
-	auto seg
-	user@ MMUSSHIFT >> seg!
-	auto off
-	user@ MMUOFFMASK & off!
-
-	auto b
-	seg@ 8 * MMUSEGBASE + b!
-
-	auto flag
-	b@ MMUSEG0FLAG + @ flag!
-
-	auto sz
-	b@ MMUSEG0SIZE + @ sz!
+	if (user@ 0x80000000 &)
+		0 valid!
+		return
+	end
 
 	if (len@ 0 s<)
 		0 valid!
 		return
 	end
 
-	if (flag@ MMUPBIT & ~~)
-		0 valid!
-		return
-	end elseif (off@ len@ + sz@ MMUPSHIFT << >=)
-		0 valid!
-		return
-	end elseif (flag@ MMURWBIT & ~~ wr@ &&)
+	auto seg
+	user@ MMUSSHIFT >> seg!
+
+	if (seg@ 2 >=)
 		0 valid!
 		return
 	end
 
-	flag@ MMUPHYMASK & MMUPSHIFT << off@ + phys!
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
+	auto b
+	p@ Process_TextPhysical + seg@ 8 * + b!
+
+	auto sz
+	b@ 4 + @ 12 << sz!
+
+	auto off
+	user@ MMUOFFMASK & off!
+
+	if (off@ len@ + sz@ >=)
+		0 valid!
+		return
+	end
+
+	if (wr@ seg@ 0 == &&)
+		0 valid!
+		return
+	end
+
+	b@@ off@ + phys!
 	1 valid!
 end
 
