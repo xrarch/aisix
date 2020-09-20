@@ -656,6 +656,9 @@ fn ReparentChildren { process -- }
 	auto i
 	0 i!
 
+	auto gotone
+	0 gotone!
+
 	process@ ParentLock
 
 	while (i@ PROCMAX <)
@@ -668,6 +671,10 @@ fn ReparentChildren { process -- }
 		if (child@ 0 ~=)
 			if (child@ Process_Parent + @ process@ ==)
 				InitProcess@ child@ Process_Parent + !
+
+				if (child@ Process_Zombie + @)
+					1 gotone!
+				end
 			end
 		end
 
@@ -677,6 +684,10 @@ fn ReparentChildren { process -- }
 	end
 
 	process@ ParentUnlock
+
+	if (gotone@)
+		InitProcess@ Process_WaitQ + WakeQueue
+	end
 end
 
 fn ProcessKill { ret process -- }
