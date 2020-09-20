@@ -146,15 +146,48 @@ asm "
 
 SwitchK3:
 	mov k3, a0
-	ftlb t0
+	mov asid, a1
+	ret
+
+FlushASID:
+	ftlb a0
 	ret
 
 "
 
-extern SwitchK3 { newk3 -- }
+extern SwitchK3 { asid newk3 -- }
+extern FlushASID { asid -- }
+
+table UsedASIDs[4096]
+
+fn PlatformProcessExit { proc -- }
+	if (proc@ Process_PQ + @)
+		auto asid
+		proc@ Process_PID + @ 4095 & asid!
+
+		1 [asid@]UsedASIDs -=
+
+		asid@ FlushASID
+	end
+end
 
 fn PlatformSwitchSeg { proc -- }
-	proc@ Process_TextPhysical + SwitchK3
+	auto asid
+	proc@ Process_PID + @ 4095 & asid!
+
+	if (proc@ Process_PQ + @ ~~)
+		1 proc@ Process_PQ + !
+
+		1 [asid@]UsedASIDs +=
+	end
+
+	if ([asid@]UsedASIDs@ 1 >)
+		asid@ FlushASID
+	end
+
+	asid@
+	proc@ Process_TextPhysical +
+	SwitchK3
 end
 
 fn PlatformUserToPhys { len user wr -- phys valid }

@@ -47,8 +47,7 @@ struct Process
 	4 DataPhysical
 	4 DataPages
 
-	4 UPhysical
-	4 UPages
+	4 PQ
 
 	4 CWDVNode
 	CWDPATHLEN CWDPathString

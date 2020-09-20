@@ -697,6 +697,8 @@ fn ReparentChildren { process -- }
 	end
 end
 
+extern PlatformProcessExit { proc -- }
+
 fn ProcessKill { ret process -- }
 	if (process@ KernelProcess@ ==)
 		"kernel process killed!\n" Panic
@@ -736,6 +738,8 @@ fn ProcessKill { ret process -- }
 
 			1 i +=
 		end
+
+		process@ PlatformProcessExit
 	end
 
 	if (process@ Process_Zombie + @)
