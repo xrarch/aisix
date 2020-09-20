@@ -27,6 +27,11 @@ fn Readline { s max -- eof }
 
 	s@ max@ STDIN Read bytes!
 
+	if (bytes@ iserr)
+		bytes@ abs bytes!
+		[bytes@]ErrorNames@ "Readline: %s\n" Abort
+	end
+
 	if (bytes@ 0 ==)
 		1 eof!
 		return
