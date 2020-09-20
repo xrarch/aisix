@@ -90,8 +90,9 @@ limn2k_refill_seg:
 
 	rfe
 
-.baddr: 
-	b limn2k_exception
+.baddr:
+	li ecause, 12
+	b  limn2k_exception
 
 ; old new -- 
 cswtch:
