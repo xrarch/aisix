@@ -28,7 +28,7 @@ endstruct
 fn DrvDMAFoundNode { node -- }
 	"address" a3xDGetProperty DMABase!
 
-	DMABase@ "0x%x" Printf
+	DMABase@ "0x%x" BootPrintf
 
 	1 DMAFound!
 end

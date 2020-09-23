@@ -26,7 +26,7 @@ fn AISIX { ksz args -- ret }
 
 	KLogInit
 
-	"\[[33mWelcome to AISIX\[[0m\n\n" Printf
+	"\[[33mAISIX is preparing your system\[[0m\n" Printf
 
 	PlatformInit
 

@@ -64,7 +64,7 @@ fn DrvSerialFoundNode { node -- }
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
-	intn@ SerialDataPort@ SerialCmdPort@ "citron:%x,%x irq:%d" Printf
+	intn@ SerialDataPort@ SerialCmdPort@ "citron:%x,%x irq:%d" BootPrintf
 
 	pointerof SerialIntr intn@ InterruptRegister
 

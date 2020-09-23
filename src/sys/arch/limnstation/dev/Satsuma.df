@@ -86,7 +86,7 @@ fn DrvDKSFoundNode { node -- }
 		1 part!
 	end
 
-	name@ "%s" Printf
+	name@ "%s" BootPrintf
 
 	auto devn
 
@@ -120,7 +120,7 @@ fn DrvDKSFoundNode { node -- }
 	end
 
 	if (node@ w@ ==)
-		" (boot device)" Printf
+		" (boot device)" BootPrintf
 		devn@ RootDevice!
 	end
 

@@ -24,6 +24,10 @@ fn KLogInit { -- }
 	end
 
 	1 EarlyLogBuf@ IOBuffer_Overwrite + !
+
+	if ("-t" ArgsCheck)
+		1 TriviaSwitch!
+	end
 end
 
 fn KLogAttach { read write -- }
@@ -135,6 +139,12 @@ end
 
 fn FPutc { fd c -- }
 	c@ Putc
+end
+
+fn BootPrintf { ... fmt -- }
+	if (TriviaSwitch@)
+		argv argc@ fmt@ VPrintf
+	end
 end
 
 extern PlatformAlertUser { early -- }

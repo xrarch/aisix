@@ -31,7 +31,7 @@ fn DrvLGFXFoundNode { node -- }
 	"height" a3xDGetProperty h!
 	h@ gfx@ GFX_Height + !
 
-	gfx@ GFX_FBAddr + @ h@ w@ "%dx%d @ 0x%x" Printf
+	gfx@ GFX_FBAddr + @ h@ w@ "%dx%d @ 0x%x" BootPrintf
 
 	w@ h@ * 2 * gfx@ GFX_FBSize + !
 

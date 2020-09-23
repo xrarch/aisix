@@ -16,6 +16,9 @@ public MachineRAMBase
 var MachineRAMSize 0
 public MachineRAMSize
 
+var TriviaSwitch 0
+public TriviaSwitch
+
 fn private Trivia { trivia info -- }
 	info@ trivia@ "\[[106m\[[30m  %20s \[[47m\[[0m  %30s\[[0m\n" Printf
 end
@@ -32,6 +35,10 @@ externptr KHeapSize
 externptr KHeapStart
 
 fn TriviaTable { ksz -- }
+	if (TriviaSwitch@ ~~)
+		return
+	end
+
 	"CONTENT" "KERNEL INFO" "\[[40m\[[97m %20s   %30s \[[0m\n" Printf
 
 	"Machine" MachineType@ Trivia

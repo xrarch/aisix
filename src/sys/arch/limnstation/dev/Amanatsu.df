@@ -13,7 +13,7 @@ fn DrvAmtsuFoundNode { node -- }
 	AmanatsuReset
 
 	(* TODO get these from device tree properties *)
-	AmaPortB AmaPortA AmaPortCMD AmaPortMID AmaPortDev "citron:%x,%x,%x,%x,%x" Printf
+	AmaPortB AmaPortA AmaPortCMD AmaPortMID AmaPortDev "citron:%x,%x,%x,%x,%x" BootPrintf
 end
 
 (* disabling and restoring interrupts is up to the user of these functions *)

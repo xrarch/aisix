@@ -9,3 +9,5 @@ extern LogPump { -- }
 externptr KLogWrite
 
 externptr KLogRead
+
+extern BootPrintf { ... fmt -- }

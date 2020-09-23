@@ -25,7 +25,7 @@ fn Main { ... -- ret }
 	if (stdio@ iserr)
 		1 Exit
 	end
-	
+
 	"/dev/cons" O_WRITE Open stdio!
 	if (stdio@ iserr)
 		1 Exit
@@ -34,10 +34,7 @@ fn Main { ... -- ret }
 	(* /bin/login should do the motd but that's not a thing at the time of writing this *)
 	auto motd
 	"/sys/motd.txt" O_READ Open motd!
-	if (motd@ iserr)
-		motd@ abs motd!
-		[motd@]ErrorNames@ "init: couldn't open /sys/motd.txt: %s\n" Printf
-	end else
+	if (motd@ iserr ~~)
 		auto motdsz
 
 		MOTDBuf 4096 motd@ Read motdsz!

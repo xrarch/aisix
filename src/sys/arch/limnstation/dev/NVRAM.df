@@ -10,7 +10,7 @@ fn DrvNVRAMFoundNode { node -- }
 	"address" a3xDGetProperty NVRAMBase!
 	"size" a3xDGetProperty NVRAMSize!
 
-	NVRAMBase@ NVRAMSize@ "%d bytes @ 0x%x" Printf
+	NVRAMBase@ NVRAMSize@ "%d bytes @ 0x%x" BootPrintf
 
 	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "nvram" NVRAMDriver 0 DeviceRegister drop
 end

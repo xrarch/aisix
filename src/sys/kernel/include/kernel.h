@@ -29,3 +29,5 @@ externptr ConsInited
 
 externptr ConsIBuf
 externptr ConsOBuf
+
+externptr TriviaSwitch
