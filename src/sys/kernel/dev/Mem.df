@@ -29,16 +29,25 @@ fn (DevIoctl) MemIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-fn (DevRead) MemRead { buf len unit seek -- bytes }
+fn (DevRead) MemRead { pm buf len unit seek -- bytes }
 	if (unit@ 0 ==) (* /dev/null *)
 		0 bytes!
 		return
 	end elseif (unit@ 1 ==) (* /dev/zero *)
-		buf@ len@ 0 memset
-		len@ bytes!
+		pm@ buf@ len@ 0 VMMemset bytes!
+
+		if (bytes@ iserr ~~)
+			len@ bytes!
+		end
+
 		return
 	end elseif (unit@ 2 ==) (* /dev/mem *)
-		buf@ seek@ len@ memcpy
+		pm@ buf@ seek@ len@ VMCopyout bytes!
+
+		if (bytes@ iserr ~~)
+			len@ bytes!
+		end
+
 		len@ bytes!
 		return
 	end elseif (unit@ 3 ==) (* /dev/full *)
@@ -47,7 +56,7 @@ fn (DevRead) MemRead { buf len unit seek -- bytes }
 	end
 end
 
-fn (DevWrite) MemWrite { buf len unit seek -- bytes }
+fn (DevWrite) MemWrite { pm buf len unit seek -- bytes }
 	if (unit@ 0 ==) (* /dev/null *)
 		0 bytes!
 		return
@@ -55,8 +64,12 @@ fn (DevWrite) MemWrite { buf len unit seek -- bytes }
 		len@ bytes!
 		return
 	end elseif (unit@ 2 ==) (* /dev/mem *)
-		seek@ buf@ len@ memcpy
-		len@ bytes!
+		pm@ seek@ buf@ len@ VMCopyin bytes!
+
+		if (bytes@ iserr ~~)
+			len@ bytes!
+		end
+
 		return
 	end elseif (unit@ 3 ==) (* /dev/full *)
 		-ENOSPC bytes!

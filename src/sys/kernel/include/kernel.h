@@ -15,6 +15,7 @@
 #include "<inc>/exec.h"
 #include "<inc>/sys.h"
 #include "<inc>/fd.h"
+#include "<inc>/seg.h"
 #include "<inc>/vm.h"
 #include "<inc>/halt.h"
 

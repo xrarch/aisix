@@ -106,9 +106,8 @@ fn Main { ... -- ret }
 	auto rp
 	[i@]argv@ RealPath rp!
 
-	if (rp@ iserr)
-		rp@ abs rp!
-		[rp@]ErrorNames@ "mkfs: %s\n" Abort
+	if (rp@ ERR ==)
+		"mkfs: Out of memory\n" Abort
 	end
 
 	auto fd

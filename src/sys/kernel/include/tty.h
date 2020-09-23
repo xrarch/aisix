@@ -6,6 +6,6 @@ endstruct
 
 extern AllocTTY { ibuf obuf -- tty }
 
-extern TTYRead { buf len tty -- bytes }
+extern TTYRead { pm buf len tty -- bytes }
 
-extern TTYWrite { buf len tty -- bytes }
+extern TTYWrite { pm buf len tty -- bytes }

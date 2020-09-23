@@ -74,7 +74,7 @@ end
 
 buffer MouseEvQ EventQueue_SIZEOF
 
-fn (DevRead) MouseRead { buf len unit seek -- bytes }
+fn (DevRead) MouseRead { pm buf len unit seek -- bytes }
 	auto i
 	0 i!
 
@@ -86,6 +86,8 @@ fn (DevRead) MouseRead { buf len unit seek -- bytes }
 	len@ bytes!
 
 	MousePacket_SIZEOF len /=
+
+	auto r
 
 	while (i@ len@ <)
 		auto rs
@@ -104,9 +106,15 @@ fn (DevRead) MouseRead { buf len unit seek -- bytes }
 
 		rs@ InterruptRestore
 
+		pm@
 		buf@
 		ReadP@ MOUSEBUFSZ % MousePacket_SIZEOF * MouseIBuffer +
-		MousePacket_SIZEOF memcpy
+		MousePacket_SIZEOF VMCopyout r!
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
 
 		InterruptDisable rs!
 		1 ReadP +=
@@ -117,7 +125,7 @@ fn (DevRead) MouseRead { buf len unit seek -- bytes }
 	end
 end
 
-fn (DevWrite) MouseWrite { buf len unit seek -- bytes }
+fn (DevWrite) MouseWrite { pm buf len unit seek -- bytes }
 	-ENOTBLK bytes!
 end
 

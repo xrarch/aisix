@@ -32,3 +32,5 @@ const LOFFMagic 0x4C4F4632
 const LOFFArch 2
 
 const LOFFGLOBAL 1
+
+const LOFFTEXT 1

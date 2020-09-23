@@ -3,12 +3,96 @@
 #include "<inc>/loff.h"
 #include "<inc>/limnmmu.h"
 
-fn private GetEntry { header vnode -- entry }
+var CachedSegmentListHead 0
+var CachedSegmentListTail 0
+
+fn RemoveCachedSegment { seg -- }
+	seg@ UnrefSegment
+	0 seg@ Segment_VNode + @ VNode_CachedTextSegment + !
+	0 seg@ Segment_VNode + !
+
+	auto ls
+	seg@ Segment_Prev + @ ls!
+
+	auto ns
+	seg@ Segment_Next + @ ns!
+
+	if (ls@)
+		ns@ ls@ Segment_Next + !
+	end
+
+	if (ns@)
+		ls@ ns@ Segment_Prev + !
+	end
+
+	if (CachedSegmentListHead@ seg@ ==)
+		ns@ CachedSegmentListHead!
+	end
+
+	if (CachedSegmentListTail@ seg@ ==)
+		ls@ CachedSegmentListTail!
+	end
+end
+
+fn ReclaimCachedText { -- cleared }
+	auto bytes
+	0 bytes!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto seg
+	CachedSegmentListHead@ seg!
+
+	0 cleared!
+
+	while (seg@)
+		auto vnode
+		seg@ Segment_VNode + @ vnode!
+
+		if (vnode@ VNodeOwned)
+			seg@ Segment_Next + @ seg!
+			continue
+		end
+
+		vnode@ VNodeRef
+
+		if (vnode@ VNodeLock)
+			vnode@ VNodeUnref
+			rs@ InterruptRestore
+			return
+		end
+
+		if (vnode@ VNode_CachedTextSegment + @ 0 ==)
+			seg@ Segment_Next + @ seg!
+			vnode@ VNodePut
+			continue
+		end
+
+		if (seg@ Segment_Refs + @ 1 ==)
+			seg@ RemoveCachedSegment
+
+			1 cleared!
+			vnode@ VNodePut
+
+			rs@ InterruptRestore
+
+			return
+		end
+
+		vnode@ VNodePut
+		seg@ Segment_Next + @ seg!
+	end
+
+	rs@ InterruptRestore
+end
+
+fn GetEntry { header vnode loff -- ok }
 	auto entrysym
 	header@ LOFFHeader_EntrySymbol + @ entrysym!
 
 	if (entrysym@ 0xFFFFFFFF ==)
-		-ENOEXEC entry!
+		-ENOEXEC ok!
 		return
 	end
 
@@ -19,7 +103,7 @@ fn private GetEntry { header vnode -- entry }
 	LOFFSymbol_SIZEOF Malloc sym!
 
 	if (sym@ iserr)
-		-ENOMEM entry!
+		-ENOMEM ok!
 		return
 	end
 
@@ -27,68 +111,104 @@ fn private GetEntry { header vnode -- entry }
 
 	auto bytes
 
-	sym@ LOFFSymbol_SIZEOF symoff@ vnode@ VRead bytes!
+	0 sym@ LOFFSymbol_SIZEOF symoff@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFSymbol_SIZEOF <)
+	if (bytes@ LOFFSymbol_SIZEOF s<)
 		if (bytes@ iserr)
-			bytes@ entry!
+			bytes@ ok!
 		end else
-			-ENOEXEC entry!
+			-ENOEXEC ok!
 		end
 		sym@ Free
 		return
 	end
 
-	sym@ LOFFSymbol_Value + @ entry!
-
 	if (sym@ LOFFSymbol_Type + @ LOFFGLOBAL ~=)
-		-ENOEXEC entry!
+		-ENOEXEC ok!
 		sym@ Free
 		return
 	end
 
+	if (sym@ LOFFSymbol_Section + @ LOFFTEXT ~=)
+		-ENOEXEC ok!
+		sym@ Free
+		return
+	end
+
+	sym@ LOFFSymbol_Value + @ loff@ LOFFSummary_Entry + !
+
 	sym@ Free
+
+	0 ok!
 end
 
-fn private ParseLOFF { vnode -- textsize textoff datasize dataoff bsssize entry }
+struct LOFFSummary
+	4 TextVAddr
+	4 TextOffset
+	4 TextSize
+	4 DataVAddr
+	4 DataOffset
+	4 DataSize
+	4 BSSVAddr
+	4 BSSSize
+	4 Entry
+	4 TextSeg
+	4 DataSeg
+	4 BSSSeg
+	4 UData
+endstruct
+
+fn ParseLOFF { pm vnode -- loff }
+	LOFFSummary_SIZEOF Malloc loff!
+
+	if (loff@ iserr)
+		return
+	end
+
 	auto header
 	LOFFHeader_SIZEOF Malloc header!
 
 	if (header@ iserr)
-		-ENOMEM textsize!
+		loff@ Free
+		-ENOMEM loff!
 		return
 	end
 
 	auto bytes
 
-	header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+	0 header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
 
-	if (bytes@ LOFFHeader_SIZEOF <)
+	if (bytes@ LOFFHeader_SIZEOF s<)
+		loff@ Free
 		if (bytes@ iserr)
-			bytes@ textsize!
+			bytes@ loff!
 		end else
-			-ENOEXEC textsize!
+			-ENOEXEC loff!
 		end
 		header@ Free
 		return
 	end
 
 	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
-		-ENOEXEC textsize!
+		loff@ Free
+		-ENOEXEC loff!
 		header@ Free
 		return
 	end
 
 	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
-		-ENOEXEC textsize!
+		loff@ Free
+		-ENOEXEC loff!
 		header@ Free
 		return
 	end
 
-	header@ vnode@ GetEntry entry!
-	if (entry@ iserr)
-		entry@ textsize!
+	auto ok
+	header@ vnode@ loff@ GetEntry ok!
+	if (ok@ iserr)
 		header@ Free
+		loff@ Free
+		ok@ loff!
 		return
 	end
 
@@ -106,94 +226,112 @@ fn private ParseLOFF { vnode -- textsize textoff datasize dataoff bsssize entry 
 	LOFFSectionHeader_SIZEOF Malloc header!
 
 	if (header@ iserr)
-		-ENOMEM textsize!
+		loff@ Free
+		header@ loff!
 		return
 	end
 
-	header@ LOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
+	0 header@ LOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
+	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+		loff@ Free
 		if (bytes@ iserr)
-			bytes@ textsize!
+			bytes@ loff!
 		end else
-			-ENOEXEC textsize!
+			-ENOEXEC loff!
 		end
 		header@ Free
 		return
 	end
 
-	if (header@ LOFFSectionHeader_LinkedAddress + @ TEXT ~=)
-		-ENOEXEC textsize!
+	auto vaddr
+	auto offset
+
+	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	vaddr@ loff@ LOFFSummary_TextVAddr + !
+	if (vaddr@ 4095 &)
+		loff@ Free
 		header@ Free
+		-ENOEXEC loff!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionOffset + @ textoff!
-	header@ LOFFSectionHeader_SectionSize + @ textsize!
+	vaddr@ loff@ LOFFSummary_Entry + +=
 
-	header@ LOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
+	header@ LOFFSectionHeader_SectionOffset + @ offset!
+	offset@ loff@ LOFFSummary_TextOffset + !
+	if (offset@ 0x3 &)
+		loff@ Free
+		header@ Free
+		-ENOEXEC loff!
+		return
+	end
+	
+	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_TextSize + !
 
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
+	0 header@ LOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+		loff@ Free
 		if (bytes@ iserr)
-			bytes@ textsize!
+			bytes@ loff!
 		end else
-			-ENOEXEC textsize!
+			-ENOEXEC loff!
 		end
 		header@ Free
 		return
 	end
 
-	if (header@ LOFFSectionHeader_LinkedAddress + @ DATA ~=)
-		-ENOEXEC textsize!
+	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	vaddr@ loff@ LOFFSummary_DataVAddr + !
+	if (vaddr@ 4095 &)
+		loff@ Free
 		header@ Free
+		-ENOEXEC loff!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionOffset + @ dataoff!
-	header@ LOFFSectionHeader_SectionSize + @ datasize!
+	header@ LOFFSectionHeader_SectionOffset + @ offset!
+	offset@ loff@ LOFFSummary_DataOffset + !
+	if (offset@ 0x3 &)
+		loff@ Free
+		header@ Free
+		-ENOEXEC loff!
+		return
+	end
 
-	header@ LOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
+	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_DataSize + !
 
-	if (bytes@ LOFFSectionHeader_SIZEOF <)
+	0 header@ LOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
+
+	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+		loff@ Free
 		if (bytes@ iserr)
-			bytes@ textsize!
+			bytes@ loff!
 		end else
-			-ENOEXEC textsize!
+			-ENOEXEC loff!
 		end
 		header@ Free
 		return
 	end
 
-	(* BSS must be contiguous with DATA *)
-	if (header@ LOFFSectionHeader_LinkedAddress + @ datasize@ DATA + ~=)
-		-ENOEXEC textsize!
+	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	vaddr@ loff@ LOFFSummary_BSSVAddr + !
+	if (vaddr@ 4095 &)
+		loff@ Free
 		header@ Free
+		-ENOEXEC loff!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionSize + @ bsssize!
+	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_BSSSize + !
 
 	header@ Free
-
-	if (textsize@ 3 &)
-		-ENOEXEC textsize!
-		return
-	end
-
-	if (datasize@ 3 &)
-		-ENOEXEC textsize!
-		return
-	end
-
-	if (bsssize@ 3 &)
-		-ENOEXEC textsize!
-		return
-	end
 end
 
 (* look through udvec and calculate how much memory needs to be appended to the end of
 the process's data section in order to accomodate the udata *)
-fn private VecSize { udvec udcnt -- bytes }
+fn VecSize { udvec udcnt -- bytes }
 	udcnt@ UDVec_SIZEOF * bytes! (* make room for table *)
 
 	auto i
@@ -207,150 +345,327 @@ fn private VecSize { udvec udcnt -- bytes }
 	end
 end
 
-fn private VecCopy { udvec udcnt base ubase -- }
+fn VecCopy { pm udvec udcnt ubase -- ok }
 	auto i
 	0 i!
 
-	auto data
-	udcnt@ UDVec_SIZEOF * base@ + data!
-
 	auto udata
-	udcnt@ UDVec_SIZEOF * ubase@ + udata!
+	ubase@ udcnt@ UDVec_SIZEOF * + udata!
+
+	auto mpm
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ mpm!
+
+	auto tdvec
+	udcnt@ UDVec_SIZEOF * Malloc tdvec!
+
+	if (tdvec@ iserr)
+		tdvec@ ok!
+		return
+	end
+
+	auto p
+	tdvec@ p!
 
 	auto sz
+
+	0 ok!
 
 	while (i@ udcnt@ <)
 		udvec@ UDVec_Size + @ sz!
 
-		sz@ base@ UDVec_Size + !
-		udata@ base@ UDVec_Ptr + !
+		sz@ p@ UDVec_Size + !
+		udata@ p@ UDVec_Ptr + !
 
 		if (sz@ 0 ~=)
-			data@ udvec@ UDVec_Ptr + @ sz@ memcpy
+			pm@ udata@ mpm@ udvec@ UDVec_Ptr + @ sz@ VMMemcpy ok!
+
+			if (ok@ iserr)
+				tdvec@ Free
+				return
+			end
 		end
 
-		sz@ data +=
 		sz@ udata +=
-		UDVec_SIZEOF base +=
+		UDVec_SIZEOF p +=
 		UDVec_SIZEOF udvec +=
 		1 i +=
 	end
+
+	pm@ ubase@ tdvec@ udcnt@ UDVec_SIZEOF * VMCopyout ok!
+
+	tdvec@ Free
 end
 
-fn private LoadLOFF { vnode udvec udcnt -- text udata data textpages datapages entry }
-	auto textsize
-	auto textoff
+fn LoadLOFF { proc vnode udvec udcnt -- loff }
+	auto pm
+	proc@ Process_Pagemap + @ pm!
 
-	auto datasize
-	auto dataoff
+	pm@ vnode@ ParseLOFF loff!
 
-	auto bsssize
-
-	vnode@ ParseLOFF entry! bsssize! dataoff! datasize! textoff! textsize!
-
-	if (textsize@ iserr)
-		textsize@ text!
+	if (loff@ iserr)
+		return
 	end
 
 	(* start trying to copy sections in and zero BSS *)
 
-	textsize@ textpages!
+	auto textseg
+	auto dataseg
+	auto bssseg
 
-	if (textpages@ 0xFFF &)
-		0x1000 textpages +=
+	auto sz
+
+	loff@ LOFFSummary_TextSize + @ sz!
+
+	auto cts
+	vnode@ VNode_CachedTextSegment + @ cts!
+
+	if (cts@)
+		cts@ textseg!
+	end else
+		sz@ VMAllocSegment textseg!
+
+		if (textseg@ iserr)
+			loff@ Free
+			textseg@ loff!
+			return
+		end
 	end
 
-	if (textpages@ 4096 / 0 ==)
-		0x1000 textpages!
+	auto ok
+
+	proc@ textseg@ 0 OpenSegment ok!
+
+	if (ok@ 0 ~=)
+		"LoadLOFF: open text\n" Panic
 	end
 
-	textpages@ 4096 / PMMAlloc text!
+	proc@ 0 loff@ LOFFSummary_TextVAddr + @ 1 MapSegment drop ok!
 
-	if (text@ iserr)
+	if (ok@ iserr)
+		textseg@ UnrefSegment
+
+		loff@ Free
+		ok@ loff!
 		return
 	end
 
-	datasize@ bsssize@ + datapages!
-	udvec@ udcnt@ VecSize datapages +=
+	textseg@ loff@ LOFFSummary_TextSeg + !
 
-	if (datapages@ 0xFFF &)
-		0x1000 datapages +=
-	end
+	loff@ LOFFSummary_DataSize + @ sz!
 
-	if (datapages@ 4096 / 0 ==)
-		0x1000 datapages!
-	end
+	udvec@ udcnt@ VecSize sz +=
 
-	datapages@ 4096 / PMMAlloc data!
+	sz@ VMAllocSegment dataseg!
 
-	if (data@ iserr)
-		textpages@ 4096 / text@ PMMFree
-		data@ text!
+	if (dataseg@ iserr)
+		textseg@ UnrefSegment
+
+		loff@ Free
+		dataseg@ loff!
 		return
 	end
+
+	proc@ dataseg@ OSEG_WRITABLE OpenSegment ok!
+
+	if (ok@ 1 ~=)
+		"LoadLOFF: open data\n" Panic
+	end
+
+	proc@ 1 loff@ LOFFSummary_DataVAddr + @ 1 MapSegment drop ok!
+
+	if (ok@ iserr)
+		textseg@ UnrefSegment
+		dataseg@ UnrefSegment
+
+		loff@ Free
+		ok@ loff!
+		return
+	end
+
+	dataseg@ loff@ LOFFSummary_DataSeg + !
+
+	loff@ LOFFSummary_BSSSize + @ sz!
+
+	sz@ VMAllocSegment bssseg!
+
+	if (bssseg@ iserr)
+		textseg@ UnrefSegment
+		dataseg@ UnrefSegment
+
+		loff@ Free
+		bssseg@ loff!
+		return
+	end
+
+	proc@ bssseg@ OSEG_WRITABLE OpenSegment ok!
+
+	if (ok@ 2 ~=)
+		"LoadLOFF: open bss\n" Panic
+	end
+
+	proc@ 2 loff@ LOFFSummary_BSSVAddr + @ 1 MapSegment drop ok!
+
+	if (ok@ iserr)
+		textseg@ UnrefSegment
+		dataseg@ UnrefSegment
+		bssseg@ UnrefSegment
+
+		loff@ Free
+		ok@ loff!
+		return
+	end
+
+	bssseg@ loff@ LOFFSummary_BSSSeg + !
 
 	auto bytes
 
-	text@ textsize@ textoff@ vnode@ VRead bytes!
+	if (cts@ ~~)
+		pm@ loff@ LOFFSummary_TextVAddr + @ loff@ LOFFSummary_TextSize + @ loff@ LOFFSummary_TextOffset + @ vnode@ VRead bytes!
 
-	if (bytes@ textsize@ <)
-		textpages@ 4096 / text@ PMMFree
-		datapages@ 4096 / data@ PMMFree
-		-ENOEXEC text!
+		if (bytes@ loff@ LOFFSummary_TextSize + @ s<)
+			textseg@ UnrefSegment
+			dataseg@ UnrefSegment
+			bssseg@ UnrefSegment
+
+			loff@ Free
+			-ENOEXEC loff!
+			return
+		end
+
+		auto rs
+		InterruptDisable rs!
+
+		textseg@ RefSegment
+
+		textseg@ vnode@ VNode_CachedTextSegment + !
+		vnode@ textseg@ Segment_VNode + !
+
+		if (CachedSegmentListTail@ 0 ==)
+			textseg@ CachedSegmentListHead!
+			textseg@ CachedSegmentListTail!
+		end else
+			CachedSegmentListTail@ textseg@ Segment_Prev + !
+			textseg@ CachedSegmentListTail@ Segment_Next + !
+			textseg@ CachedSegmentListTail!
+		end
+
+		rs@ InterruptRestore
+	end
+
+	pm@ loff@ LOFFSummary_DataVAddr + @ loff@ LOFFSummary_DataSize + @ loff@ LOFFSummary_DataOffset + @ vnode@ VRead bytes!
+
+	if (bytes@ loff@ LOFFSummary_DataSize + @ s<)
+		textseg@ VMSegDestruct drop
+		textseg@ Free
+
+		dataseg@ VMSegDestruct drop
+		dataseg@ Free
+
+		bssseg@ VMSegDestruct drop
+		bssseg@ Free
+
+		loff@ Free
+		-ENOEXEC loff!
 		return
 	end
 
-	data@ datasize@ dataoff@ vnode@ VRead bytes!
+	pm@ loff@ LOFFSummary_BSSVAddr + @ loff@ LOFFSummary_BSSSize + @ 0 VMMemset ok!
 
-	if (bytes@ datasize@ <)
-		textpages@ 4096 / text@ PMMFree
-		datapages@ 4096 / data@ PMMFree
-		-ENOEXEC text!
+	if (ok@ iserr)
+		textseg@ VMSegDestruct drop
+		textseg@ Free
+
+		dataseg@ VMSegDestruct drop
+		dataseg@ Free
+
+		bssseg@ VMSegDestruct drop
+		bssseg@ Free
+
+		loff@ Free
+		ok@ loff!
 		return
 	end
 
-	data@ datasize@ +
-	bsssize@
-	0 memset
+	auto udata
 
 	if (udcnt@)
-		DATA datasize@ + bsssize@ + udata!
+		loff@ LOFFSummary_DataVAddr + @ loff@ LOFFSummary_DataSize + @ + udata!
 
-		udvec@ udcnt@ data@ datasize@ + bsssize@ + udata@ VecCopy
+		pm@
+		udvec@
+		udcnt@
+		udata@
+		VecCopy ok!
+
+		if (ok@ iserr)
+			textseg@ VMSegDestruct drop
+			textseg@ Free
+
+			dataseg@ VMSegDestruct drop
+			dataseg@ Free
+
+			bssseg@ VMSegDestruct drop
+			bssseg@ Free
+
+			loff@ Free
+			ok@ loff!
+			return
+		end
 	end else
 		0 udata!
 	end
+
+	udata@ loff@ LOFFSummary_UData + !
 end
 
-fn private VNewProcess1 { vnode name udvec udcnt -- process }
-	auto text
-	auto data
-	auto textpages
-	auto datapages
-	auto entry
-
-	vnode@ udvec@ udcnt@ LoadLOFF entry! datapages! textpages! data! udvec! text!
-
-	if (text@ iserr)
-		text@ process!
-		return
-	end
-
-	entry@ name@ udvec@ udcnt@ ProcessNew process!
+fn VNewProcess1 { vnode name udvec udcnt -- process }
+	name@ ProcessNew process!
 
 	if (process@ iserr)
-		textpages@ 4096 / text@ PMMFree
-		datapages@ 4096 / data@ PMMFree
 		return
 	end
 
-	text@ process@ Process_TextPhysical + !
-	textpages@ 4096 / process@ Process_TextPages + !
+	auto ok
+	process@ VMPagemapAlloc ok!
 
-	data@ process@ Process_DataPhysical + !
-	datapages@ 4096 / process@ Process_DataPages + !
+	if (ok@ iserr)
+		process@ ProcessFreeSlot
+		ok@ process!
+		return
+	end
 
-	1 process@ Process_Mapped + !
+	auto loff
+
+	process@ vnode@ udvec@ udcnt@ LoadLOFF loff!
+
+	if (loff@ iserr)
+		process@ ProcessFreeSlot
+		loff@ process!
+		return
+	end
+
+	loff@ LOFFSummary_Entry + @ loff@ LOFFSummary_UData + @ udcnt@ process@ 0 ProcessAddMainThread ok!
+
+	if (ok@ iserr)
+		process@ ProcessFreeSlot
+
+		loff@ LOFFSummary_TextSeg + @ VMSegDestruct drop
+		loff@ LOFFSummary_TextSeg + @ Free
+
+		loff@ LOFFSummary_DataSeg + @ VMSegDestruct drop
+		loff@ LOFFSummary_DataSeg + @ Free
+
+		loff@ LOFFSummary_BSSSeg + @ VMSegDestruct drop
+		loff@ LOFFSummary_BSSSeg + @ Free
+
+		loff@ Free
+
+		ok@ process!
+
+		return
+	end
+
+	loff@ Free
 
 	auto p
 	CurrentThread@ Thread_Process + @ p!

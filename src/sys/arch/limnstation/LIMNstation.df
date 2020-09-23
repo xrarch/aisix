@@ -149,14 +149,26 @@ SwitchK3:
 	mov asid, a1
 	ret
 
-FlushASID:
-	ftlb a0
+FlushTLB:
+	ftlb a0, a1
 	ret
 
 "
 
+extern FlushTLB { vpn asid -- }
+
+fn FlushASID { asid -- }
+	-1 asid@ FlushTLB
+end
+
+fn PlatformInvalidatePage { vpn proc -- }
+	auto asid
+	proc@ Process_PID + @ 4095 & asid!
+
+	vpn@ asid@ FlushTLB
+end
+
 extern SwitchK3 { asid newk3 -- }
-extern FlushASID { asid -- }
 
 table UsedASIDs[4096]
 
@@ -186,53 +198,8 @@ fn PlatformSwitchSeg { proc -- }
 	end
 
 	asid@
-	proc@ Process_TextPhysical +
+	proc@ Process_Pagemap + @ Pagemap_Data + @
 	SwitchK3
-end
-
-fn PlatformUserToPhys { len user wr -- phys valid }
-	if (user@ 0x80000000 &)
-		0 valid!
-		return
-	end
-
-	if (len@ 0 s<)
-		0 valid!
-		return
-	end
-
-	auto seg
-	user@ MMUSSHIFT >> seg!
-
-	if (seg@ 2 >=)
-		0 valid!
-		return
-	end
-
-	auto p
-	CurrentThread@ Thread_Process + @ p!
-
-	auto b
-	p@ Process_TextPhysical + seg@ 8 * + b!
-
-	auto sz
-	b@ 4 + @ 12 << sz!
-
-	auto off
-	user@ MMUOFFMASK & off!
-
-	if (off@ len@ + sz@ >=)
-		0 valid!
-		return
-	end
-
-	if (wr@ seg@ 0 == &&)
-		0 valid!
-		return
-	end
-
-	b@@ off@ + phys!
-	1 valid!
 end
 
 fn PlatformPrePanic { -- }

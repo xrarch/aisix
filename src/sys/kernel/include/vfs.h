@@ -34,9 +34,9 @@ fnptr FSReadDir { dirent -- ok }
 
 fnptr FSUnmount { mount -- ok }
 
-fnptr FSRead { buf len seek vnode -- bytes }
+fnptr FSRead { pm buf len seek vnode -- bytes }
 
-fnptr FSWrite { buf len seek vnode -- bytes }
+fnptr FSWrite { pm buf len seek vnode -- bytes }
 
 fnptr FSCreate { dirvnode name type uid permissions -- vnid }
 
@@ -84,6 +84,7 @@ struct VNode
 	4 DeleteLastRef
 	4 Dirty
 	4 DirParentVNID
+	4 CachedTextSegment
 endstruct
 
 const VNODE_FILE 1
@@ -117,9 +118,9 @@ endstruct
 
 externptr RootVNode
 
-extern VRead { buf len seek vnode -- bytes }
+extern VRead { pm buf len seek vnode -- bytes }
 
-extern VWrite { buf len seek vnode -- bytes }
+extern VWrite { pm buf len seek vnode -- bytes }
 
 extern VTrunc { vnode -- ok }
 

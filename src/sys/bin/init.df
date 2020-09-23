@@ -25,7 +25,7 @@ fn Main { ... -- ret }
 	if (stdio@ iserr)
 		1 Exit
 	end
-
+	
 	"/dev/cons" O_WRITE Open stdio!
 	if (stdio@ iserr)
 		1 Exit

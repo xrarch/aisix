@@ -1,0 +1,910 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+var Pages 0
+public Pages
+
+var Alloced 0
+public Alloced
+
+buffer PMMBitmap 8192
+
+fn PMMInit { -- }
+	auto pages
+	MachineRAMSize@ 4096 / pages!
+
+	if (pages@ 65536 >=)
+		"can only manage up to 65536 pages\n" Panic
+	end
+
+	pages@ dup Pages! "managing %d pages\n" Printf
+end
+
+fn private CheckRow { pages start -- real }
+	auto pmb
+	PMMBitmap pmb!
+
+	auto rb
+	pmb@ start@ 8 / + @ rb!
+
+	auto boff
+	0 boff!
+
+	while (rb@ boff@ bitget)
+		if (boff@ 32 >=)
+			"CheckRow\n" Panic
+		end
+
+		1 start +=
+		1 boff +=
+	end
+
+	auto max
+	start@ pages@ + max!
+
+	start@ real!
+
+	if (max@ Pages@ >=)
+		pages@ start@ max@ "max=%d start=%d pages=%d CheckRow\n" Panic
+	end
+
+	while (start@ max@ <)
+		if (boff@ 32 ==)
+			pmb@ start@ 8 / + @ rb!
+			0 boff!
+		end
+
+		if (rb@ boff@ bitget)
+			-1 real! return
+		end
+
+		1 start +=
+		1 boff +=
+	end
+end
+
+fn private PMMSetString { with pages start -- }
+	auto max
+	pages@ start@ + max!
+
+	if (max@ Pages@ >=)
+		"PMMSetString\n" Panic
+	end
+
+	auto pmb
+	PMMBitmap pmb!
+
+	while (start@ max@ <)
+		auto rbp
+		start@ 8 / pmb@ + rbp!
+
+		auto bef
+		rbp@ gb bef!
+
+		if (with@ 1 ==)
+			rbp@ gb start@ 8 % bitset rbp@ sb
+		end else
+			rbp@ gb start@ 8 % bitclear rbp@ sb
+		end
+
+		1 start +=
+	end
+end
+
+fn PMMFree { pages addr -- }
+	if (addr@ 0xFFF & 0 ~=)
+		"PMMFree: address not aligned to a page\n" Panic
+	end
+
+	if (pages@ 0 ==)
+		"PMMFree: zero pages freed\n" Panic
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	pages@ Alloced -=
+
+	0
+	pages@
+	addr@ MachineRAMBase@ - 4096 /
+	PMMSetString
+
+	rs@ InterruptRestore
+end
+
+fn PMMCalloc { pages -- addr }
+	pages@ PMMAlloc addr!
+
+	if (addr@ iserr ~~)
+		addr@ pages@ 4096 * 0 memset
+	end
+end
+
+fn PMMAlloc { pages -- addr }
+	if (pages@ 0 ==)
+		"allocating zero pages\n" Panic
+	end
+
+	-ENOMEM addr!
+
+	while (1)
+		auto rs
+		InterruptDisable rs!
+
+		auto pmb
+		PMMBitmap pmb!
+
+		auto pc
+		Pages@ pc!
+
+		auto i
+		0 i!
+
+		while (i@ pages@ + pc@ <)
+			auto rb
+			pmb@ i@ 8 / + @ rb!
+
+			if (rb@ 0xFFFFFFFF ~=)
+				auto start
+				pages@ i@ CheckRow start!
+
+				if (start@ -1 ~=)
+					1 pages@ start@ PMMSetString
+
+					start@ 4096 * MachineRAMBase@ + addr!
+
+					pages@ Alloced +=
+
+					rs@ InterruptRestore
+
+					return
+				end
+			end
+
+			32 i +=
+		end
+
+		rs@ InterruptRestore
+
+		if (ReclaimCachedText ~~)
+			return
+		end
+	end
+end
+
+fn PMMFasterSinglePageAlloc { -- addr }
+	-ENOMEM addr!
+
+	while (1)
+		auto rs
+		InterruptDisable rs!
+
+		auto pmb
+		PMMBitmap pmb!
+
+		auto pc
+		Pages@ pc!
+
+		auto i
+		0 i!
+
+		while (i@ pc@ <)
+			auto qp
+			pmb@@ qp!
+
+			if (qp@ 0xFFFFFFFF ~=)
+				auto j
+				0 j!
+
+				while (j@ 32 <)
+					if (i@ pc@ >=)
+						break
+					end
+
+					if (qp@ j@ >> 1 & 0 ==)
+						1 j@ << qp |=
+						qp@ pmb@!
+
+						i@ 12 << MachineRAMBase@ + addr!
+
+						rs@ InterruptRestore
+
+						return
+					end
+
+					1 j +=
+					1 i +=
+				end
+
+				break
+			end
+
+			4 pmb +=
+			32 i +=
+		end
+
+		rs@ InterruptRestore
+
+		if (ReclaimCachedText ~~)
+			return
+		end
+	end
+end
+
+fn PMMFasterSinglePageCalloc { -- addr }
+	PMMFasterSinglePageAlloc addr!
+
+	if (addr@ iserr)
+		return
+	end
+
+	addr@ 4096 0 memset
+end
+
+fn PMMFasterSinglePageFree { addr -- }
+	auto pmb
+	PMMBitmap pmb!
+
+	auto page
+	addr@ MachineRAMBase@ - 12 >> page!
+
+	page@ 5 >> 2 << pmb +=
+
+	auto off
+	page@ 31 & off!
+
+	1 off@ << ~ pmb@ &=
+end
+
+extern PlatformInvalidatePage { vpn proc -- }
+
+fn VMPagemapAlloc { proc -- pm }
+	if (proc@ Process_Pagemap + @)
+		"VMPagemapAlloc: proc already has pagemap!\n" Panic
+	end
+
+	Pagemap_SIZEOF Calloc pm!
+
+	if (pm@ iserr)
+		return
+	end
+
+	auto pg
+	PMMFasterSinglePageCalloc pg!
+
+	if (pg@ iserr)
+		pm@ Free
+		pg@ pm!
+		return
+	end
+
+	pg@ pm@ Pagemap_Data + !
+	proc@ pm@ Pagemap_Process + !
+	pm@ proc@ Process_Pagemap + !
+end
+
+fn VMPagemapFree { pm -- }
+	auto pdi
+	pm@ Pagemap_Data + @ pdi!
+
+	auto i
+	0 i!
+
+	while (i@ 1024 <)
+		if (pdi@@)
+			auto pt
+			pdi@@ pt!
+
+			if (pt@)
+				pt@ PMMFasterSinglePageFree
+			end
+		end
+
+		4 pdi +=
+		1 i +=
+	end
+
+	pm@ Pagemap_Data + @ PMMFasterSinglePageFree
+end
+
+fn VMMap { pm virt phys flags -- ok }
+	auto rs
+	InterruptDisable rs!
+
+	auto pdi
+	virt@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
+
+	auto pt
+	pdi@@ pt!
+
+	if (pt@ 0 ==)
+		PMMFasterSinglePageCalloc pt!
+
+		if (pt@ iserr)
+			rs@ InterruptRestore
+			pt@ ok!
+			return
+		end
+
+		pt@ pdi@!
+	end
+
+	virt@ 12 >> 1023 & 2 << pt@ + pdi!
+
+	if (pdi@@ 1 &)
+		virt@ 12 >> 1023 & "VMMap: vpn %x is already mapped!\n" Panic
+	end
+
+	phys@ 12 >> 4 << flags@ | pdi@!
+
+	0 ok!
+
+	rs@ InterruptRestore
+end
+
+fn VMUnmap { pm virt free -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto pdi
+	virt@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
+
+	auto pt
+	pdi@@ pt!
+
+	if (pt@@ 0 ==)
+		virt@ 12 >> 1023 & "VMUnmap: vpn %x wasn't mapped(0)\n" Panic
+	end
+
+	auto pti
+	virt@ 12 >> 1023 & 2 << pt@ + pti!
+
+	if (pti@@ 1 & ~~)
+		virt@ 12 >> 1023 & "VMUnmap: vpn %x wasn't mapped(1)\n" Panic
+	end
+
+	if (free@)
+		pti@@ 4 >> 12 << PMMFasterSinglePageFree
+	end
+
+	0 pti@!
+
+	auto i
+	0 i!
+
+	auto found
+	0 found!
+
+	while (i@ 1024 <)
+		if (pt@@)
+			1 found!
+			break
+		end
+
+		4 pt +=
+		1 i +=
+	end
+
+	if (found@ ~~)
+		pt@ PMMFasterSinglePageFree
+		0 pdi@!
+	end
+
+	virt@ 12 >> 1023 & pm@ Pagemap_Process + @ PlatformInvalidatePage
+
+	rs@ InterruptRestore
+end
+
+fn VMNewSegment { -- seg }
+	Segment_SIZEOF Calloc seg!
+end
+
+const PAGEMAX 1048576
+
+fn VMFindEmptyRow { pm length start must -- ok ava }
+	auto i
+	start@ 12 >> i!
+
+	auto pd
+	pm@ Pagemap_Data + @ start@ 22 >> 2 << + pd!
+
+	auto pt
+
+	auto max
+	PAGEMAX max!
+
+	auto r
+	0 r!
+
+	auto row
+	0 row!
+
+	auto cv
+	start@ cv!
+	start@ ava!
+
+	if (i@ 1023 &)
+		pd@ i@ 1023 & 2 << + @ pt!
+
+		4 pd +=
+	end
+
+	while (1)
+		if (row@ length@ >=)
+			0 ok!
+			return
+		end
+
+		if (i@ max@ >=)
+			if (start@ 0 ==)
+				(* already searched the whole thing *)
+				break
+			end
+
+			if (r@)
+				break
+			end
+
+			1 r!
+			0 i!
+			start@ 12 >> max!
+			0 ava!
+			0 cv!
+			pm@ Pagemap_Data + @ pd!
+		end
+
+		if (i@ 1023 & 0 ==)
+			pd@@ pt!
+
+			4 pd +=
+		end
+
+		if (pt@ 0 ==)
+			1024 row +=
+			1024 i +=
+			0x400000 cv +=
+			continue
+		end
+
+		if (pt@@)
+			if (must@)
+				break
+			end
+
+			0 row!
+			cv@ ava!
+		end else
+			1 row +=
+		end
+		
+		1 i +=
+		4 pt +=
+		0x1000 cv +=
+	end
+
+	ERR ok!
+end
+
+fn VMMapSegment { seg pm pva flags must -- ok ava }
+	auto pages
+	seg@ Segment_PageCount + @ pages!
+
+	pm@ pages@ pva@ must@ VMFindEmptyRow ava! ok!
+
+	if (ok@ ERR ==)
+		-ENOVMEM ok!
+		return
+	end
+
+	auto pl
+	seg@ Segment_PageList + @ pl!
+
+	auto i
+	0 i!
+
+	auto va
+	ava@ va!
+
+	while (i@ pages@ <)
+		pm@ va@ pl@@ flags@ VMMap ok!
+
+		if (ok@ iserr)
+			return
+		end
+
+		0x1000 va +=
+		4 pl +=
+		1 i +=
+	end
+end
+
+fn VMUnmapSegment { seg pm virt -- }
+	auto pages
+	seg@ Segment_PageCount + @ pages!
+
+	auto i
+	0 i!
+
+	while (i@ pages@ <)
+		pm@ virt@ 0 VMUnmap
+
+		0x1000 virt +=
+		1 i +=
+	end
+end
+
+fn (SegmentDestructor) VMSegDestruct { segment -- ok }
+	0 ok!
+
+	auto i
+	0 i!
+
+	auto pages
+	segment@ Segment_PageCount + @ pages!
+
+	auto pb
+	segment@ Segment_PageList + @ pb!
+
+	auto ptr
+	pb@ ptr!
+
+	while (i@ pages@ <)
+		ptr@@ PMMFasterSinglePageFree
+
+		4 ptr +=
+		1 i +=
+	end
+
+	pb@ Free
+end
+
+fn VMAllocSegment { bytes -- seg }
+	VMNewSegment seg!
+
+	if (seg@ iserr)
+		return
+	end
+
+	if (bytes@ 4095 &)
+		4096 bytes +=
+	end
+
+	auto pages
+	bytes@ 12 >> pages!
+
+	pages@ seg@ Segment_PageCount + !
+
+	auto pb
+	pages@ 4 * Malloc pb!
+
+	if (pb@ iserr)
+		seg@ Free
+		pb@ seg!
+		return
+	end
+
+	pb@ seg@ Segment_PageList + !
+
+	pointerof VMSegDestruct seg@ Segment_Destructor + !
+
+	auto ptr
+	pb@ ptr!
+
+	auto i
+	0 i!
+
+	while (i@ pages@ <)
+		auto pg
+
+		PMMFasterSinglePageAlloc pg!
+
+		if (pg@ iserr)
+			while (i@)
+				1 i -=
+				4 ptr -=
+
+				ptr@@ PMMFasterSinglePageFree
+			end
+
+			pb@ Free
+			seg@ Free
+			pg@ seg!
+			return
+		end
+
+		pg@ ptr@!
+
+		4 ptr +=
+		1 i +=
+	end
+end
+
+fn VMWalk { pm va -- ok pa }
+	if (pm@ 0 ==)
+		0 ok!
+		va@ pa!
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	auto pdi
+	va@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
+
+	auto pt
+	pdi@@ pt!
+
+	if (pt@ 0 ==)
+		ERR ok!
+		rs@ InterruptRestore
+		return
+	end
+
+	va@ 12 >> 1023 & 2 << pt@ + pdi!
+
+	auto pte
+	pdi@@ pte!
+
+	if (pte@ 1 & 0 ==)
+		ERR ok!
+		rs@ InterruptRestore
+		return
+	end
+
+	pte@ 4 >> 12 << va@ 4095 & | pa!
+
+	0 ok!
+
+	rs@ InterruptRestore
+end
+
+fn VMDumpWalk { pm -- }
+	auto pdi
+	pm@ Pagemap_Data + @ pdi!
+
+	auto i
+	0 i!
+
+	while (i@ 1024 <)
+		if (pdi@@)
+			auto j
+			0 j!
+
+			i@ "[%d]\n" Printf
+
+			auto pt
+			pdi@@ pt!
+
+			while (j@ 1024 <)
+				if (pt@@)
+					pt@@ j@ "  [%d]-> %x\n" Printf
+				end
+
+				4 pt +=
+				1 j +=
+			end
+		end
+
+		4 pdi +=
+		1 i +=
+	end
+end
+
+fn VMMemset { pm va size word -- ok }
+	0 ok!
+
+	if (pm@ 0 ==)
+		va@ size@ word@ memset
+	end else
+		while (size@)
+			auto pa
+			pm@ va@ VMWalk pa! ok!
+
+			if (ok@ iserr)
+				-EFAULT ok!
+				return
+			end
+
+			auto n
+			4096 va@ 0xFFF & - n!
+
+			if (n@ size@ >)
+				size@ n!
+			end
+
+			pa@ n@ word@ memset
+
+			n@ size -=
+			n@ va += 
+		end
+	end
+end
+
+fn VMCopyout { pm va src len -- ok }
+	0 ok!
+
+	if (pm@ 0 ==)
+		va@ src@ len@ memcpy
+	end else
+		while (len@)
+			auto pa
+			pm@ va@ VMWalk pa! ok!
+
+			if (ok@ iserr)
+				-EFAULT ok!
+				return
+			end
+
+			auto n
+			4096 va@ 0xFFF & - n!
+
+			if (n@ len@ >)
+				len@ n!
+			end
+
+			pa@ src@ n@ memcpy
+
+			n@ len -=
+			n@ src +=
+			n@ va += 
+		end
+	end
+end
+
+fn VMCopyin { pm dest va len -- ok }
+	0 ok!
+
+	if (pm@ 0 ==)
+		dest@ va@ len@ memcpy
+	end else
+		while (len@)
+			auto pa
+			pm@ va@ VMWalk pa! ok!
+
+			if (ok@ iserr)
+				-EFAULT ok!
+				return
+			end
+
+			auto n
+			4096 va@ 0xFFF & - n!
+
+			if (n@ len@ >)
+				len@ n!
+			end
+
+			dest@ pa@ n@ memcpy
+
+			n@ len -=
+			n@ dest +=
+			n@ va += 
+		end
+	end
+end
+
+fn VMMemcpy { destpm dest srcpm src len -- ok }
+	if (destpm@ 0 ==)
+		if (srcpm@ 0 ==)
+			dest@ src@ len@ memcpy
+			0 ok!
+		end else
+			srcpm@ dest@ src@ len@ VMCopyin ok!
+		end
+	end else
+		if (srcpm@ 0 ==)
+			destpm@ dest@ src@ len@ VMCopyout ok!
+		end else
+			while (len@)
+				auto destpa
+				destpm@ dest@ VMWalk destpa! ok!
+
+				if (ok@ iserr)
+					-EFAULT ok!
+					return
+				end
+
+				auto srcpa
+				srcpm@ src@ VMWalk srcpa! ok!
+
+				if (ok@ iserr)
+					-EFAULT ok!
+					return
+				end
+
+				auto n1
+				4096 dest@ 0xFFF & - n1!
+
+				auto n2
+				4096 src@ 0xFFF & - n2!
+
+				auto n
+				n1@ n2@ min n!
+
+				if (n@ len@ >)
+					len@ n!
+				end
+
+				destpa@ srcpa@ n@ memcpy
+
+				n@ len -=
+				n@ dest +=
+				n@ src += 
+			end
+		end
+	end
+end
+
+fn VMStrlen { pm va -- len }
+	auto pa
+	auto r
+	if (va@ 4095 &)
+		pm@ va@ VMWalk pa! r!
+
+		if (r@ iserr)
+			r@ len!
+			return
+		end
+	end
+
+	while (1)
+		if (va@ 4095 & 0 ==)
+			pm@ va@ VMWalk pa! r!
+
+			if (r@ iserr)
+				r@ len!
+				return
+			end
+		end
+
+		if (pa@ gb 0 ==)
+			return
+		end
+
+		1 len +=
+		1 pa +=
+		1 va +=
+	end
+end
+
+fn VMStrnCopyin { pm dest va max -- ok }
+	auto pa
+	if (va@ 4095 &)
+		pm@ va@ VMWalk pa! ok!
+
+		if (ok@ iserr)
+			return
+		end
+	end
+
+	auto len
+	0 len!
+
+	while (1)
+		if (va@ 4095 & 0 ==)
+			pm@ va@ VMWalk pa! ok!
+
+			if (ok@ iserr)
+				return
+			end
+		end
+
+		if (len@ max@ >=)
+			break
+		end
+
+		if (pa@ gb 0 ==)
+			return
+		end
+
+		pa@ gb dest@ sb
+
+		1 len +=
+		1 pa +=
+		1 va +=
+		1 dest +=
+	end
+
+	0 dest@ sb
+end

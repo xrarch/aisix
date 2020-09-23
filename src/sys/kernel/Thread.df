@@ -25,7 +25,7 @@ extern AISIXInitialThread { -- }
 
 fn ThreadInit { -- }
 	auto process
-	pointerof AISIXInitialThread 0 0 0 ProcessNew process!
+	0 ProcessNew process!
 
 	if (process@ iserr)
 		process@ abs process!
@@ -34,6 +34,14 @@ fn ThreadInit { -- }
 
 	if (KernelProcess@ process@ ~=)
 		"couldn't set up kernel process\n" Panic
+	end
+
+	auto ok
+	pointerof AISIXInitialThread 0 0 process@ 1 ProcessAddMainThread ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "couldn't set up initial kernel thread: %s\n" Panic
 	end
 
 	process@ Process_MainThread + @ ThreadReady
@@ -85,7 +93,7 @@ fn private ThreadFreeSlot { thread -- }
 end
 
 fn ThreadFree { thread -- }
-	KERNELSTACKPAGES thread@ Thread_KernelStack + @ PMMFree
+	thread@ Thread_KernelStack + @ PMMFasterSinglePageFree
 
 	thread@ ThreadFreeSlot
 end
@@ -211,7 +219,7 @@ fn ThreadNew { process entry name kern pass0 pass1 -- thread }
 	process@ thread@ Thread_Process + !
 
 	auto stack
-	KERNELSTACKPAGES PMMCalloc stack!
+	PMMFasterSinglePageCalloc stack!
 
 	if (stack@ iserr)
 		thread@ ThreadFreeSlot
@@ -225,7 +233,7 @@ fn ThreadNew { process entry name kern pass0 pass1 -- thread }
 
 	auto vst
 
-	KERNELSTACKPAGES 4096 * stack@ + dup thread@ Thread_KernelStackTop + ! uc!
+	4096 stack@ + dup thread@ Thread_KernelStackTop + ! uc!
 
 	pass0@ pass1@ entry@ uc@ kern@ CPUContextPrepare thread@ Thread_Context + !
 
@@ -299,7 +307,7 @@ fn Scheduler { -- }
 			thread@ Thread_Process + @ proc!
 
 			if (proc@ lastproc@ ~=)
-				if (proc@ Process_Mapped + @)
+				if (proc@ Process_Pagemap + @)
 					proc@ PlatformSwitchSeg
 
 					proc@ lastproc!
@@ -556,7 +564,7 @@ fn private ProcessAllocate { -- process }
 	end
 end
 
-fn private ProcessFreeSlot { process -- }
+fn ProcessFreeSlot { process -- }
 	auto index
 	process@ Process_Index + @ index!
 
@@ -565,7 +573,7 @@ fn private ProcessFreeSlot { process -- }
 	process@ Free
 end
 
-fn ProcessNew { entry name udata udatasz -- process }
+fn ProcessNew { name -- process }
 	auto canon
 	if (name@ 0 ==)
 		0 canon!
@@ -605,21 +613,24 @@ fn ProcessNew { entry name udata udatasz -- process }
 
 	"proc parent" process@ Process_ParentLock + InitMutex
 
+	if (kernel@)
+		process@ KernelProcess!
+	end
+end
+
+fn ProcessAddMainThread { entry udata udatasz process kernel -- ok }
 	auto mthread
 
 	process@ entry@ "main" kernel@ udata@ udatasz@ ThreadNew mthread!
 
-	mthread@ process@ Process_MainThread + !
-
 	if (mthread@ iserr)
-		process@ ProcessFreeSlot
-		mthread@ process!
+		mthread@ ok!
 		return
 	end
 
-	if (kernel@)
-		process@ KernelProcess!
-	end
+	mthread@ process@ Process_MainThread + !
+
+	0 ok!
 end
 
 fn KillTTY { tty -- }
@@ -790,10 +801,22 @@ fn ProcessKill { ret process -- }
 			1 i +=
 		end
 
-		if (process@ Process_Mapped + @)
-			process@ Process_TextPages + @ process@ Process_TextPhysical + @ PMMFree
-			process@ Process_DataPages + @ process@ Process_DataPhysical + @ PMMFree
-			0 process@ Process_Mapped + !
+		process@ Process_OSegs + ofile!
+
+		0 i!
+
+		while (i@ OSEGMAX <)
+			if (ofile@ OSeg_Segment + @)
+				ofile@ ClosePSegment drop
+				0 ofile@ OSeg_Segment + !
+			end
+
+			OSeg_SIZEOF ofile +=
+			1 i +=
+		end
+
+		if (process@ Process_Pagemap + @)
+			process@ Process_Pagemap + @ VMPagemapFree
 		end
 
 		parent@ Process_WaitQ + WakeQueue

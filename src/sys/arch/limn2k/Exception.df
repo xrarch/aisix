@@ -63,36 +63,26 @@ forkret:
 
 	rfe ; give control back to the thread
 
-;k3 = CurrentThread@ Thread_Process + @ Process_TextPhysical + @
-limn2k_refill_seg:
-	blt.s badaddr, zero, .baddr ; is it in a bad segment?
+VALID === 1
 
-	rshi  k0, badaddr, 30       ; k0 = segment number
-	lshi  k0, k0, 3
-	l.l   k1, k3, k0            ; k1 = segment physical address
-	addi  k0, k0, 4
-	l.l   k2, k3, k0            ; k2 = segment size in pages
+;k0 = pdindex
+;k1 = ptindex
+;k3 = CurrentThread@ Thread_Process + @ Process_Pagemap + @ Pagemap_Data + @
+limn2k_refill:
+	l.l k0, k3, k0
+	beq k0, zero, .baddr
 
-	lshi  k2, k2, 12            ; k2 = segment size in bytes
+	l.l k0, k0, k1
+	andi k1, k0, VALID
+	beq k1, zero, .baddr
 
-	la    k0, 0x3FFFFFFF
-	and   k0, badaddr, k0       ; k0 = offset within segment
-
-	slt   k2, k0, k2            ; k2 = !(offset < size) = offset >= size
-	beq   k2, zero, .baddr      ; is it beyond the segment boundary?
-
-	add   k0, k0, k1            ; k0 = physical address
-	rshi  k0, k0, 12
-	lshi  k0, k0, 4
-	ori   k0, k0, 3
-
-	wtlb  badaddr, k0
+	wtlb badaddr, k0
 
 	rfe
 
 .baddr:
-	li ecause, 12
-	b  limn2k_exception
+	li ecause, 0xFF
+	b limn2k_exception
 
 ; old new -- 
 cswtch:
@@ -138,7 +128,7 @@ PlatformSetTimer:
 ExceptionInit:
 .global ExceptionInit
 	la ev, limn2k_exception
-	la tlbv, limn2k_refill_seg
+	la tlbv, limn2k_refill
 	ret
 
 "
@@ -148,6 +138,8 @@ extern PlatformSetTimer { -- } (* it's actually in this file but this makes the 
 extern forkret { -- }
 
 extern KDebug { -- }
+
+externptr TraceTF
 
 const EXCINTERRUPT 1
 const EXCSYS 2
@@ -212,6 +204,7 @@ fn Exception { badaddr ecause tf -- }
 	end else
 		if (mode@ 0 ==)
 			(* kernel mode exception, panic *)
+			1 TraceTF!
 			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end else
 			CurrentThread@ Thread_Process + @ Process_Name + "killed: %s\n" Printf

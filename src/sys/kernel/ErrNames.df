@@ -11,7 +11,7 @@ table ErrorNames
 	"Bad file number"
 	"No child processes"
 	"Try again"
-	"Out of memory"
+	"Insufficient memory"
 	"Permission denied"
 	"---"
 	"Operation not supported"
@@ -33,5 +33,11 @@ table ErrorNames
 	"Too many links"
 	"Broken pipe"
 	"Bad syscall"
+	"Bad virtual address"
+	"Segment already mapped"
+	"Insufficient virtual address space"
+	"Segment not mapped"
+	"Bad segment number"
+	"Too many open segments"
 endtable
 public ErrorNames

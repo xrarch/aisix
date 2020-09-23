@@ -290,6 +290,11 @@ fn ASpawn { fd0 fd1 fd2 argcn argvt path -- pid }
 	auto uvec
 	argcn@ 2 + UDVec_SIZEOF * Malloc uvec!
 
+	if (uvec@ ERR ==)
+		-ENOMEM pid!
+		return
+	end
+
 	(* some day soon [0]uvec will be envp, but for now make it zero *)
 	0 uvec@ UDVec_Size + !
 	0 uvec@ UDVec_Ptr + !

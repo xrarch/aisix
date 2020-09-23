@@ -15,6 +15,10 @@ var LastRet 0
 fn String { m -- word }
 	256 Calloc word!
 
+	if (word@ ERR ==)
+		return
+	end
+
 	auto q
 	word@ q!
 

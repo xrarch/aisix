@@ -1,5 +1,6 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
+#include "<inc>/context.h"
 
 var KLogWrite 0
 public KLogWrite
@@ -178,6 +179,9 @@ fn LogPump { -- }
 	end
 end
 
+var TraceTF 0
+public TraceTF
+
 fn Panic { ... fmt -- }
 	InterruptDisable drop
 
@@ -211,7 +215,14 @@ fn Panic { ... fmt -- }
 
 	"\[[41m\[c!!! AISIX PANIC !!!\n" Printf
 
-	pointerof Panic PanicLink@ Trace
+	if (TraceTF@ ~~)
+		pointerof Panic PanicLink@ Trace
+	end else
+		auto tf
+		CurrentThread@ Thread_TrapFrame + @ tf!
+
+		tf@ Context_epc + @ tf@ Context_sp + @ Trace
+	end
 
 	CurrentThread@ thn@ procn@ "running process: %s (thread: %s [%x])\n" Printf
 

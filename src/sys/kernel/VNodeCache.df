@@ -50,6 +50,13 @@ fn VNodeUnref { vnode -- }
 
 			rs@ InterruptRestore
 
+			auto cseg
+			vnode@ VNode_CachedTextSegment + @ cseg!
+
+			if (cseg@)
+				cseg@ RemoveCachedSegment
+			end
+
 			vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Delete + @ FSDelete drop
 
 			vnode@ Free
@@ -70,6 +77,13 @@ end
 fn VNodeRemove { vnode -- res }
 	if (vnode@ VNode_Refs + @ 1 >)
 		"tried to remove vnode with hanging references!\n" Panic
+	end
+
+	auto cseg
+	vnode@ VNode_CachedTextSegment + @ cseg!
+
+	if (cseg@)
+		cseg@ RemoveCachedSegment
 	end
 
 	auto mount

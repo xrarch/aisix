@@ -59,14 +59,14 @@ const CANONLEN 1024
 fn RealPath { path -- canon }
 	CANONLEN Calloc canon!
 
-	if (canon@ iserr)
+	if (canon@ ERR ==)
 		return
 	end
 
 	auto pcomp
 	256 Calloc pcomp!
 
-	if (pcomp@ iserr)
+	if (pcomp@ ERR ==)
 		canon@ Free
 		pcomp@ canon!
 		return

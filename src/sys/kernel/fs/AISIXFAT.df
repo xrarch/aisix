@@ -70,7 +70,7 @@ struct INode
 	4 bytesize
 endstruct
 
-fn private BAlloc { link mount prefatbuf -- buf }
+fn BAlloc { link mount prefatbuf -- buf }
 	auto fsd
 	mount@ Mount_FSData + @ fsd!
 
@@ -119,9 +119,13 @@ fn private BAlloc { link mount prefatbuf -- buf }
 			if (search@)
 				break
 			end else
+				if (lfb@ 0 ==)
+					break
+				end
+
 				1 search!
 				mount@ Mount_FSData + @ AFSData_FATStart + @ fatb!
-				lfb@ 1 + top!
+				lfb@ top!
 				0 i!
 			end
 		end
@@ -194,7 +198,7 @@ fn private BAlloc { link mount prefatbuf -- buf }
 	-ENOSPC buf!
 end
 
-fn private UpdateNode { vnode -- ok }
+fn UpdateNode { vnode -- ok }
 	0 ok!
 
 	auto vd
@@ -246,7 +250,7 @@ fn private UpdateNode { vnode -- ok }
 	buf@ brelse
 end
 
-fn private WalkFAT { ent count reading vnode cache -- b }
+fn WalkFAT { ent count reading vnode cache -- b }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
@@ -366,7 +370,7 @@ fn private WalkFAT { ent count reading vnode cache -- b }
 	fatbuf@ brelse
 end
 
-fn private BMap { bn reading vnode -- buf }
+fn BMap { bn reading vnode -- buf }
 	auto vd
 	vnode@ VNode_FSData + @ vd!
 
@@ -380,7 +384,7 @@ fn private BMap { bn reading vnode -- buf }
 	vd@ AVData_BNCache + @ bm!
 
 	if (bm@ 0 ==)
-		1 PMMAlloc bm!
+		PMMFasterSinglePageAlloc bm!
 
 		if (bm@ iserr)
 			bm@ buf!
@@ -446,7 +450,7 @@ fn private BMap { bn reading vnode -- buf }
 	bno@ vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
 end
 
-fn private TruncNode { vnode -- ok }
+fn TruncNode { vnode -- ok }
 	auto vd
 	vnode@ VNode_FSData + @ vd!
 
@@ -516,7 +520,7 @@ fn (FSTrunc) AISIXFSTrunc { vnode -- ok }
 	vnode@ TruncNode ok!
 end
 
-fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
+fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 	if (vnode@ VNode_Type + @ VNODE_DIR ==)
 		-EISDIR bytes!
 		return
@@ -550,6 +554,8 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 	auto tot
 	0 tot!
 
+	auto r
+
 	while (tot@ len@ <)
 		auto bbuf
 		seek@ 4096 / 1 vnode@ BMap bbuf!
@@ -565,11 +571,17 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 		4096 seek@ 4096 % -
 		min m!
 
+		pm@
 		buf@
 		bbuf@ Buffer_Data + @ seek@ 4096 % +
-		m@ memcpy
+		m@ VMCopyout r!
 
 		bbuf@ brelse
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
 
 		m@ buf +=
 		m@ seek +=
@@ -581,7 +593,7 @@ fn (FSRead) AISIXFSRead { buf len seek vnode -- bytes }
 	len@ bytes!
 end
 
-fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
+fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 	if (seek@ 0 s<)
 		0 bytes!
 		return
@@ -623,9 +635,16 @@ fn (FSWrite) AISIXFSWrite { buf len seek vnode -- bytes }
 		4096 seek@ 4096 % -
 		min m!
 
+		pm@
 		bbuf@ Buffer_Data + @ seek@ 4096 % +
 		buf@
-		m@ memcpy
+		m@ VMCopyin r!
+
+		if (r@ iserr)
+			r@ bytes!
+			bbuf@ brelse
+			return
+		end
 
 		bbuf@ bwrite
 
@@ -980,7 +999,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	buf@ brelse
 
 	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
-		1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+		vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFasterSinglePageFree
 	end
 
 	vnode@ VNode_FSData + @ Free
@@ -1138,7 +1157,7 @@ fn (FSPutNode) AISIXFSPutNode { vnode -- ok }
 	vnode@ UpdateNode ok!
 
 	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
-		1 vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFree
+		vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFasterSinglePageFree
 	end
 
 	vnode@ VNode_FSData + @ Free

@@ -28,29 +28,34 @@ endstruct
 
 const OFILEMAX 64
 
+const OSEGMAX 32
+
 const PROCNAMELEN 32
 
-const CWDPATHLEN 512
+const CWDPATHLEN 384
+
+struct OSeg
+	4 Segment
+	4 Flags
+	4 VAddr
+endstruct
+
+const OSEG_MAPPED 1
+const OSEG_WRITABLE 2
 
 struct Process
 	4 Threads
-	4 Mapped
 	4 Parent
 	4 UID
 	4 EUID
 
 	4 MainThread
 
-	4 TextPhysical
-	4 TextPages
-
-	4 DataPhysical
-	4 DataPages
-
 	4 PQ
 
+	4 Pagemap
+
 	4 CWDVNode
-	CWDPATHLEN CWDPathString
 
 	4 Exited
 
@@ -59,21 +64,26 @@ struct Process
 	4 TTY
 	4 IgnoreTTY
 
+	4 Index
+	4 PID
+
+	4 ReturnValue
+
+	4 UMask
+
 	Mutex_SIZEOF Mutex
 
 	Mutex_SIZEOF ParentLock
 
 	EventQueue_SIZEOF WaitQ
 
-	4 Index
-	4 PID
-
 	256 OFiles (* dragonfruit is dumb so we can't use a nice constant here, but this is OFILEMAX=64 * 4 *)
 
-	4 ReturnValue
-	PROCNAMELEN Name
+	384 OSegs (* OSEGMAX=32 * 12 *)
 
-	4 UMask
+	CWDPATHLEN CWDPathString
+
+	PROCNAMELEN Name
 endstruct
 
 externptr CurrentThread
@@ -134,7 +144,11 @@ extern ThreadFree { thread -- }
 
 extern cswtch { old new -- }
 
-extern ProcessNew { entry name udata udatasz -- process }
+extern ProcessNew { name -- process }
+
+extern ProcessAddMainThread { entry udata udatasz process kernel -- ok }
+
+extern ProcessFreeSlot { process -- }
 
 extern ProcLock { proc -- killed }
 

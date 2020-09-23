@@ -17,11 +17,11 @@ fnptr DevClose { unit -- ok }
 
 fnptr DevIoctl { op1 op2 op3 op4 unit -- ok }
 
-fnptr DevRead { buf len unit seek -- bytes }
+fnptr DevRead { pm buf len unit seek -- bytes }
 
 fnptr BlockDevRead { buf len unit seek -- blocks }
 
-fnptr DevWrite { buf len unit seek -- bytes }
+fnptr DevWrite { pm buf len unit seek -- bytes }
 
 fnptr BlockDevWrite { buf len unit seek -- blocks }
 
@@ -50,9 +50,9 @@ externptr DevFSTab
 
 extern DeviceSysctl { op1 op2 op3 op4 dev -- ok }
 
-extern DeviceRead { buf len seek dev -- bytes }
+extern DeviceRead { pm buf len seek dev -- bytes }
 
-extern DeviceWrite { buf len seek dev -- bytes }
+extern DeviceWrite { pm buf len seek dev -- bytes }
 
 extern DeviceOpen { dev -- ok }
 

@@ -123,12 +123,12 @@ fn VFSMountRoot { -- }
 	"mounted devfs on /dev\n" Printf
 end
 
-fn VRead { buf len seek vnode -- bytes }
-	buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Read + @ FSRead bytes!
+fn VRead { pm buf len seek vnode -- bytes }
+	pm@ buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Read + @ FSRead bytes!
 end
 
-fn VWrite { buf len seek vnode -- bytes }
-	buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Write + @ FSWrite bytes!
+fn VWrite { pm buf len seek vnode -- bytes }
+	pm@ buf@ len@ seek@ vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Write + @ FSWrite bytes!
 end
 
 fn VTrunc { vnode -- ok }

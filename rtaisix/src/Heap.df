@@ -57,7 +57,7 @@ fn private Malloc1 { endp startp sz -- ptr }
 
 	while (ptr@ endp@ <)
 		if (ptr@ 0 ==)
-			-ENOMEM ptr!
+			ERR ptr!
 			break
 		end
 
@@ -110,7 +110,7 @@ fn private Malloc1 { endp startp sz -- ptr }
 		ptr@ KHeapHeader_next + @ ptr!
 	end
 
-	if (ptr@ iserr ~~)
+	if (ptr@ ERR ~=)
 		ptr@ KHeapLast!
 
 		1 ptr@ KHeapHeader_allocated + !
@@ -126,23 +126,23 @@ fn Malloc { size -- ptr }
 
 	0 KHeapLast@ size@ Malloc1 ptr!
 
-	if (ptr@ iserr ~~)
+	if (ptr@ ERR ~=)
 		return
 	end
 
 	KHeapLast@ 0 size@ Malloc1 ptr!
 
-	if (ptr@ iserr ~~)
+	if (ptr@ ERR ~=)
 		return
 	end
 
-	-ENOMEM ptr! return
+	ERR ptr! return
 end
 
 fn Calloc { size -- ptr }
 	size@ Malloc ptr!
 
-	if (ptr@ iserr)
+	if (ptr@ ERR ==)
 		return
 	end
 
@@ -150,7 +150,7 @@ fn Calloc { size -- ptr }
 end
 
 fn Free { ptr -- }
-	if (ptr@ 0 == ptr@ iserr ||)
+	if (ptr@ 0 == ptr@ ERR == ||)
 		ptr@ "tried to free 0x%x!\n" Abort
 	end
 

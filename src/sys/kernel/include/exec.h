@@ -15,3 +15,7 @@ struct UDVec
 	4 Ptr
 	4 Size
 endstruct
+
+extern RemoveCachedSegment { seg -- }
+
+extern ReclaimCachedText { -- cleared }

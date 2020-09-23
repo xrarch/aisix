@@ -169,6 +169,11 @@ fn MonitorCommandsInit { -- }
 	pointerof PrintVNodes
 	"vnodes"
 	MonitorAddCommand
+
+	"[pid] Dump the process's page table."
+	pointerof MonitorCommandPages
+	"pages"
+	MonitorAddCommand
 end
 
 fn CommandPanic { -- }
@@ -329,6 +334,29 @@ fn MonitorCommandKill { -- }
 	end
 
 	-1 proc@ ProcessKill
+end
+
+fn MonitorCommandPages { -- }
+	auto tidw
+	MonitorParseWord tidw!
+
+	auto tid
+	tidw@ atoi tid!
+
+	tidw@ Free
+
+	if (tid@ PROCMAX >=)
+		return
+	end
+
+	auto proc
+	[tid@]Processes@ proc!
+
+	if (proc@ 0 ==)
+		return
+	end
+
+	proc@ Process_Pagemap + @ VMDumpWalk
 end
 
 fn MonitorCommandHelp { -- }

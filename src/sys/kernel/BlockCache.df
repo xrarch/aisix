@@ -48,7 +48,7 @@ fn BlockInit { -- }
 		b@ BufferHead Buffer_Next + !
 
 		auto bd
-		1 PMMAlloc bd!
+		PMMFasterSinglePageAlloc bd!
 
 		if (bd@ iserr)
 			bd@ abs bd!
@@ -149,6 +149,7 @@ fn bread { blockno dev -- buf }
 	auto ok
 
 	if (buf@ Buffer_Valid + @ ~~)
+		0
 		buf@ Buffer_Data + @
 		1
 		blockno@
@@ -193,6 +194,7 @@ fn bupdate { buf -- ok }
 	buf@ LockBuf
 
 	if (buf@ Buffer_Valid + @ buf@ Buffer_Dirty + @ &&)
+		0
 		buf@ Buffer_Data + @
 		1
 		buf@ Buffer_BlockNum + @

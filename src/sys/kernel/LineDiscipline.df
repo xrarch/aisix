@@ -131,13 +131,24 @@ fn (IOCharInput) TTYInput { c buf -- }
 	end
 end
 
-fn TTYRead { buf len tty -- bytes }
+fn TTYRead { pm buf len tty -- bytes }
 	auto ib
 	tty@ TTY_IBuffer + @ ib!
 
 	if (ib@ ~~)
 		-ENOTBLK bytes!
 		return
+	end
+
+	auto pa
+	auto r
+	if (buf@ 4095 &)
+		pm@ buf@ VMWalk pa! r!
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
 	end
 
 	auto rs
@@ -174,7 +185,17 @@ fn TTYRead { buf len tty -- bytes }
 			continue
 		end
 
-		c@ buf@ sb
+		if (buf@ 4095 & 0 ==)
+			pm@ buf@ VMWalk pa! r!
+
+			if (r@ iserr)
+				r@ bytes!
+				return
+			end
+		end
+
+		c@ pa@ sb
+		1 pa +=
 		1 buf +=
 		1 bytes +=
 
@@ -184,7 +205,7 @@ fn TTYRead { buf len tty -- bytes }
 	end
 end
 
-fn TTYWrite { buf len tty -- bytes }
+fn TTYWrite { pm buf len tty -- bytes }
 	auto ob
 	tty@ TTY_OBuffer + @ ob!
 
@@ -195,16 +216,35 @@ fn TTYWrite { buf len tty -- bytes }
 
 	0 bytes!
 
+	auto pa
 	auto r
+	if (buf@ 4095 &)
+		pm@ buf@ VMWalk pa! r!
+
+		if (r@ iserr)
+			r@ bytes!
+			return
+		end
+	end
 
 	while (bytes@ len@ <)
-		buf@ gb ob@ 1 IOBufPutc r!
+		if (buf@ 4095 & 0 ==)
+			pm@ buf@ VMWalk pa! r!
+
+			if (r@ iserr)
+				r@ bytes!
+				return
+			end
+		end
+
+		pa@ gb ob@ 1 IOBufPutc r!
 
 		if (r@ iserr)
 			r@ bytes!
 			return
 		end
 
+		1 pa +=
 		1 buf +=
 		1 bytes +=
 	end

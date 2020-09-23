@@ -7,6 +7,6 @@ extern _MainTrampoline { udv udc -- }
 
 fn _Launch { udc udv -- }
 	_HeapInit
-
+	
 	udv@ udc@ _MainTrampoline
 end

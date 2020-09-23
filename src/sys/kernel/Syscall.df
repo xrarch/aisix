@@ -36,19 +36,21 @@ table Syscalls
 endtable
 public Syscalls
 
+const STRMAX 256
+
 fn private GetString { user len -- str }
 	if (user@ ~~)
 		-EINVAL str!
 		return
 	end
 
-	auto r
-	len@ user@ 0 PlatformUserToPhys r! user!
-
-	if (r@ ~~)
-		-EINVAL str!
+	if (len@ STRMAX >=)
+		-E2BIG str!
 		return
 	end
+
+	auto p
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ p!
 
 	len@ 1 + Calloc str!
 
@@ -56,7 +58,13 @@ fn private GetString { user len -- str }
 		return
 	end
 
-	str@ user@ len@ strncpy
+	auto ok
+	p@ str@ user@ len@ VMStrnCopyin ok!
+
+	if (ok@ iserr)
+		str@ Free
+		ok@ str!
+	end
 end
 
 fn (Syscall) SysOpen { tf -- ok }
@@ -94,14 +102,6 @@ fn (Syscall) SysWrite { tf -- ok }
 	auto fd
 	tf@ Context_a1 + @ fd!
 
-	auto r
-	len@ buf@ 0 PlatformUserToPhys r! buf!
-
-	if (r@ ~~)
-		-EINVAL ok!
-		return
-	end
-
 	buf@ len@ fd@ Write ok!
 end
 
@@ -122,71 +122,7 @@ fn (Syscall) SysRead { tf -- ok }
 	auto fd
 	tf@ Context_a1 + @ fd!
 
-	auto r
-	len@ buf@ 1 PlatformUserToPhys r! buf!
-
-	if (r@ ~~)
-		-EINVAL ok!
-		return
-	end
-
 	buf@ len@ fd@ Read ok!
-end
-
-fn private GetKVec { udc udv -- kdv }
-	0 kdv!
-
-	auto p1
-	auto p2
-	auto r
-
-	if (udc@)
-		udc@ UDVec_SIZEOF * udv@ 1 PlatformUserToPhys r! udv!
-
-		if (r@ ~~)
-			-EINVAL kdv!
-			return
-		end
-
-		udc@ UDVec_SIZEOF * Malloc kdv!
-
-		if (kdv@ iserr)
-			-ENOMEM kdv!
-			return
-		end
-
-		auto i
-		0 i!
-
-		kdv@ p1!
-
-		while (i@ udc@ <)
-			if (udv@ UDVec_Size + @ 0 ==)
-				0 p1@ UDVec_Size + !
-				0 p1@ UDVec_Ptr + !
-
-				1 i +=
-				UDVec_SIZEOF p1 +=
-				UDVec_SIZEOF udv +=
-				continue
-			end
-
-			udv@ UDVec_Size + @ udv@ UDVec_Ptr + @ 0 PlatformUserToPhys r! p2!
-
-			if (r@ ~~)
-				kdv@ Free
-				-EINVAL kdv!
-				return
-			end
-
-			udv@ UDVec_Size + @ p1@ UDVec_Size + !
-			p2@ p1@ UDVec_Ptr + !
-
-			UDVec_SIZEOF p1 +=
-			UDVec_SIZEOF udv +=
-			1 i +=
-		end
-	end
 end
 
 fn (Syscall) SysNewProcess { tf -- ok }
@@ -216,16 +152,13 @@ fn (Syscall) SysNewProcess { tf -- ok }
 		return
 	end
 
-	if (udv@ 3 &)
-		-EINVAL ok!
+	if (udc@ 64 >)
+		-E2BIG ok!
 		return
 	end
 
-	auto kdv
-	udc@ udv@ GetKVec kdv!
-
-	if (kdv@ iserr)
-		kdv@ ok!
+	if (udv@ 3 &)
+		-EINVAL ok!
 		return
 	end
 
@@ -233,20 +166,38 @@ fn (Syscall) SysNewProcess { tf -- ok }
 
 	if (path@ iserr)
 		path@ ok!
-		if (kdv@)
-			kdv@ Free
-		end
 		return
+	end
+
+	if (udc@)
+		auto udvs
+		udc@ UDVec_SIZEOF * udvs!
+
+		auto kdv
+		udvs@ Malloc kdv!
+
+		if (kdv@ iserr)
+			path@ Free
+			return
+		end
+
+		CurrentThread@ Thread_Process + @ Process_Pagemap + @ kdv@ udv@ udvs@ VMCopyin ok!
+
+		if (ok@ iserr)
+			path@ Free
+			kdv@ Free
+			return
+		end
 	end
 
 	auto vnode
 	path@ VFSPath vnode!
 
 	if (vnode@ iserr)
-		path@ Free
-		if (kdv@)
+		if (udc@)
 			kdv@ Free
 		end
+		path@ Free
 		vnode@ ok!
 		return
 	end
@@ -257,12 +208,12 @@ fn (Syscall) SysNewProcess { tf -- ok }
 		end else
 			fd0@ GetFilp fd0!
 			if (fd0@ iserr)
+				if (udc@)
+					kdv@ Free
+				end
 				fd0@ ok!
 				path@ Free
 				vnode@ VNodePut
-				if (kdv@)
-					kdv@ Free
-				end
 				return
 			end
 		end
@@ -272,12 +223,12 @@ fn (Syscall) SysNewProcess { tf -- ok }
 		end else
 			fd1@ GetFilp fd1!
 			if (fd1@ iserr)
+				if (udc@)
+					kdv@ Free
+				end
 				fd1@ ok!
 				path@ Free
 				vnode@ VNodePut
-				if (kdv@)
-					kdv@ Free
-				end
 				return
 			end
 		end
@@ -287,12 +238,12 @@ fn (Syscall) SysNewProcess { tf -- ok }
 		end else
 			fd2@ GetFilp fd2!
 			if (fd2@ iserr)
+				if (udc@)
+					kdv@ Free
+				end
 				fd2@ ok!
 				path@ Free
 				vnode@ VNodePut
-				if (kdv@)
-					kdv@ Free
-				end
 				return
 			end
 		end
@@ -308,7 +259,7 @@ fn (Syscall) SysNewProcess { tf -- ok }
 
 	path@ Free
 
-	if (kdv@)
+	if (udc@)
 		kdv@ Free
 	end
 
@@ -404,26 +355,40 @@ fn (Syscall) SysReadDir { tf -- ok }
 	auto fd
 	tf@ Context_a1 + @ fd!
 
+	auto udirent
+	tf@ Context_a2 + @ udirent!
+
 	auto dirent
-	tf@ Context_a2 + @ dirent!
+	Dirent_SIZEOF Malloc dirent!
 
-	auto r
-	Dirent_SIZEOF dirent@ 1 PlatformUserToPhys r! dirent!
-
-	if (r@ ~~)
-		-EINVAL ok!
+	if (dirent@ iserr)
+		dirent@ ok!
 		return
 	end
 
 	dirent@ fd@ ReadDir ok!
+
+	if (ok@ iserr)
+		dirent@ Free
+		return
+	end
+
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ udirent@ dirent@ Dirent_SIZEOF VMCopyout ok!
+
+	dirent@ Free
 end
 
 fn (Syscall) SysPStat { tf -- ok }
 	auto path
 	tf@ Context_a1 + @ path!
 
-	auto stat
-	tf@ Context_a2 + @ stat!
+	auto ustat
+	tf@ Context_a2 + @ ustat!
+
+	if (ustat@ 3 &)
+		-EINVAL ok!
+		return
+	end
 
 	auto pathlen
 	tf@ Context_a3 + @ pathlen!
@@ -435,36 +400,58 @@ fn (Syscall) SysPStat { tf -- ok }
 		return
 	end
 
-	auto r
-	Stat_SIZEOF stat@ 1 PlatformUserToPhys r! stat!
+	auto stat
+	Stat_SIZEOF Malloc stat!
 
-	if (r@ ~~)
-		path@ Free
-		-EINVAL ok!
+	if (stat@ iserr)
+		stat@ ok!
 		return
 	end
 
 	stat@ path@ PStat ok!
 
 	path@ Free
+
+	if (ok@ iserr)
+		stat@ Free
+		return
+	end
+
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ ustat@ stat@ Stat_SIZEOF VMCopyout ok!
+
+	stat@ Free
 end
 
 fn (Syscall) SysFStat { tf -- ok }
 	auto fd
 	tf@ Context_a1 + @ fd!
 
-	auto stat
-	tf@ Context_a2 + @ stat!
+	auto ustat
+	tf@ Context_a2 + @ ustat!
 
-	auto r
-	Stat_SIZEOF stat@ 1 PlatformUserToPhys r! stat!
-
-	if (r@ ~~)
+	if (ustat@ 3 &)
 		-EINVAL ok!
 		return
 	end
 
+	auto stat
+	Stat_SIZEOF Malloc stat!
+
+	if (stat@ iserr)
+		stat@ ok!
+		return
+	end
+
 	stat@ fd@ FStat ok!
+
+	if (ok@ iserr)
+		stat@ Free
+		return
+	end
+
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ ustat@ stat@ Stat_SIZEOF VMCopyout ok!
+
+	stat@ Free
 end
 
 fn (Syscall) SysChdir { tf -- ok }
@@ -532,17 +519,17 @@ fn (Syscall) SysUName { tf -- ok }
 	auto uname
 	tf@ Context_a1 + @ uname!
 
-	auto r
-	UNameS_SIZEOF uname@ 1 PlatformUserToPhys r! uname!
+	auto kuname
+	UNameS_SIZEOF Calloc kuname!
 
-	if (r@ ~~)
-		-EINVAL ok!
+	if (kuname@ iserr)
+		kuname@ ok!
 		return
 	end
 
-	uname@ UNameS_Sysname +  "AISIX" strcpy
-	uname@ UNameS_Nodename + "unk" strcpy
-	uname@ UNameS_Release +  "unk" strcpy
+	kuname@ UNameS_Sysname +  "AISIX" strcpy
+	kuname@ UNameS_Nodename + "unk" strcpy
+	kuname@ UNameS_Release +  "unk" strcpy
 
 	auto vstr
 	"pre-1.0 " vstr!
@@ -550,16 +537,16 @@ fn (Syscall) SysUName { tf -- ok }
 	auto vl
 	vstr@ strlen vl!
 
-	uname@ UNameS_Version + vstr@ strcpy
+	kuname@ UNameS_Version + vstr@ strcpy
 	
-	uname@ UNameS_Version + vl@ +
+	kuname@ UNameS_Version + vl@ +
 	pointerof _date
 	255 vl@ - strncpy
 	
-	uname@ UNameS_Machine + MachineType@ 255 strncpy
-	uname@ UNameS_Processor + MachineCPU@ 255 strncpy
+	kuname@ UNameS_Machine + MachineType@ 255 strncpy
+	kuname@ UNameS_Processor + MachineCPU@ 255 strncpy
 
-	0 ok!
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ uname@ kuname@ UNameS_SIZEOF VMCopyout ok!
 end
 
 fn (Syscall) SysMkdir { tf -- ok }
@@ -746,20 +733,13 @@ fn (Syscall) SysGetCWD { tf -- ok }
 	auto buf
 	tf@ Context_a1 + @ buf!
 
+	auto p
+	CurrentThread@ Thread_Process + @ p!
+
 	auto cwdlen
-	CurrentThread@ Thread_Process + @ Process_CWDPathString + strlen cwdlen!
+	p@ Process_CWDPathString + strlen 1 + cwdlen!
 
-	auto r
-	cwdlen@ 1 + buf@ 1 PlatformUserToPhys r! buf!
-
-	if (r@ ~~)
-		-EINVAL ok!
-		return
-	end
-
-	buf@ CurrentThread@ Thread_Process + @ Process_CWDPathString + strcpy
-
-	0 ok!
+	p@ Process_Pagemap + @ buf@ p@ Process_CWDPathString + cwdlen@ VMCopyout ok!
 end
 
 fn (Syscall) SysHalt { tf -- ok }

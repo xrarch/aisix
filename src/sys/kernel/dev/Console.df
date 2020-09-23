@@ -145,20 +145,20 @@ fn (DevIoctl) ConsIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-fn (DevRead) ConsRead { buf len unit seek -- bytes }
+fn (DevRead) ConsRead { pm buf len unit seek -- bytes }
 	if (ConsIBuf@ ~~)
 		0 bytes!
 		return
 	end
 
-	buf@ len@ ConsTTY@ TTYRead bytes!
+	pm@ buf@ len@ ConsTTY@ TTYRead bytes!
 end
 
-fn (DevWrite) ConsWrite { buf len unit seek -- bytes }
+fn (DevWrite) ConsWrite { pm buf len unit seek -- bytes }
 	if (ConsOBuf@ ~~)
 		0 bytes!
 		return
 	end
 
-	buf@ len@ ConsTTY@ TTYWrite bytes!
+	pm@ buf@ len@ ConsTTY@ TTYWrite bytes!
 end

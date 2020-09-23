@@ -1,0 +1,169 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+fn GetOSeg { proc sd -- oseg }
+	if (sd@ iserr sd@ OSEGMAX >= ||)
+		-EBADS oseg!
+		return
+	end
+
+	auto osegs
+	proc@ Process_OSegs + osegs!
+
+	sd@ OSeg_SIZEOF * osegs@ + oseg!
+
+	if (oseg@ OSeg_Segment + @ 0 ==)
+		-EBADS oseg!
+		return
+	end
+
+	if (oseg@ OSeg_Segment + @ Segment_Refs + @ 0 ==)
+		"seg count 0\n" Panic
+	end
+end
+
+fn RefSegment { seg -- }
+	auto rs
+	InterruptDisable rs!
+
+	1 seg@ Segment_Refs + +=
+
+	rs@ InterruptRestore
+end
+
+fn UnrefSegment { seg -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (seg@ Segment_Refs + @ 0 ==)
+		"UnrefSegment\n" Panic
+	end
+
+	1 seg@ Segment_Refs + -=
+
+	rs@ InterruptRestore
+
+	if (seg@ Segment_Refs + @ 0 ==)
+		if (seg@ Segment_Destructor + @)
+			seg@ seg@ Segment_Destructor + @ SegmentDestructor drop
+		end
+
+		seg@ Free
+	end
+end
+
+fn ClosePSegment { oseg -- ok }
+	auto seg
+	oseg@ OSeg_Segment + @ seg!
+
+	0 oseg@ OSeg_Segment + !
+
+	seg@ UnrefSegment
+
+	0 ok!
+end
+
+fn CloseSegment { proc sd -- ok }
+	auto oseg
+	proc@ sd@ GetOSeg oseg!
+
+	if (oseg@ iserr)
+		oseg@ ok!
+	end
+
+	if (oseg@ OSeg_Flags + @ OSEG_MAPPED &)
+		proc@ sd@ UnmapSegment ok!
+		if (ok@ iserr)
+			return
+		end
+	end
+
+	oseg@ ClosePSegment ok!
+end
+
+fn private GetSD { proc -- sd oseg }
+	auto i
+	0 i!
+
+	proc@ Process_OSegs + oseg!
+
+	-EMSEG sd!
+
+	while (i@ OSEGMAX <)
+		if (oseg@ OSeg_Segment + @ 0 ==)
+			i@ sd!
+			return
+		end
+
+		OSeg_SIZEOF oseg +=
+		1 i +=
+	end
+end
+
+fn OpenSegment { proc seg flags -- sd }
+	auto oseg
+	proc@ GetSD oseg! sd!
+
+	if (sd@ iserr)
+		return
+	end
+
+	flags@ oseg@ OSeg_Flags + !
+	seg@ oseg@ OSeg_Segment + !
+
+	seg@ RefSegment
+end
+
+fn MapSegment { proc sd pva must -- ok ava }
+	auto oseg
+	proc@ sd@ GetOSeg oseg!
+
+	if (oseg@ iserr)
+		oseg@ ok!
+		return
+	end
+
+	if (oseg@ OSeg_Flags + @ OSEG_MAPPED &)
+		-EMAPPED ok!
+		return
+	end
+
+	auto pm
+	proc@ Process_Pagemap + @ pm!
+
+	auto flags (* XXX platform specific *)
+	1 flags!
+	if (oseg@ OSeg_Flags + @ OSEG_WRITABLE &)
+		3 flags!
+	end
+
+	oseg@ OSeg_Segment + @ pm@ pva@ flags@ must@ VMMapSegment ava! ok!
+
+	if (ok@ iserr ~~)
+		OSEG_MAPPED oseg@ OSeg_Flags + |=
+		ava@ oseg@ OSeg_VAddr + !
+	end
+end
+
+fn UnmapSegment { proc sd -- ok }
+	auto oseg
+	proc@ sd@ GetOSeg oseg!
+
+	if (oseg@ iserr)
+		oseg@ ok!
+		return
+	end
+
+	if (oseg@ OSeg_Flags + @ OSEG_MAPPED & 0 ==)
+		-ENMAPPED ok!
+		return
+	end
+
+	auto pm
+	proc@ Process_Pagemap + @ pm!
+
+	oseg@ OSeg_Segment + @ pm@ oseg@ OSeg_VAddr + @ VMUnmapSegment
+
+	0 oseg@ OSeg_VAddr + !
+	OSEG_MAPPED ~ oseg@ OSeg_Flags + &=
+end

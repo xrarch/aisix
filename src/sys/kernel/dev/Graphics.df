@@ -82,7 +82,7 @@ fn (DevIoctl) GFXIoctl { op1 op2 op3 op4 unit -- ok }
 	0 ok!
 end
 
-fn (DevRead) GFXRead { buf len unit seek -- bytes }
+fn (DevRead) GFXRead { pm buf len unit seek -- bytes }
 	auto gfx
 	unit@ GFXByUnit gfx!
 
@@ -122,10 +122,14 @@ fn (DevRead) GFXRead { buf len unit seek -- bytes }
 
 	len@ bytes!
 
-	buf@ fb@ seek@ + len@ memcpy
+	pm@ buf@ fb@ seek@ + len@ VMCopyout sz!
+
+	if (sz@ iserr)
+		sz@ bytes!
+	end
 end
 
-fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
+fn (DevWrite) GFXWrite { pm buf len unit seek -- bytes }
 	auto gfx
 	unit@ GFXByUnit gfx!
 
@@ -165,5 +169,9 @@ fn (DevWrite) GFXWrite { buf len unit seek -- bytes }
 
 	len@ bytes!
 
-	fb@ seek@ + buf@ len@ memcpy
+	pm@ fb@ seek@ + buf@ len@ VMCopyin sz!
+
+	if (sz@ iserr)
+		sz@ bytes!
+	end
 end

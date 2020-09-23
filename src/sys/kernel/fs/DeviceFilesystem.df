@@ -109,7 +109,8 @@ fn DeviceRegister { permissions ibuffer obuffer name driver unit -- device }
 	rs@ InterruptRestore
 end
 
-fn DeviceRead { buf len seek dev -- bytes }
+fn DeviceRead { pm buf len seek dev -- bytes }
+	pm@
 	buf@
 	len@
 	dev@ Device_Unit + @
@@ -117,7 +118,8 @@ fn DeviceRead { buf len seek dev -- bytes }
 	dev@ Device_Driver + @ Driver_Read + @ DevRead bytes!
 end
 
-fn DeviceWrite { buf len seek dev -- bytes }
+fn DeviceWrite { pm buf len seek dev -- bytes }
+	pm@
 	buf@
 	len@
 	dev@ Device_Unit + @
@@ -144,7 +146,7 @@ fn DeviceClose { dev -- ok }
 	dev@ Device_Driver + @ Driver_Close + @ DevClose ok!
 end
 
-fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
+fn (FSRead) DevFSRead { pm buf len seek vnode -- bytes }
 	if (vnode@ VNode_VNID + @ 0 ==)
 		-EISDIR bytes!
 		return
@@ -155,6 +157,7 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 	vnode@ VNode_FSData + @ dev!
 
 	if (vnode@ VNode_Type + @ VNODE_CHAR ==)
+		pm@
 		buf@
 		len@
 		seek@
@@ -193,6 +196,8 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 
 	auto bbuf
 
+	auto ok
+
 	while (tot@ len@ <)
 		seek@ 4096 / dev@ bread bbuf!
 
@@ -210,12 +215,18 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 		4096 off@ -
 		min m!
 
+		pm@
 		buf@
 		bbuf@ Buffer_Data + @ off@ +
 		m@
-		memcpy
+		VMCopyout ok!
 
 		bbuf@ brelse
+
+		if (ok@ iserr)
+			ok@ bytes!
+			return
+		end
 
 		m@ seek +=
 		m@ buf +=
@@ -225,7 +236,7 @@ fn (FSRead) DevFSRead { buf len seek vnode -- bytes }
 	len@ bytes!
 end
 
-fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
+fn (FSWrite) DevFSWrite { pm buf len seek vnode -- bytes }
 	if (vnode@ VNode_VNID + @ 0 ==)
 		-EPERM bytes!
 		return
@@ -236,6 +247,7 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 	vnode@ VNode_FSData + @ dev!
 
 	if (vnode@ VNode_Type + @ VNODE_CHAR ==)
+		pm@
 		buf@
 		len@
 		seek@
@@ -273,6 +285,8 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 	0 tot!
 
 	auto bbuf
+
+	auto ok
 	
 	auto r
 
@@ -293,10 +307,18 @@ fn (FSWrite) DevFSWrite { buf len seek vnode -- bytes }
 		4096 off@ -
 		min m!
 
+		pm@
 		bbuf@ Buffer_Data + @ off@ +
 		buf@
 		m@
-		memcpy
+		VMCopyin ok!
+
+		bbuf@ brelse
+
+		if (ok@ iserr)
+			ok@ bytes!
+			return
+		end
 
 		bbuf@ bwrite
 
