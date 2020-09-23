@@ -313,9 +313,8 @@ fn (FSWrite) DevFSWrite { pm buf len seek vnode -- bytes }
 		m@
 		VMCopyin ok!
 
-		bbuf@ brelse
-
 		if (ok@ iserr)
+			bbuf@ brelse
 			ok@ bytes!
 			return
 		end
