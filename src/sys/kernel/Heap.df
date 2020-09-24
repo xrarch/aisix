@@ -9,6 +9,9 @@ public KHeapSize
 public KHeapStart
 var KHeapLast 0
 
+var KHeapUsed 0
+public KHeapUsed
+
 const MAGIC 0xCAFEBABE
 const BADMAGIC 0xACA7BABE
 
@@ -16,12 +19,17 @@ const FRACTION 40
 
 const MINSIZE 32
 
+const RESETLAST 64
+
+var Allocations 0
+
 struct KHeapHeader
 	4 magic
 	4 size
 	4 last
 	4 next
 	4 allocated
+	4 allocby
 endstruct
 
 fn HeapInit { -- }
@@ -45,6 +53,8 @@ fn HeapInit { -- }
 
 	MAGIC KHeapStart@ KHeapHeader_magic + !
 end
+
+extern GetSym { pc -- symbase symname }
 
 fn HeapDump { -- }
 	auto ept
@@ -84,6 +94,9 @@ fn HeapDump { -- }
 		auto next
 		ept@ KHeapHeader_next + @ next!
 
+		auto ab
+		ept@ KHeapHeader_allocby + @ ab!
+
 		i@ "block %d:\n" Printf
 		ept@ "\tptr: 0x%x\n" Printf
 		size@ "\tsize: %d bytes\n" Printf
@@ -92,6 +105,7 @@ fn HeapDump { -- }
 		next@ "\tnext: 0x%x\n" Printf
 		alloc@ "\tallocated: %d\n" Printf
 		magic@ "\tmagic: %x\n" Printf
+		ab@ GetSym swap drop "\tallocby: <%s>\n" Printf
 
 		if (alloc@ 1 ==)
 			talloc@ size@ + talloc!
@@ -114,7 +128,7 @@ end
 
 (* first-fit *)
 
-fn private Malloc1 { endp startp sz -- ptr }
+fn Malloc1 { ac endp startp sz -- ptr }
 	if (sz@ 0 ==)
 		"Malloc: sz = 0\n" Panic
 	end
@@ -195,11 +209,29 @@ fn private Malloc1 { endp startp sz -- ptr }
 
 		1 ptr@ KHeapHeader_allocated + !
 
+		ptr@ KHeapHeader_size + @ KHeapUsed +=
+
+		ac@ ptr@ KHeapHeader_allocby + !
+
 		KHeapHeader_SIZEOF ptr +=
 	end
 end
 
-fn Malloc { size -- ptr }
+asm "
+
+GetAllocator:
+	lio.l v0, sp, 4
+	ret
+
+"
+
+extern GetAllocator { -- pc }
+
+fn Malloc2 { ac size -- ptr }
+	if (size@ 0 ==)
+		"0 malloc\n" Panic
+	end
+
 	if (size@ 0x3 & 0 ~=)
 		size@ 0xFFFFFFFC & 4 + size!
 	end
@@ -207,17 +239,26 @@ fn Malloc { size -- ptr }
 	auto rs
 	InterruptDisable rs!
 
-	0 KHeapLast@ size@ Malloc1 ptr!
+	if (Allocations@ RESETLAST ==)
+		KHeapStart@ KHeapLast!
+		0 Allocations!
+	end
+
+	ac@ 0 KHeapLast@ size@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
+		1 Allocations +=
+
 		rs@ InterruptRestore
 
 		return
 	end
 
-	KHeapLast@ 0 size@ Malloc1 ptr!
+	ac@ KHeapLast@ 0 size@ Malloc1 ptr!
 
 	if (ptr@ iserr ~~)
+		1 Allocations +=
+
 		rs@ InterruptRestore
 
 		return
@@ -228,8 +269,12 @@ fn Malloc { size -- ptr }
 	-ENOMEM ptr! return
 end
 
+fn Malloc { size -- ptr }
+	GetAllocator size@ Malloc2 ptr!
+end
+
 fn Calloc { size -- ptr }
-	size@ Malloc ptr!
+	GetAllocator size@ Malloc2 ptr!
 
 	if (ptr@ iserr)
 		return
@@ -253,9 +298,11 @@ fn Free { ptr -- }
 	auto rs
 	InterruptDisable rs!
 
-	if (nptr@ KHeapHeader_allocated + @ 0 ==)
+	if (nptr@ KHeapHeader_allocated + @ 1 ~=)
 		ptr@ "tried to free block that was not allocated\n" Panic
 	end
+
+	nptr@ KHeapHeader_size + @ KHeapUsed -=
 
 	0 nptr@ KHeapHeader_allocated + !
 

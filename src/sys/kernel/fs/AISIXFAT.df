@@ -383,64 +383,68 @@ fn BMap { bn reading vnode -- buf }
 	auto bm
 	vd@ AVData_BNCache + @ bm!
 
-	if (bm@ 0 ==)
-		PMMFasterSinglePageAlloc bm!
+	if (bn@ 16 >= bm@ ||)
+		if (bm@ 0 ==)
+			PMMFasterSinglePageAlloc bm!
 
-		if (bm@ iserr)
-			bm@ buf!
-			return
-		end
-
-		vd@ AVData_Entry + @ bm@ !
-
-		bm@ vd@ AVData_BNCache + !
-	end
-
-	auto bno
-	auto cnt
-	auto cache
-
-	if (bn@ fb@ >= bn@ nb@ < &&)
-		bn@ fb@ - 4 * bm@ + @ bno!
-	end else
-		if (bn@ fb@ < nb@ 0 == ||)
-			vd@ AVData_Entry + @ bno!
-			bn@ cnt!
-			0 cache!
-		end elseif (bn@ nb@ >=)
-			nb@ 1 - fb@ - 4 * bm@ + @ bno!
-			bn@ nb@ - 1 + cnt!
-
-			if (bn@ fb@ - 1024 <)
-				bn@ 1 + nb!
-				1 cache!
-			end else
-				0 cache!
+			if (bm@ iserr)
+				bm@ buf!
+				return
 			end
+
+			vd@ AVData_Entry + @ bm@ !
+
+			bm@ vd@ AVData_BNCache + !
+		end
+
+		auto bno
+		auto cnt
+		auto cache
+
+		if (bn@ fb@ >= bn@ nb@ < &&)
+			bn@ fb@ - 4 * bm@ + @ bno!
 		end else
-			"BMap: im bad at math\n" Panic
+			if (bn@ fb@ < nb@ 0 == ||)
+				vd@ AVData_Entry + @ bno!
+				bn@ cnt!
+				0 cache!
+			end elseif (bn@ nb@ >=)
+				nb@ 1 - fb@ - 4 * bm@ + @ bno!
+				bn@ nb@ - 1 + cnt!
+
+				if (bn@ fb@ - 1024 <)
+					bn@ 1 + nb!
+					1 cache!
+				end else
+					0 cache!
+				end
+			end else
+				"BMap: im bad at math\n" Panic
+			end
+
+			bno@ cnt@ reading@ vnode@ cache@ WalkFAT bno!
+
+			if (bno@ iserr)
+				0 vd@ AVData_FirstBN + !
+				0 vd@ AVData_NextBN + !
+
+				bno@ buf!
+				return
+			end
+
+			if (cache@)
+				nb@ vd@ AVData_NextBN + !
+			end else
+				bn@ fb!
+				bn@ 1 + nb!
+				fb@ vd@ AVData_FirstBN + !
+				nb@ vd@ AVData_NextBN + !
+
+				bno@ bm@ !
+			end
 		end
-
-		bno@ cnt@ reading@ vnode@ cache@ WalkFAT bno!
-
-		if (bno@ iserr)
-			0 vd@ AVData_FirstBN + !
-			0 vd@ AVData_NextBN + !
-
-			bno@ buf!
-			return
-		end
-
-		if (cache@)
-			nb@ vd@ AVData_NextBN + !
-		end else
-			bn@ fb!
-			bn@ 1 + nb!
-			fb@ vd@ AVData_FirstBN + !
-			nb@ vd@ AVData_NextBN + !
-
-			bno@ bm@ !
-		end
+	end else
+		vd@ AVData_Entry + @ bn@ reading@ vnode@ 0 WalkFAT bno!
 	end
 
 	if (bno@ 0 ==)

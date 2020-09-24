@@ -208,6 +208,8 @@ fn PMMFasterSinglePageAlloc { -- addr }
 
 						i@ 12 << MachineRAMBase@ + addr!
 
+						1 Alloced +=
+
 						rs@ InterruptRestore
 
 						return
@@ -255,6 +257,8 @@ fn PMMFasterSinglePageFree { addr -- }
 	page@ 31 & off!
 
 	1 off@ << ~ pmb@ &=
+
+	1 Alloced -=
 end
 
 extern PlatformInvalidatePage { vpn proc -- }
@@ -306,6 +310,8 @@ fn VMPagemapFree { pm -- }
 	end
 
 	pm@ Pagemap_Data + @ PMMFasterSinglePageFree
+
+	pm@ Free
 end
 
 fn VMMap { pm virt phys flags -- ok }

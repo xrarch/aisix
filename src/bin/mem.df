@@ -1,0 +1,19 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto memused
+	auto memtotal
+	auto heapused
+	auto heaptotal
+
+	MemInfo heapused! heaptotal! memused! memtotal!
+
+	"\n== main mem ==\n" Printf
+	memtotal@ memused@ - 1024 / memused@ 1024 / memtotal@ 1024 / "total: %6dK\n used: %6dK\n free: %6dK\n" Printf
+
+	"== sys heap ==\n" Printf
+	heaptotal@ heapused@ - heapused@ heaptotal@ "total: %7dB\n used: %7dB\n free: %7dB\n" Printf
+end

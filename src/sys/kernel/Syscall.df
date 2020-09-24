@@ -33,10 +33,11 @@ table Syscalls
 	pointerof SysSeek
 	pointerof SysGetCWD
 	pointerof SysHalt
+	pointerof SysMemInfo
 endtable
 public Syscalls
 
-const STRMAX 256
+const STRMAX 512
 
 fn private GetString { user len -- str }
 	if (user@ ~~)
@@ -547,6 +548,8 @@ fn (Syscall) SysUName { tf -- ok }
 	kuname@ UNameS_Processor + MachineCPU@ 255 strncpy
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ uname@ kuname@ UNameS_SIZEOF VMCopyout ok!
+
+	kuname@ Free
 end
 
 fn (Syscall) SysMkdir { tf -- ok }
@@ -747,4 +750,15 @@ fn (Syscall) SysHalt { tf -- ok }
 	tf@ Context_a1 + @ hmode!
 
 	hmode@ Halt ok!
+end
+
+externptr KHeapSize
+
+externptr KHeapUsed
+
+fn (Syscall) SysMemInfo { tf -- ok }
+	Pages@ 12 << ok!
+	Alloced@ 12 << tf@ Context_v1 + !
+	KHeapSize@ tf@ Context_t0 + !
+	KHeapUsed@ tf@ Context_t1 + !
 end

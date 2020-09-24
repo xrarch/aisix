@@ -1,5 +1,7 @@
 externptr Pages
 
+externptr Alloced
+
 extern PMMFree { pages addr -- }
 
 extern PMMAlloc { pages -- addr }

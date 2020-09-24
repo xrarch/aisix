@@ -30,6 +30,7 @@ const SYSSYNC    26
 const SYSSEEK    27
 const SYSGETCWD  28
 const SYSHALT    29
+const SYSMEMINFO 30
 
 asm "
 
@@ -235,6 +236,13 @@ _halt:
 	mov a1, a0
 	li a0, SYSHALT
 	sys
+	ret
+
+_meminfo:
+	li a0, SYSMEMINFO
+	sys
+	sio.l sp, 8, t0
+	sio.l sp, 12, t1
 	ret
 
 ; fd c --
@@ -481,4 +489,10 @@ extern _halt { haltmode -- ok }
 
 fn Halt { haltmode -- ok }
 	haltmode@ _halt ok!
+end
+
+extern _meminfo { -- memtotal memused heaptotal heapused }
+
+fn MemInfo { -- memtotal memused heaptotal heapused }
+	_meminfo heapused! heaptotal! memused! memtotal!
 end
