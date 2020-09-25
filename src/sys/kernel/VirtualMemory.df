@@ -582,7 +582,7 @@ fn VMAllocSegment { bytes -- seg }
 	pages@ seg@ Segment_PageCount + !
 
 	auto pb
-	pages@ 4 * Malloc pb!
+	pages@ 2 << Malloc pb!
 
 	if (pb@ iserr)
 		seg@ Free

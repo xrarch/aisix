@@ -47,7 +47,7 @@ fn ThreadInit { -- }
 	process@ Process_MainThread + @ ThreadReady
 end
 
-fn private ThreadAllocate { -- thread }
+fn ThreadAllocate { -- thread }
 	auto tid
 	0 tid!
 
@@ -83,7 +83,7 @@ fn private ThreadAllocate { -- thread }
 	end
 end
 
-fn private ThreadFreeSlot { thread -- }
+fn ThreadFreeSlot { thread -- }
 	auto tid
 	thread@ Thread_TID + @ tid!
 
@@ -388,7 +388,7 @@ end
 
 extern KDebug { -- }
 
-fn private WaitQueue1 { evq status -- killed }
+fn WaitQueue1 { evq status -- killed }
 	auto rs
 	InterruptDisable rs!
 
@@ -522,7 +522,7 @@ end
 
 var NextPID 1
 
-fn private ProcessAllocate { -- process }
+fn ProcessAllocate { -- process }
 	auto i
 	0 i!
 

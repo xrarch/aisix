@@ -13,7 +13,8 @@ var KHeapUsed 0
 public KHeapUsed
 
 const MAGIC 0xD8F77558
-const BADMAGIC 0xACA7BAB1
+const BADMAGICF 0xACA7BAB1
+const BADMAGICB 0xACA7BAB7
 
 const FRACTION 40
 
@@ -137,7 +138,15 @@ fn HeapDump { -- }
 		end
 
 		stotal@ size@ + stotal!
+		
+		auto lept
+		ept@ lept!
 		ept@ KHeapHeader_next + @ ept!
+
+		if (lept@ size@ + ept@ ~=)
+			"DISPARITY!\n" Printf
+		end
+
 		1 i +=
 	end
 
@@ -166,7 +175,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 	startp@ ptr!
 
-	while (ptr@ endp@ <)
+	while (ptr@)
 		if (ptr@ 0 ==)
 			-ENOMEM ptr!
 			break
@@ -177,7 +186,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		end
 
 		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
-			ptr@ HeapDumpBlock
+			ptr@ HeapDump
 			ptr@ ptr@ KHeapHeader_magic + @ "Malloc: bad magic %x on block %x\n" Panic
 		end
 
@@ -195,6 +204,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			if (thissize@ mysize@ ==)
 				1 be!
 			end elseif (thissize@ mysize@ - KHeapHeader_SIZEOF <=)
+				thissize@ mysize!
 				1 be!
 			end
 
@@ -211,6 +221,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			ptr@ mysize@ + newblockp!
 
 			ptr@ KHeapHeader_next + @ newblockp@ KHeapHeader_next + !
+			newblockp@ ptr@ KHeapHeader_next + @ KHeapHeader_last + !
 
 			mysize@ ptr@ KHeapHeader_size + !
 			newblockp@ ptr@ KHeapHeader_next + !
@@ -231,7 +242,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 		1 ptr@ KHeapHeader_allocated + !
 
-		ptr@ KHeapHeader_size + @ KHeapUsed +=
+		mysize@ KHeapUsed +=
 
 		ac@ ptr@ KHeapHeader_allocby + !
 
@@ -314,7 +325,7 @@ fn Free { ptr -- }
 	ptr@ KHeapHeader_SIZEOF - nptr!
 
 	if (nptr@ KHeapHeader_magic + @ MAGIC ~=)
-		ptr@ "Free: bad magic on block 0x%x\n" Panic
+		ptr@ nptr@ KHeapHeader_magic + @ "Free: bad magic %x on block 0x%x\n" Panic
 	end
 
 	auto rs
@@ -329,47 +340,15 @@ fn Free { ptr -- }
 	0 nptr@ KHeapHeader_allocated + !
 
 	auto link
-	nptr@ KHeapHeader_last + @ link!
-
-	auto tlink
-
-	if (link@)
-		if (link@ KHeapHeader_allocated + @ 0 ==)
-			link@ KHeapHeader_size + @
-			nptr@ KHeapHeader_size + @
-			+
-			link@ KHeapHeader_size + !
-
-			nptr@ KHeapHeader_next + @ link@ KHeapHeader_next + !
-
-			BADMAGIC nptr@ KHeapHeader_magic + !
-
-			nptr@ KHeapHeader_next + @ tlink!
-
-			if (tlink@)
-				link@ tlink@ KHeapHeader_last + !
-			end
-
-			if (nptr@ KHeapLast@ ==)
-				0 KHeapLast!
-			end
-
-			link@ nptr!
-		end
-	end
-
 	nptr@ KHeapHeader_next + @ link!
 
 	if (link@)
 		if (link@ KHeapHeader_allocated + @ 0 ==)
-			link@ KHeapHeader_size + @
-			nptr@ KHeapHeader_size + @
-			+
-			nptr@ KHeapHeader_size + !
+			link@ KHeapHeader_size + @ nptr@ KHeapHeader_size + +=
 
 			link@ KHeapHeader_next + @ nptr@ KHeapHeader_next + !
 
-			BADMAGIC link@ KHeapHeader_magic + !
+			BADMAGICB link@ KHeapHeader_magic + !
 
 			if (link@ KHeapLast@ ==)
 				0 KHeapLast!
@@ -379,6 +358,30 @@ fn Free { ptr -- }
 
 			if (link@)
 				nptr@ link@ KHeapHeader_last + !
+			end
+		end
+	end
+
+	nptr@ KHeapHeader_last + @ link!
+
+	auto tlink
+
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			nptr@ KHeapHeader_size + @ link@ KHeapHeader_size + +=
+
+			nptr@ KHeapHeader_next + @ link@ KHeapHeader_next + !
+
+			BADMAGICF nptr@ KHeapHeader_magic + !
+
+			nptr@ KHeapHeader_next + @ tlink!
+
+			if (tlink@)
+				link@ tlink@ KHeapHeader_last + !
+			end
+
+			if (nptr@ KHeapLast@ ==)
+				0 KHeapLast!
 			end
 		end
 	end
