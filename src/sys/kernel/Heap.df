@@ -12,8 +12,8 @@ var KHeapLast 0
 var KHeapUsed 0
 public KHeapUsed
 
-const MAGIC 0xCAFEBABE
-const BADMAGIC 0xACA7BABE
+const MAGIC 0xD8F77558
+const BADMAGIC 0xACA7BAB1
 
 const FRACTION 40
 
@@ -36,7 +36,9 @@ fn HeapInit { -- }
 	auto heapsizep
 	Pages@ FRACTION / MINSIZE max heapsizep!
 
-	heapsizep@ PMMAlloc dup KHeapStart! KHeapLast!
+	heapsizep@ PMMAlloc KHeapStart!
+
+	0 KHeapLast!
 
 	heapsizep@ 4096 * KHeapSize!
 
@@ -55,6 +57,38 @@ fn HeapInit { -- }
 end
 
 extern GetSym { pc -- symbase symname }
+
+fn HeapDumpBlock { ept -- }
+	auto size
+	ept@ KHeapHeader_size + @ size!
+
+	auto asz
+	size@ KHeapHeader_SIZEOF - asz!
+
+	auto alloc
+	ept@ KHeapHeader_allocated + @ alloc!
+
+	auto last
+	ept@ KHeapHeader_last + @ last!
+
+	auto magic
+	ept@ KHeapHeader_magic + @ magic!
+
+	auto next
+	ept@ KHeapHeader_next + @ next!
+
+	auto ab
+	ept@ KHeapHeader_allocby + @ ab!
+
+	ept@ "\tptr: 0x%x\n" Printf
+	size@ "\tsize: %d bytes\n" Printf
+	asz@ "\treal size: %d bytes\n" Printf
+	last@ "\tlast: 0x%x\n" Printf
+	next@ "\tnext: 0x%x\n" Printf
+	alloc@ "\tallocated: %d\n" Printf
+	magic@ "\tmagic: %x\n" Printf
+	ab@ GetSym swap drop "\tallocby: <%s>\n" Printf
+end
 
 fn HeapDump { -- }
 	auto ept
@@ -76,36 +110,20 @@ fn HeapDump { -- }
 	0 stotal!
 
 	while (ept@)
+		if (ept@ 3 &)
+			"unaligned block!\n" Printf
+			break
+		end
+
 		auto size
 		ept@ KHeapHeader_size + @ size!
-
-		auto asz
-		size@ KHeapHeader_SIZEOF - asz!
 
 		auto alloc
 		ept@ KHeapHeader_allocated + @ alloc!
 
-		auto last
-		ept@ KHeapHeader_last + @ last!
-
-		auto magic
-		ept@ KHeapHeader_magic + @ magic!
-
-		auto next
-		ept@ KHeapHeader_next + @ next!
-
-		auto ab
-		ept@ KHeapHeader_allocby + @ ab!
-
 		i@ "block %d:\n" Printf
-		ept@ "\tptr: 0x%x\n" Printf
-		size@ "\tsize: %d bytes\n" Printf
-		asz@ "\treal size: %d bytes\n" Printf
-		last@ "\tlast: 0x%x\n" Printf
-		next@ "\tnext: 0x%x\n" Printf
-		alloc@ "\tallocated: %d\n" Printf
-		magic@ "\tmagic: %x\n" Printf
-		ab@ GetSym swap drop "\tallocby: <%s>\n" Printf
+
+		ept@ HeapDumpBlock
 
 		if (alloc@ 1 ==)
 			talloc@ size@ + talloc!
@@ -154,9 +172,13 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			break
 		end
 
+		if (ptr@ 3 &)
+			ptr@ "Malloc: unaligned block %x\n" Panic
+		end
+
 		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
-			HeapDump
-			ptr@ "Malloc: bad magic on %x\n" Panic
+			ptr@ HeapDumpBlock
+			ptr@ ptr@ KHeapHeader_magic + @ "Malloc: bad magic %x on block %x\n" Panic
 		end
 
 		if (ptr@ KHeapHeader_allocated + @)
@@ -240,7 +262,7 @@ fn Malloc2 { ac size -- ptr }
 	InterruptDisable rs!
 
 	if (Allocations@ RESETLAST ==)
-		KHeapStart@ KHeapLast!
+		0 KHeapLast!
 		0 Allocations!
 	end
 
@@ -329,7 +351,7 @@ fn Free { ptr -- }
 			end
 
 			if (nptr@ KHeapLast@ ==)
-				link@ KHeapLast!
+				0 KHeapLast!
 			end
 
 			link@ nptr!
@@ -350,7 +372,7 @@ fn Free { ptr -- }
 			BADMAGIC link@ KHeapHeader_magic + !
 
 			if (link@ KHeapLast@ ==)
-				nptr@ KHeapLast!
+				0 KHeapLast!
 			end
 
 			link@ KHeapHeader_next + @ link!

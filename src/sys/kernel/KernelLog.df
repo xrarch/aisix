@@ -239,6 +239,10 @@ fn Panic { ... fmt -- }
 	"panic: " Printf
 	argv argc@ fmt@ VPrintf
 
+	"\npress any key to enter kernel debugger\n" Printf
+
+	while (Getc ERR ==) end
+
 	KDebug
 
 	PlatformPanic

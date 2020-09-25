@@ -87,12 +87,19 @@ extern DevFSPrintDevs { -- }
 
 extern PrintVNodes { -- }
 
+extern HeapDumpBlock { ept -- }
+
 fn MonitorCommandsInit { -- }
 	ListCreate MonitorCommandList!
 
 	"Dump heap."
 	pointerof HeapDump
 	"dumpheap"
+	MonitorAddCommand
+
+	"Display info about a certain heap block."
+	pointerof MonitorCommandHeapDumpBlock
+	"dumpheapblock"
 	MonitorAddCommand
 
 	"Display help."
@@ -274,6 +281,20 @@ fn MonitorCommandKillThread { -- }
 	end
 
 	thread@ ThreadKill
+end
+
+fn MonitorCommandHeapDumpBlock { -- }
+	auto et
+	MonitorParseWord et!
+
+	auto etv
+	et@ atoi etv!
+
+	et@ Free
+
+	if (etv@ 3 & 0 == etv@ 0 ~= &&)
+		etv@ HeapDumpBlock
+	end
 end
 
 extern Trace { pc link -- }
