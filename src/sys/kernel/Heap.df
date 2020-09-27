@@ -186,7 +186,6 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		end
 
 		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
-			ptr@ HeapDump
 			ptr@ ptr@ KHeapHeader_magic + @ "Malloc: bad magic %x on block %x\n" Panic
 		end
 
