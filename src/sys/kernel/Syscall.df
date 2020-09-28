@@ -34,6 +34,10 @@ table Syscalls
 	pointerof SysGetCWD
 	pointerof SysHalt
 	pointerof SysMemInfo
+	pointerof SysAllocSegment
+	pointerof SysMapSegment
+	pointerof SysCloseSegment
+	pointerof SysUnmapSegment
 endtable
 public Syscalls
 
@@ -761,4 +765,53 @@ fn (Syscall) SysMemInfo { tf -- ok }
 	Alloced@ 12 << tf@ Context_v1 + !
 	KHeapSize@ tf@ Context_t0 + !
 	KHeapUsed@ tf@ Context_t1 + !
+end
+
+fn (Syscall) SysAllocSegment { tf -- ok }
+	auto bytes
+	tf@ Context_a1 + @ bytes!
+
+	if (bytes@ 0 ==)
+		-EINVAL ok!
+		return
+	end
+
+	auto flags
+	tf@ Context_a2 + @ 1 << flags!
+
+	auto seg
+	bytes@ VMAllocSegment seg!
+
+	if (seg@ iserr)
+		seg@ ok!
+		return
+	end
+
+	CurrentThread@ Thread_Process + @ seg@ flags@ OpenSegment ok!
+end
+
+fn (Syscall) SysMapSegment { tf -- ok }
+	auto sd
+	auto pva
+	auto must
+
+	tf@ Context_a1 + @ must!
+	tf@ Context_a2 + @ pva!
+	tf@ Context_a3 + @ sd!
+
+	CurrentThread@ Thread_Process + @ sd@ pva@ must@ MapSegment tf@ Context_v1 + ! ok!
+end
+
+fn (Syscall) SysCloseSegment { tf -- ok }
+	auto sd
+	tf@ Context_a1 + @ sd!
+
+	CurrentThread@ Thread_Process + @ sd@ CloseSegment ok!
+end
+
+fn (Syscall) SysUnmapSegment { tf -- ok }
+	auto sd
+	tf@ Context_a1 + @ sd!
+
+	CurrentThread@ Thread_Process + @ sd@ UnmapSegment ok!
 end

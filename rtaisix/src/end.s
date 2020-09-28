@@ -2,10 +2,10 @@
 
 _HeapSize:
 .global _HeapSize
-	.dl 131072
+	.dl 2048
 
 .section bss
 
 _HeapStart:
 .global _HeapStart
-	.bytes 131072 0
+	.bytes 2048 0

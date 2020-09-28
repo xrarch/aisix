@@ -1,14 +1,31 @@
 #include "<df>/dragonfruit.h"
-#include "<inc>/aisix.h"
+#include "<ll>/rtaisix/aisix.h"
 
 (* ported from ancient AISIX *)
 
+externptr _HeapStart
+externptr _HeapSize
+
 var KHeapStart 0
 var KHeapSize 0
+public KHeapSize
+public KHeapStart
 var KHeapLast 0
 
-const MAGIC 0xCAFEBABE
-const BADMAGIC 0xACA7BABE
+var KHeapUsed 0
+public KHeapUsed
+
+const MAGIC 0xD8F77558
+const BADMAGICF 0xACA7BAB1
+const BADMAGICB 0xACA7BAB7
+
+const FRACTION 40
+
+const MINSIZE 32
+
+const RESETLAST 64
+
+var Allocations 0
 
 struct KHeapHeader
 	4 magic
@@ -16,14 +33,14 @@ struct KHeapHeader
 	4 last
 	4 next
 	4 allocated
+	4 allocby
 endstruct
-
-externptr _HeapStart
-externptr _HeapSize
 
 fn _HeapInit { -- }
 	pointerof _HeapStart dup KHeapStart! KHeapLast!
 	pointerof _HeapSize @ KHeapSize!
+
+	0 KHeapLast!
 
 	KHeapSize@ KHeapStart@ KHeapHeader_size + !
 	0 KHeapStart@ KHeapHeader_last + !
@@ -33,9 +50,102 @@ fn _HeapInit { -- }
 	MAGIC KHeapStart@ KHeapHeader_magic + !
 end
 
+fn HeapDumpBlock { ept -- }
+	auto size
+	ept@ KHeapHeader_size + @ size!
+
+	auto asz
+	size@ KHeapHeader_SIZEOF - asz!
+
+	auto alloc
+	ept@ KHeapHeader_allocated + @ alloc!
+
+	auto last
+	ept@ KHeapHeader_last + @ last!
+
+	auto magic
+	ept@ KHeapHeader_magic + @ magic!
+
+	auto next
+	ept@ KHeapHeader_next + @ next!
+
+	auto ab
+	ept@ KHeapHeader_allocby + @ ab!
+
+	ept@ "\tptr: 0x%x\n" Printf
+	size@ "\tsize: %d bytes\n" Printf
+	asz@ "\treal size: %d bytes\n" Printf
+	last@ "\tlast: 0x%x\n" Printf
+	next@ "\tnext: 0x%x\n" Printf
+	alloc@ "\tallocated: %d\n" Printf
+	magic@ "\tmagic: %x\n" Printf
+end
+
+fn HeapDump { -- }
+	auto ept
+	KHeapStart@ ept!
+
+	auto max
+	KHeapStart@ KHeapSize@ + max!
+
+	auto tfree
+	0 tfree!
+
+	auto talloc
+	0 talloc!
+
+	auto i
+	0 i!
+
+	auto stotal
+	0 stotal!
+
+	while (ept@)
+		if (ept@ 3 &)
+			"unaligned block!\n" Printf
+			break
+		end
+
+		auto size
+		ept@ KHeapHeader_size + @ size!
+
+		auto alloc
+		ept@ KHeapHeader_allocated + @ alloc!
+
+		i@ "block %d:\n" Printf
+
+		ept@ HeapDumpBlock
+
+		if (alloc@ 1 ==)
+			talloc@ size@ + talloc!
+		end else
+			tfree@ size@ + tfree!
+		end
+
+		if (size@ 0 ==)
+			"size 0, very weird, breaking\n" Printf
+			break
+		end
+
+		stotal@ size@ + stotal!
+		
+		auto lept
+		ept@ lept!
+		ept@ KHeapHeader_next + @ ept!
+
+		if (lept@ size@ + ept@ ~=)
+			"DISPARITY!\n" Printf
+		end
+
+		1 i +=
+	end
+
+	tfree@ talloc@ stotal@ "heap size: 0x%x bytes.\n%d bytes taken, %d bytes free.\n" Printf
+end
+
 (* first-fit *)
 
-fn private Malloc1 { endp startp sz -- ptr }
+fn Malloc1 { ac endp startp sz -- ptr }
 	if (sz@ 0 ==)
 		"Malloc: sz = 0\n" Abort
 	end
@@ -55,14 +165,13 @@ fn private Malloc1 { endp startp sz -- ptr }
 
 	startp@ ptr!
 
-	while (ptr@ endp@ <)
-		if (ptr@ 0 ==)
-			ERR ptr!
-			break
+	while (ptr@)
+		if (ptr@ 3 &)
+			ptr@ "Malloc: unaligned block %x\n" Abort
 		end
 
 		if (ptr@ KHeapHeader_magic + @ MAGIC ~=)
-			ptr@ "Malloc: bad magic on %x\n" Abort
+			ptr@ ptr@ KHeapHeader_magic + @ "Malloc: bad magic %x on block %x\n" Abort
 		end
 
 		if (ptr@ KHeapHeader_allocated + @)
@@ -79,6 +188,7 @@ fn private Malloc1 { endp startp sz -- ptr }
 			if (thissize@ mysize@ ==)
 				1 be!
 			end elseif (thissize@ mysize@ - KHeapHeader_SIZEOF <=)
+				thissize@ mysize!
 				1 be!
 			end
 
@@ -94,7 +204,14 @@ fn private Malloc1 { endp startp sz -- ptr }
 			auto newblockp
 			ptr@ mysize@ + newblockp!
 
-			ptr@ KHeapHeader_next + @ newblockp@ KHeapHeader_next + !
+			auto link
+			ptr@ KHeapHeader_next + @ link!
+
+			link@ newblockp@ KHeapHeader_next + !
+
+			if (link@)
+				newblockp@ link@ KHeapHeader_last + !
+			end
 
 			mysize@ ptr@ KHeapHeader_size + !
 			newblockp@ ptr@ KHeapHeader_next + !
@@ -110,37 +227,73 @@ fn private Malloc1 { endp startp sz -- ptr }
 		ptr@ KHeapHeader_next + @ ptr!
 	end
 
+	if (ptr@ 0 ==)
+		ERR ptr!
+		return
+	end
+
 	if (ptr@ ERR ~=)
 		ptr@ KHeapLast!
 
 		1 ptr@ KHeapHeader_allocated + !
 
+		mysize@ KHeapUsed +=
+
+		ac@ ptr@ KHeapHeader_allocby + !
+
 		KHeapHeader_SIZEOF ptr +=
 	end
 end
 
-fn Malloc { size -- ptr }
+asm "
+
+GetAllocator:
+	lio.l v0, sp, 4
+	ret
+
+"
+
+extern GetAllocator { -- pc }
+
+fn Malloc2 { ac size -- ptr }
+	if (size@ 0 ==)
+		"0 malloc\n" Abort
+	end
+
 	if (size@ 0x3 & 0 ~=)
 		size@ 0xFFFFFFFC & 4 + size!
 	end
 
-	0 KHeapLast@ size@ Malloc1 ptr!
+	if (Allocations@ RESETLAST ==)
+		0 KHeapLast!
+		0 Allocations!
+	end
+
+	ac@ 0 KHeapLast@ size@ Malloc1 ptr!
 
 	if (ptr@ ERR ~=)
+		1 Allocations +=
+
 		return
 	end
 
-	KHeapLast@ 0 size@ Malloc1 ptr!
+	ac@ KHeapLast@ 0 size@ Malloc1 ptr!
 
 	if (ptr@ ERR ~=)
+		1 Allocations +=
+
 		return
 	end
 
 	ERR ptr! return
 end
 
+fn Malloc { size -- ptr }
+	GetAllocator size@ Malloc2 ptr!
+end
+
 fn Calloc { size -- ptr }
-	size@ Malloc ptr!
+	GetAllocator size@ Malloc2 ptr!
 
 	if (ptr@ ERR ==)
 		return
@@ -158,30 +311,51 @@ fn Free { ptr -- }
 	ptr@ KHeapHeader_SIZEOF - nptr!
 
 	if (nptr@ KHeapHeader_magic + @ MAGIC ~=)
-		ptr@ "Free: bad magic on block 0x%x\n" Abort
+		ptr@ nptr@ KHeapHeader_magic + @ "Free: bad magic %x on block 0x%x\n" Abort
 	end
 
-	if (nptr@ KHeapHeader_allocated + @ 0 ==)
+	if (nptr@ KHeapHeader_allocated + @ 1 ~=)
 		ptr@ "tried to free block that was not allocated\n" Abort
 	end
+
+	nptr@ KHeapHeader_size + @ KHeapUsed -=
 
 	0 nptr@ KHeapHeader_allocated + !
 
 	auto link
+	nptr@ KHeapHeader_next + @ link!
+
+	if (link@)
+		if (link@ KHeapHeader_allocated + @ 0 ==)
+			link@ KHeapHeader_size + @ nptr@ KHeapHeader_size + +=
+
+			link@ KHeapHeader_next + @ nptr@ KHeapHeader_next + !
+
+			BADMAGICB link@ KHeapHeader_magic + !
+
+			if (link@ KHeapLast@ ==)
+				0 KHeapLast!
+			end
+
+			link@ KHeapHeader_next + @ link!
+
+			if (link@)
+				nptr@ link@ KHeapHeader_last + !
+			end
+		end
+	end
+
 	nptr@ KHeapHeader_last + @ link!
 
 	auto tlink
 
 	if (link@)
 		if (link@ KHeapHeader_allocated + @ 0 ==)
-			link@ KHeapHeader_size + @
-			nptr@ KHeapHeader_size + @
-			+
-			link@ KHeapHeader_size + !
+			nptr@ KHeapHeader_size + @ link@ KHeapHeader_size + +=
 
 			nptr@ KHeapHeader_next + @ link@ KHeapHeader_next + !
 
-			BADMAGIC nptr@ KHeapHeader_magic + !
+			BADMAGICF nptr@ KHeapHeader_magic + !
 
 			nptr@ KHeapHeader_next + @ tlink!
 
@@ -190,34 +364,7 @@ fn Free { ptr -- }
 			end
 
 			if (nptr@ KHeapLast@ ==)
-				link@ KHeapLast!
-			end
-
-			link@ nptr!
-		end
-	end
-
-	nptr@ KHeapHeader_next + @ link!
-
-	if (link@)
-		if (link@ KHeapHeader_allocated + @ 0 ==)
-			link@ KHeapHeader_size + @
-			nptr@ KHeapHeader_size + @
-			+
-			nptr@ KHeapHeader_size + !
-
-			link@ KHeapHeader_next + @ nptr@ KHeapHeader_next + !
-
-			BADMAGIC link@ KHeapHeader_magic + !
-
-			if (link@ KHeapLast@ ==)
-				nptr@ KHeapLast!
-			end
-
-			link@ KHeapHeader_next + @ link!
-
-			if (link@)
-				nptr@ link@ KHeapHeader_last + !
+				0 KHeapLast!
 			end
 		end
 	end

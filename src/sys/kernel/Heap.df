@@ -176,11 +176,6 @@ fn Malloc1 { ac endp startp sz -- ptr }
 	startp@ ptr!
 
 	while (ptr@)
-		if (ptr@ 0 ==)
-			-ENOMEM ptr!
-			break
-		end
-
 		if (ptr@ 3 &)
 			ptr@ "Malloc: unaligned block %x\n" Panic
 		end
@@ -219,8 +214,14 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			auto newblockp
 			ptr@ mysize@ + newblockp!
 
-			ptr@ KHeapHeader_next + @ newblockp@ KHeapHeader_next + !
-			newblockp@ ptr@ KHeapHeader_next + @ KHeapHeader_last + !
+			auto link
+			ptr@ KHeapHeader_next + @ link!
+
+			link@ newblockp@ KHeapHeader_next + !
+
+			if (link@)
+				newblockp@ link@ KHeapHeader_last + !
+			end
 
 			mysize@ ptr@ KHeapHeader_size + !
 			newblockp@ ptr@ KHeapHeader_next + !
@@ -234,6 +235,11 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		end
 
 		ptr@ KHeapHeader_next + @ ptr!
+	end
+
+	if (ptr@ 0 ==)
+		-ENOMEM ptr!
+		return
 	end
 
 	if (ptr@ iserr ~~)

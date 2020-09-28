@@ -1,4 +1,4 @@
-const SYSMAX 30
+const SYSMAX 34
 
 externptr Syscalls
 

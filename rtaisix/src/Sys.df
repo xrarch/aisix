@@ -31,6 +31,10 @@ const SYSSEEK    27
 const SYSGETCWD  28
 const SYSHALT    29
 const SYSMEMINFO 30
+const SYSALLOCSEGMENT 31
+const SYSMAPSEGMENT   32
+const SYSCLOSESEGMENT 33
+const SYSUNMAPSEGMENT 34
 
 asm "
 
@@ -243,6 +247,33 @@ _meminfo:
 	sys
 	sio.l sp, 8, t0
 	sio.l sp, 12, t1
+	ret
+
+_allocsegment:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSALLOCSEGMENT
+	sys
+	ret
+
+_mapsegment:
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSMAPSEGMENT
+	sys
+	ret
+
+_closesegment:
+	mov a1, a0
+	li a0, SYSCLOSESEGMENT
+	sys
+	ret
+
+_unmapsegment:
+	mov a1, a0
+	li a0, SYSUNMAPSEGMENT
+	sys
 	ret
 
 ; fd c --
@@ -495,4 +526,28 @@ extern _meminfo { -- memtotal memused heaptotal heapused }
 
 fn MemInfo { -- memtotal memused heaptotal heapused }
 	_meminfo heapused! heaptotal! memused! memtotal!
+end
+
+extern _allocsegment { flags bytes -- sd }
+
+fn AllocSegment { flags bytes -- sd }
+	flags@ bytes@ _allocsegment sd!
+end
+
+extern _mapsegment { sd va must -- ok ava }
+
+fn MapSegment { sd va must -- ok ava }
+	sd@ va@ must@ _mapsegment ava! ok!
+end
+
+extern _closesegment { sd -- ok }
+
+fn CloseSegment { sd -- ok  }
+	sd@ _closesegment ok!
+end
+
+extern _unmapsegment { sd -- ok }
+
+fn UnmapSegment { sd -- ok }
+	sd@ _unmapsegment ok!
 end

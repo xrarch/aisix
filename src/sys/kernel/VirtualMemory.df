@@ -359,7 +359,7 @@ fn VMUnmap { pm virt free -- }
 	auto pt
 	pdi@@ pt!
 
-	if (pt@@ 0 ==)
+	if (pt@ 0 ==)
 		virt@ 12 >> 1023 & "VMUnmap: vpn %x wasn't mapped(0)\n" Panic
 	end
 
@@ -470,6 +470,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 			1024 row +=
 			1024 i +=
 			0x400000 cv +=
+
 			continue
 		end
 
@@ -479,7 +480,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 			end
 
 			0 row!
-			cv@ ava!
+			cv@ 0x1000 + ava!
 		end else
 			1 row +=
 		end
