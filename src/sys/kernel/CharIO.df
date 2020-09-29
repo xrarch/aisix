@@ -72,9 +72,11 @@ end
 
 (* ok is 1 if char put, 0 if buffer full, negative if error *)
 fn IOBufPutc { c buf sleeponfull -- ok }
-	if (sleeponfull@ CurrentThread@ Thread_Killed + @ &&)
-		-EINTR ok!
-		return
+	if (CurrentThread@)
+		if (sleeponfull@ CurrentThread@ Thread_Killed + @ &&)
+			-EINTR ok!
+			return
+		end
 	end
 
 	auto rs
@@ -180,9 +182,11 @@ end
 
 (* c is char if available, IOBUFEMPTY if buf empty, negative if error *)
 fn IOBufGetc { buf sleeponempty -- c }
-	if (sleeponempty@ CurrentThread@ Thread_Killed + @ &&)
-		-EINTR c!
-		return
+	if (CurrentThread@)
+		if (sleeponempty@ CurrentThread@ Thread_Killed + @ &&)
+			-EINTR c!
+			return
+		end
 	end
 
 	auto rs
