@@ -35,6 +35,10 @@ const SYSALLOCSEGMENT 31
 const SYSMAPSEGMENT   32
 const SYSCLOSESEGMENT 33
 const SYSUNMAPSEGMENT 34
+const SYSAISIXGETMODE 35
+const SYSTIME    36
+const SYSFCHOWN  37
+const SYSFCHMOD  38
 
 asm "
 
@@ -276,6 +280,30 @@ _unmapsegment:
 	sys
 	ret
 
+_getmode:
+	li a0, SYSAISIXGETMODE
+	sys
+	ret
+
+_time:
+	li a0, SYSTIME
+	sys
+	ret
+
+_fchown:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSFCHOWN
+	sys
+	ret
+
+_fchmod:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSFCHMOD
+	sys
+	ret
+
 ; fd c --
 FPutc:
 .global FPutc
@@ -361,7 +389,7 @@ fn ASpawn { fd0 fd1 fd2 argcn argvt path -- pid }
 		1 i +=
 	end
 
-	if (fd0@ -1 ==)
+	if (fd0@ -2 ==)
 		path@ 0 0 0 NP_INHERIT uvec@ argcn@ 2 + NewProcess pid!
 	end else
 		path@ fd0@ fd1@ fd2@ NP_SPECIFY uvec@ argcn@ 2 + NewProcess pid!
@@ -371,7 +399,11 @@ fn ASpawn { fd0 fd1 fd2 argcn argvt path -- pid }
 end
 
 fn VSpawn { argcn argvt path -- pid }
-	-1 0 0 argcn@ argvt@ path@ ASpawn pid!
+	-2 0 0 argcn@ argvt@ path@ ASpawn pid!
+end
+
+fn SSpawn { ... fd0 fd1 fd2 path -- pid }
+	fd0@ fd1@ fd2@ argc@ argv path@ ASpawn pid!
 end
 
 fn Spawn { ... path -- pid }
@@ -492,10 +524,22 @@ fn Chown { path owner -- ok }
 	owner@ path@ strlen path@ _chown ok!
 end
 
+extern _fchown { owner fd -- ok }
+
+fn FChown { fd owner -- ok }
+	owner@ fd@ _fchown ok!
+end
+
 extern _chmod { mode pathlen path -- ok }
 
 fn Chmod { path mode -- ok }
 	mode@ path@ strlen path@ _chmod ok!
+end
+
+extern _fchmod { mode fd -- ok }
+
+fn FChmod { fd mode -- ok }
+	mode@ fd@ _fchmod ok!
 end
 
 extern _sync { -- ok }
@@ -550,4 +594,16 @@ extern _unmapsegment { sd -- ok }
 
 fn UnmapSegment { sd -- ok }
 	sd@ _unmapsegment ok!
+end
+
+extern _getmode { -- mode }
+
+fn AISIXGetMode { -- mode }
+	_getmode mode!
+end
+
+extern _time { -- sec ms }
+
+fn Time { -- sec ms }
+	_time ms! sec!
 end

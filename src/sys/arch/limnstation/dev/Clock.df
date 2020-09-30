@@ -35,6 +35,19 @@ fn DrvClockFoundNode { node -- }
 	ClockSet
 end
 
+fn ClockEpoch { -- sec ms }
+	auto rs
+	InterruptDisable rs!
+
+	2 ClockCmdPort@ DCitronCommand
+	ClockDataPort@ DCitronInl sec!
+
+	3 ClockCmdPort@ DCitronCommand
+	ClockDataPort@ DCitronInl ms!
+
+	rs@ InterruptRestore
+end
+
 fn ClockSet { -- }
 	auto rs
 	InterruptDisable rs!

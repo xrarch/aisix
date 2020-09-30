@@ -38,6 +38,10 @@ table Syscalls
 	pointerof SysMapSegment
 	pointerof SysCloseSegment
 	pointerof SysUnmapSegment
+	pointerof SysAISIXGetMode
+	pointerof SysTime
+	pointerof SysFChown
+	pointerof SysFChmod
 endtable
 public Syscalls
 
@@ -814,4 +818,38 @@ fn (Syscall) SysUnmapSegment { tf -- ok }
 	tf@ Context_a1 + @ sd!
 
 	CurrentThread@ Thread_Process + @ sd@ UnmapSegment ok!
+end
+
+var SysMode -1
+
+fn (Syscall) SysAISIXGetMode { tf -- ok }
+	if (SysMode@ -1 ==)
+		"-s" ArgsCheck SysMode!
+	end
+
+	SysMode@ ok!
+end
+
+fn (Syscall) SysTime { tf -- ok }
+	ClockEpoch tf@ Context_v1 + ! ok!
+end
+
+fn (Syscall) SysFChown { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto owner
+	tf@ Context_a2 + @ owner!
+
+	fd@ owner@ FChown ok!
+end
+
+fn (Syscall) SysFChmod { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto mode
+	tf@ Context_a2 + @ mode!
+
+	fd@ mode@ FChmod ok!
 end

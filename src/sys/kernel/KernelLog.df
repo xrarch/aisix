@@ -14,6 +14,10 @@ public Panicked
 var EarlyLog 1
 public EarlyLog
 
+var ConsTTY 0
+
+var ConsUseVid 0
+
 var EarlyLogBuf 0
 
 fn KLogInit { -- }
@@ -35,7 +39,19 @@ fn KLogAttach { read write -- }
 	write@ KLogWrite!
 end
 
-externptr ConsUseVid
+externptr VConsTTY
+externptr SerialTTY
+
+fn SelectConsole { -- }
+	if (VConsTTY@)
+		1 ConsUseVid!
+		VConsTTY@ ConsTTY!
+		KLogDumpEarly
+		0 EarlyLog!
+	end else
+		SerialTTY@ ConsTTY!
+	end
+end
 
 externptr VConsOBuffer
 
@@ -100,14 +116,12 @@ fn PolledGets { s max -- }
 	0 s@ len@ + sb
 end
 
-extern ConsRead { buf len unit seek -- bytes }
-
 fn Readline { s max -- }
 	auto bytes
 	0 bytes!
 
 	while (bytes@ 0 ==)
-		s@ max@ 0 0 ConsRead bytes!
+		0 s@ max@ ConsTTY@ TTYRead bytes!
 	end
 
 	if (s@ bytes@ 1 - + gb '\n' ~=)
@@ -119,7 +133,7 @@ fn Readline { s max -- }
 end
 
 fn Gets { s max -- }
-	if (ConsIBuf@ ~~ Panicked@ ||)
+	if (ConsTTY@ ~~ Panicked@ ||)
 		s@ max@ PolledGets
 	end else
 		s@ max@ Readline

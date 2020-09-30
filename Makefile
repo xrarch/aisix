@@ -23,7 +23,7 @@ KERNEL_DIR     := src/sys/kernel
 
 FSTOOL         := $(FST) $(DISTIMAGE) offset=$(OFFSET)
 
-dist: $(DISTIMAGE) rtaisixt bootable stand kernel sysbin bin motd
+dist: $(DISTIMAGE) rtaisixt bootable stand kernel sysbin bin sysfiles
 
 kernel:
 	make --directory=$(KERNEL_DIR) PLATFORM=$(PLATFORM) CPU=$(CPU)
@@ -70,8 +70,12 @@ bootable:
 	dd if=$(FILELOADER_DIR)/BootSector.bin of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
 	dd if=$(FILELOADER_DIR)/loader.a3x of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((2 + $(OFFSET))) 2>/dev/null
 
-motd:
+sysfiles:
 	$(FSTOOL) w /sys/motd.txt ./src/sys/motd.txt
+	$(FSTOOL) w /sys/ttys.fields ./src/sys/ttys.fields
+	$(FSTOOL) w /sys/user.fields ./src/sys/user.fields
+	$(FSTOOL) w /sys/passwd.fields ./src/sys/passwd.fields
+	$(FSTOOL) chmod /sys/passwd.fields 416
 
 rtaisixt:
 	./build-rtaisix.sh

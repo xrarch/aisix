@@ -59,6 +59,9 @@ var GConsoleModified 0
 
 var GCInverted 0
 
+var VConsTTY 0
+public VConsTTY
+
 var VConsUpdate 0
 public VConsUpdate
 
@@ -119,11 +122,53 @@ fn GConsoleDefault { -- }
 	0 GCLSkip!
 end
 
+table VConsDriver
+	"vcons"
+	DEV_CHAR
+	pointerof VConsOpen
+	pointerof VConsClose
+	pointerof VConsIoctl
+	pointerof VConsRead
+	pointerof VConsWrite
+	pointerof VConsSysctl
+endtable
+
+fn (DevSysctl) VConsSysctl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
+end
+
+fn (DevOpen) VConsOpen { unit -- ok }
+	0 ok!
+end
+
+fn (DevClose) VConsClose { unit -- ok }
+	0 ok!
+end
+
+fn (DevIoctl) VConsIoctl { op1 op2 op3 op4 unit -- ok }
+	0 ok!
+end
+
+fn (DevRead) VConsRead { pm buf len unit seek -- bytes }
+	pm@ buf@ len@ VConsTTY@ TTYRead bytes!
+end
+
+fn (DevWrite) VConsWrite { pm buf len unit seek -- bytes }
+	pm@ buf@ len@ VConsTTY@ TTYWrite bytes!
+end
+
 fn VConsInit { -- }
 	auto gfx
 	0 GFXByUnit gfx!
 
 	if (gfx@ iserr)
+		return
+	end
+
+	auto kbd
+	"kbd0" DevByName kbd!
+
+	if (kbd@ ~~)
 		return
 	end
 
@@ -156,6 +201,20 @@ fn VConsInit { -- }
 	end
 
 	vcw@ ThreadReady
+
+	if ("-h" ArgsCheck ~~)
+		kbd@ Device_IBuffer + @ VConsOBuffer@ AllocTTY VConsTTY!
+
+		if (VConsTTY@ iserr)
+			VConsTTY@ abs VConsTTY!
+			[VConsTTY@]ErrorNames@ "couldn't allocate VConsTTY: %s\n" Panic
+		end
+
+		auto vdev
+		OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "ttyV0" VConsDriver 0 DeviceRegister vdev!
+
+		VConsTTY@ vdev@ Device_TTY + !
+	end
 end
 
 fn VConsPump { sleep buf -- ok }

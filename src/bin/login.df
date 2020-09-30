@@ -1,0 +1,441 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+buffer Hash 14
+table Bits[67]
+
+fn Crypt { str salt -- hash }
+	Hash hash!
+
+	auto i
+	0 i!
+
+	while (i@ 67 <)
+		0 [i@]Bits!
+		1 i +=
+	end
+
+	0xFFFF salt &=
+
+	if (salt@ 0xFF & 0 ==)
+		salt@ 16 >> salt |=
+	end
+
+	auto salthi
+	salt@ 8 >> salthi!
+
+	auto saltlo
+	salt@ 0xFF & saltlo!
+
+	auto rot
+	salthi@ 2 << saltlo@ - 127 & rot!
+
+	auto j
+
+	auto pk
+
+	0 i!
+	while (i@ 8 <)
+		if (str@ gb 0 ==)
+			break
+		end
+
+		0 j!
+		while (j@ 7 <)
+			if (str@ gb 1 j@ << &)
+				1 [j@ 3 << i@ +]Bits!
+			end else
+				0 [j@ 3 << i@ +]Bits!
+			end
+
+			1 j +=
+		end
+
+		if (i@ 2 >> 0 ==)
+			saltlo@ pk!
+		end else
+			salthi@ pk!
+		end
+
+		if (pk@ 1 i@ 3 & << &)
+			1 [i@ 56 +]Bits!
+		end else
+			0 [i@ 56 +]Bits!
+		end
+
+		1 str +=
+		1 i +=
+	end
+
+	if (saltlo@ 1 &)
+		1 [64]Bits!
+	end else
+		0 [64]Bits!
+	end
+
+	if (salthi@ 1 &)
+		1 [65]Bits!
+	end else
+		0 [65]Bits!
+	end
+
+	if (rot@ 1 &)
+		1 [66]Bits!
+	end else
+		0 [66]Bits!
+	end
+
+	while (rot@)
+		65 i!
+		while (1)
+			if (i@ -1 ==)
+				break
+			end
+
+			[i@]Bits@ [i@ 1 +]Bits!
+
+			1 i -=
+		end
+
+		[66]Bits@ [0]Bits!
+
+		1 rot -=
+	end
+
+	0 i!
+	while (i@ 12 <)
+		auto hq
+		0 hq!
+
+		0 j!
+		while (j@ 6 <)
+			if ([i@ 6 * j@ +]Bits@)
+				1 j@ << hq |=
+			end
+
+			1 j +=
+		end
+
+		48 hq +=
+		if (hq@ '9' >)
+			7 hq +=
+		end
+		if (hq@ 'Z' >)
+			6 hq +=
+		end
+
+		hq@ hash@ i@ + 2 + sb
+
+		1 i +=
+	end
+
+	saltlo@ hash@ sb
+	salthi@ hash@ 1 + sb
+	0 hash@ 13 + sb
+end
+
+buffer LineBuf 256
+
+fn GetLineRaw { fd -- more }
+	auto chars
+	0 chars!
+
+	auto p
+	LineBuf p!
+
+	1 more!
+
+	auto comment
+	0 comment!
+
+	auto r
+
+	while (chars@ 255 <)
+		p@ 1 fd@ Read r!
+
+		if (r@ 0 ==)
+			if (chars@ 0 ==)
+				0 more!
+			end
+
+			break
+		end
+
+		if (p@ gb '\n' ==)
+			break
+		end
+
+		if (comment@)
+			continue
+		end
+
+		1 p +=
+
+		if (p@ 1 - gb '#' ==)
+			1 p -=
+			0 p@ sb
+
+			while (p@ gb ' ' ==)
+				0 p@ sb
+				1 p -=
+			end
+
+			1 comment!
+		end
+
+		1 chars +=
+	end
+
+	0 p@ sb
+end
+
+var LBP 0
+
+fn GetLine { fd -- more }
+	LineBuf LBP!
+
+	0 LineBuf sb
+
+	1 more!
+
+	while (LineBuf strlen 0 ==)
+		if (more@ 0 ==)
+			return
+		end
+
+		fd@ GetLineRaw more!
+	end
+end
+
+fn ParseField { field m -- }
+	LBP@ field@ ':' m@ strntok LBP!
+end
+
+buffer TBuf 64
+
+struct UserInfo
+	4 UID
+	4 GID
+	128 Home
+	128 Shell
+endstruct
+
+buffer UserInfoBuf UserInfo_SIZEOF
+
+var PasswdTableFD 0
+
+fn GetPasswd { buf uid -- }
+	auto fd
+	PasswdTableFD@ fd!
+
+	auto ok
+	fd@ 0 SEEK_SET Seek ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "login: %s\n" Abort
+	end
+
+	while (fd@ GetLine)
+		TBuf 31 ParseField
+
+		if (TBuf atoi uid@ ==)
+			buf@ 31 ParseField
+
+			break
+		end
+	end
+end
+
+var NameTableFD 0
+
+fn UserByName { name -- buf }
+	auto fd
+	NameTableFD@ fd!
+
+	-1 buf!
+
+	auto ok
+	fd@ 0 SEEK_SET Seek ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "login: %s\n" Abort
+	end
+
+	while (fd@ GetLine)
+		TBuf 63 ParseField
+
+		if (TBuf name@ strcmp)
+			UserInfoBuf buf!
+
+			auto uid
+
+			TBuf 63 ParseField
+			TBuf atoi uid!
+			uid@ buf@ UserInfo_UID + !
+
+			TBuf 63 ParseField
+			TBuf atoi buf@ UserInfo_GID + !
+
+			buf@ UserInfo_Home + 127 ParseField
+			buf@ UserInfo_Shell + 127 ParseField
+
+			break
+		end
+	end
+end
+
+buffer InputBuf 128
+
+buffer PassBuf 32
+
+buffer FileBuf 128
+
+fn PrintFile { fd name -- }
+	auto bytes
+
+	FileBuf 128 fd@ Read bytes!
+
+	if (bytes@ iserr)
+		bytes@ abs bytes!
+		[bytes@]ErrorNames@ name@ "login: couldn't read %s: %s\n" Printf
+		return
+	end
+
+	auto r
+
+	while (bytes@)
+		FileBuf bytes@ STDOUT Write drop
+
+		FileBuf 128 fd@ Read bytes!
+
+		if (bytes@ iserr)
+			bytes@ abs bytes!
+			[bytes@]ErrorNames@ name@ "login: couldn't read %s: %s\n" Printf
+			return
+		end
+	end
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	"/sys/user.fields" O_READ Open NameTableFD!
+
+	if (NameTableFD@ iserr)
+		NameTableFD@ abs NameTableFD!
+		[NameTableFD@]ErrorNames@ "login: couldn't open /sys/user.fields: %s\n" Abort
+	end
+
+	"/sys/passwd.fields" O_READ Open PasswdTableFD!
+
+	if (PasswdTableFD@ iserr)
+		PasswdTableFD@ abs PasswdTableFD!
+		[PasswdTableFD@]ErrorNames@ "login: couldn't open /sys/passwd.fields: %s\n" Abort
+	end
+
+	auto bad
+	0 bad!
+
+	while (1)
+		if (bad@)
+			0 bad!
+			"Login incorrect\n" Printf
+		end
+
+		"login: " Printf
+		if (InputBuf 127 Readline)
+			'\n' Putc
+			continue
+		end
+
+		auto buf
+		InputBuf buf!
+
+		while (buf@ gb ' ' ==)
+			1 buf +=
+		end
+
+		if (buf@ strlen 0 ==)
+			continue
+		end
+
+		buf@ UserByName buf!
+
+		if (buf@ -1 ~=)
+			PassBuf buf@ UserInfo_UID + @ GetPasswd
+
+			if (PassBuf "none" strcmp)
+				1 bad!
+			end else
+				0 bad!
+			end
+		end else
+			1 bad!
+		end
+
+		"password: " Printf
+		InputBuf 127 Gets
+
+		if (bad@)
+			continue
+		end
+
+		if (PassBuf "any" strcmp)
+			break
+		end
+
+		if (InputBuf PassBuf gi Crypt PassBuf strcmp)
+			break
+		end
+
+		1 bad!
+	end
+
+	buf@ UserInfo_Home + Chdir ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ buf@ UserInfo_Home + "login: couldn't cd %s: %s\n" Printf
+	end
+
+	STDOUT buf@ UserInfo_UID + @ FChown ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "login: couldn't take ownership of tty: %s\n" Printf
+	end
+
+	buf@ UserInfo_UID + @ SetUID ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "login: couldn't setuid: %s\n" Abort
+	end
+
+	auto motd
+	"/sys/motd.txt" O_READ Open motd!
+	if (motd@ iserr ~~)
+		motd@ "/sys/motd.txt" PrintFile
+	end
+
+	auto shpid
+	buf@ UserInfo_Shell + Spawn shpid!
+
+	if (shpid@ iserr)
+		shpid@ abs shpid!
+		[shpid@]ErrorNames@ buf@ UserInfo_Shell + "login: couldn't spawn %s: %s\n" Abort
+	end
+
+	while (1)
+		auto pid
+		Wait ret! pid!
+
+		if (pid@ shpid@ ==)
+			break
+		end
+	end
+
+	0 Exit
+end

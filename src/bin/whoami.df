@@ -1,0 +1,135 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+buffer LineBuf 256
+
+fn GetLineRaw { fd -- more }
+	auto chars
+	0 chars!
+
+	auto p
+	LineBuf p!
+
+	1 more!
+
+	auto comment
+	0 comment!
+
+	auto r
+
+	while (chars@ 255 <)
+		p@ 1 fd@ Read r!
+
+		if (r@ 0 ==)
+			if (chars@ 0 ==)
+				0 more!
+			end
+
+			break
+		end
+
+		if (p@ gb '\n' ==)
+			break
+		end
+
+		if (comment@)
+			continue
+		end
+
+		1 p +=
+
+		if (p@ 1 - gb '#' ==)
+			1 p -=
+			0 p@ sb
+
+			while (p@ gb ' ' ==)
+				0 p@ sb
+				1 p -=
+			end
+
+			1 comment!
+		end
+
+		1 chars +=
+	end
+
+	0 p@ sb
+end
+
+var LBP 0
+
+fn GetLine { fd -- more }
+	LineBuf LBP!
+
+	0 LineBuf sb
+
+	1 more!
+
+	while (LineBuf strlen 0 ==)
+		if (more@ 0 ==)
+			return
+		end
+
+		fd@ GetLineRaw more!
+	end
+end
+
+fn ParseField { field m -- }
+	LBP@ field@ ':' m@ strntok LBP!
+end
+
+buffer TBuf 64
+
+buffer NameBuf 64
+
+var NameTableFD 0
+
+fn UserByUID { uid -- name }
+	auto fd
+	NameTableFD@ fd!
+
+	-1 name!
+
+	auto ok
+	fd@ 0 SEEK_SET Seek ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "whoami: %s\n" Abort
+	end
+
+	while (fd@ GetLine)
+		NameBuf 63 ParseField
+
+		TBuf 63 ParseField
+
+		if (TBuf atoi uid@ ==)
+			NameBuf name!
+
+			break
+		end
+	end
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto uid
+	GetUID uid!
+
+	"/sys/user.fields" O_READ Open NameTableFD!
+
+	if (NameTableFD@ iserr)
+		NameTableFD@ abs NameTableFD!
+		[NameTableFD@]ErrorNames@ "whoami: couldn't open /sys/user.fields: %s\n" Abort
+	end
+
+	auto buf
+	uid@ UserByUID buf!
+
+	if (buf@ -1 ==)
+		"whoami: couldn't find you... I don't know who you are... does anybody..?\n" Abort
+	end
+
+	buf@ "%s\n" Printf
+end

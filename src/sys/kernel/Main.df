@@ -47,9 +47,9 @@ extern VFSMountRoot { -- }
 
 extern VCacheInit { -- }
 
-extern ConsInit { -- }
-
 extern VConsInit { -- }
+
+extern SelectConsole { -- }
 
 extern CPUHlt { -- }
 
@@ -60,7 +60,7 @@ fn AISIXInitialThread { -- }
 
 	VConsInit
 
-	ConsInit
+	SelectConsole
 
 	VFSMountRoot
 

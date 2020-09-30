@@ -79,6 +79,10 @@ extern Mkdir { path mode -- ok }
 
 extern Chown { path owner -- ok }
 
+extern FChown { fd owner -- ok }
+
 extern Chmod { path mode -- ok }
+
+extern FChmod { fd mode -- ok }
 
 extern Seek { fd offset whence -- ok }

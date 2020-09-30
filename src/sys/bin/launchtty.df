@@ -1,0 +1,48 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 2 <)
+		return
+	end
+
+	auto tty
+	[1]argv@ tty!
+
+	auto stdio
+	tty@ O_READ Open stdio!
+	if (stdio@ 0 ~=)
+		1 Exit
+	end
+
+	tty@ O_WRITE Open stdio!
+	if (stdio@ 1 ~=)
+		1 Exit
+	end
+
+	tty@ O_WRITE Open stdio!
+	if (stdio@ 2 ~=)
+		1 Exit
+	end
+
+	auto lpid
+	tty@ "/bin/login" Spawn lpid!
+
+	if (lpid@ iserr)
+		lpid@ abs lpid!
+		[lpid@]ErrorNames@ "launchtty: couldn't spawn /bin/login: %s\n" Abort
+	end
+
+	while (1)
+		auto pid
+		Wait ret! pid!
+
+		if (pid@ lpid@ ==)
+			break
+		end
+	end
+
+	0 Exit
+end

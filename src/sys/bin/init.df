@@ -1,7 +1,98 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
-buffer MOTDBuf 4096
+buffer LineBuf 256
+
+fn GetLineRaw { fd -- more }
+	auto chars
+	0 chars!
+
+	auto p
+	LineBuf p!
+
+	1 more!
+
+	auto comment
+	0 comment!
+
+	auto r
+
+	while (chars@ 255 <)
+		p@ 1 fd@ Read r!
+
+		if (r@ 0 ==)
+			if (chars@ 0 ==)
+				0 more!
+			end
+
+			break
+		end
+
+		if (p@ gb '\n' ==)
+			break
+		end
+
+		if (comment@)
+			continue
+		end
+
+		1 p +=
+
+		if (p@ 1 - gb '#' ==)
+			1 p -=
+			0 p@ sb
+
+			while (p@ gb ' ' ==)
+				0 p@ sb
+				1 p -=
+			end
+
+			1 comment!
+		end
+
+		1 chars +=
+	end
+
+	0 p@ sb
+end
+
+var LBP 0
+
+fn GetLine { fd -- more }
+	LineBuf LBP!
+
+	0 LineBuf sb
+
+	1 more!
+
+	while (LineBuf strlen 0 ==)
+		if (more@ 0 ==)
+			return
+		end
+
+		fd@ GetLineRaw more!
+	end
+end
+
+fn ParseField { field m -- }
+	LBP@ field@ ':' m@ strntok LBP!
+end
+
+buffer LoginStat Stat_SIZEOF
+
+struct Terminal
+	128 ManagerProgram
+	64 DevName
+	4 ManagerPID
+endstruct
+
+const TERMMAX 32
+
+buffer Terminals (Terminal_SIZEOF TERMMAX *)
+
+var Terms 0
+
+var SUserWhy 0
 
 fn Main { ... -- ret }
 	(* kernel process is pid 1 on AISIX, which makes init pid 2 *)
@@ -10,63 +101,170 @@ fn Main { ... -- ret }
 		1 Exit
 	end
 
-	(* don't die when ^C hit on /dev/cons *)
+	(* don't die when ^C hit on console *)
 	TTYI_IGN SetTTYIgnore drop
 
 	18 UMask drop
 
-	auto stdio
-	"/dev/cons" O_READ Open stdio!
-	if (stdio@ iserr)
-		1 Exit
+	if (AISIXGetMode)
+		"-s: single-user mode.\nLaunch multi-user mode by striking ^D." SUserWhy!
+		SingleUser
 	end
 
-	"/dev/cons" O_WRITE Open stdio!
-	if (stdio@ iserr)
-		1 Exit
-	end
+	auto bad
+	1 bad!
 
-	"/dev/cons" O_WRITE Open stdio!
-	if (stdio@ iserr)
-		1 Exit
-	end
+	auto ttys
+	-1 ttys!
 
-	(* /bin/login should do the motd but that's not a thing at the time of writing this *)
-	auto motd
-	"/sys/motd.txt" O_READ Open motd!
-	if (motd@ iserr ~~)
-		auto motdsz
+	while (bad@)
+		0 bad!
 
-		MOTDBuf 4096 motd@ Read motdsz!
-
-		if (motdsz@ iserr)
-			motdsz@ abs motdsz!
-			[motdsz@]ErrorNames@ "init: couldn't read /sys/motd.txt: %s\n" Printf
-		end else
-			MOTDBuf motdsz@ STDOUT Write motdsz!
+		if (ttys@ -1 ~=)
+			ttys@ Close drop
 		end
-
-		motd@ Close drop
-	end
-
-
-	while (1)
-		auto shpid
-		"/bin/sh" Spawn shpid!
-
-		if (shpid@ iserr)
-			shpid@ abs shpid!
-			[shpid@]ErrorNames@ "init: couldn't spawn /bin/sh: %s\n" Abort
-		end
-
-		auto pid
 
 		while (1)
-			Wait ret! pid!
+			auto logstat
+			LoginStat "/bin/login" PStat logstat!
 
-			if (pid@ shpid@ ==)
+			if (logstat@ iserr)
+				"/bin/login: couldn't stat!" SUserWhy!
+				SingleUser
+			end else
 				break
 			end
+		end
+
+		if (LoginStat Stat_Mode + @ XMASK & 0 ==)
+			"/bin/login: not executable!" SUserWhy!
+			1 bad!
+			SingleUser
+		end
+
+		"/sys/ttys.fields" O_READ Open ttys!
+		if (ttys@ iserr)
+			-1 ttys!
+			"/sys/ttys.fields: couldn't open!" SUserWhy!
+			1 bad!
+			SingleUser
+		end
+	end
+
+	auto tty
+
+	while (ttys@ GetLine)
+		if (Terms@ TERMMAX >=)
+			break
+		end
+
+		Terms@ Terminal_SIZEOF * Terminals + tty!
+
+		tty@ Terminal_DevName + 63 ParseField
+		tty@ Terminal_ManagerProgram + 127 ParseField
+
+		1 Terms +=
+	end
+
+	auto i
+	0 i!
+
+	auto pid
+
+	while (i@ Terms@ <)
+		i@ Terminal_SIZEOF * Terminals + tty!
+
+		tty@ Terminal_DevName + -1 -1 -1 tty@ Terminal_ManagerProgram + SSpawn pid!
+
+		if (pid@ iserr ~~)
+			pid@ tty@ Terminal_ManagerPID + !
+		end
+
+		1 i +=
+	end
+
+	while (1)
+		Wait ret! pid!
+
+		0 i!
+		while (i@ Terms@ <)
+			i@ Terminal_SIZEOF * Terminals + tty!
+
+			if (ret@ 0 ==)
+				if (tty@ Terminal_ManagerPID + @ pid@ ==)
+					(* terminal line, or UI or whatever this is, needs to be restarted *)
+					tty@ Terminal_DevName + -1 -1 -1 tty@ Terminal_ManagerProgram + SSpawn pid!
+
+					if (pid@ iserr ~~)
+						pid@ tty@ Terminal_ManagerPID + !
+					end else
+						0 tty@ Terminal_ManagerPID + !
+					end
+				end
+			end else
+				0 tty@ Terminal_ManagerPID + !
+			end
+
+			1 i +=
+		end
+	end
+end
+
+var OpenedSTDIO 0
+
+fn OpenConsole { name -- ok }
+	1 ok!
+
+	auto stdio
+	name@ O_READ Open stdio!
+	if (stdio@ iserr)
+		0 ok!
+		return
+	end
+
+	name@ O_WRITE Open stdio!
+	if (stdio@ iserr)
+		1 Exit
+	end
+
+	name@ O_WRITE Open stdio!
+	if (stdio@ iserr)
+		1 Exit
+	end
+end
+
+fn SingleUser { -- }
+	if (OpenedSTDIO@ ~~)
+		if ("/dev/ttyV0" OpenConsole ~~)
+			if ("/dev/ttyS0" OpenConsole ~~)
+				1 Exit
+			end
+		end
+
+		1 OpenedSTDIO!
+	end
+
+	if (SUserWhy@)
+		SUserWhy@ "init: %s\n" Printf
+		0 SUserWhy!
+	end
+
+	auto shpid
+	"/bin/sh" Spawn shpid!
+
+	if (shpid@ iserr)
+		shpid@ abs shpid!
+		[shpid@]ErrorNames@ "init: single-user: couldn't spawn /bin/sh: %s\n" Abort
+	end
+
+	auto pid
+	auto ret
+
+	while (1)
+		Wait ret! pid!
+
+		if (pid@ shpid@ ==)
+			break
 		end
 	end
 end

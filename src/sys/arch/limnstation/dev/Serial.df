@@ -30,12 +30,23 @@ var SerialIBuffer 0
 
 var SerialOBuffer 0
 
+var SerialTTY 0
+public SerialTTY
+
 fn DrvSerialFoundNode { node -- }
 	if (SerialFound@)
 		return
 	end
 
 	1 SerialFound!
+
+	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
+
+	if (SerialCmdPort@ 0 ==)
+		return
+	end
+
+	"serial,dataPort" a3xDGetProperty SerialDataPort!
 
 	1024 AllocIOBuf SerialIBuffer!
 
@@ -53,14 +64,6 @@ fn DrvSerialFoundNode { node -- }
 
 	pointerof SerialWriter SerialOBuffer@ IOBuffer_WriterF + !
 
-	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
-
-	if (SerialCmdPort@ 0 ==)
-		return
-	end
-
-	"serial,dataPort" a3xDGetProperty SerialDataPort!
-
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
@@ -68,9 +71,19 @@ fn DrvSerialFoundNode { node -- }
 
 	pointerof SerialIntr intn@ InterruptRegister
 
+	SerialIBuffer@ SerialOBuffer@ AllocTTY SerialTTY!
+
+	if (SerialTTY@ iserr)
+		SerialTTY@ abs SerialTTY!
+		[SerialTTY@]ErrorNames@ "couldn't allocate SerialTTY: %s\n" Panic
+	end
+
 	SerialIntrEnable
 
-	OWNER_W OWNER_R | GROUP_W | GROUP_R | WORLD_W | WORLD_R | SerialIBuffer@ SerialOBuffer@ "serial0" SerialDriver 0 DeviceRegister drop
+	auto sdev
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "ttyS0" SerialDriver 0 DeviceRegister sdev!
+
+	SerialTTY@ sdev@ Device_TTY + !
 end
 
 fn (DevSysctl) SerialSysctl { op1 op2 op3 op4 unit -- ok }
@@ -90,82 +103,11 @@ fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
 end
 
 fn (DevRead) SerialRead { pm buf len unit seek -- bytes }
-	auto i
-	0 i!
-
-	auto pa
-	auto r
-	if (buf@ 4095 &)
-		pm@ buf@ VMWalk pa! r!
-
-		if (r@ iserr)
-			r@ bytes!
-			return
-		end
-	end
-
-	while (i@ len@ <)
-		auto c
-
-		SerialIBuffer@ 1 IOBufGetc c!
-
-		if (c@ iserr)
-			c@ bytes!
-			return
-		end
-
-		if (buf@ 4095 & 0 ==)
-			pm@ buf@ VMWalk pa! r!
-
-			if (r@ iserr)
-				r@ bytes!
-				return
-			end
-		end
-
-		c@ pa@ sb
-
-		1 buf +=
-		1 pa +=
-		1 i +=
-	end
-
-	len@ bytes!
+	pm@ buf@ len@ SerialTTY@ TTYRead bytes!
 end
 
 fn (DevWrite) SerialWrite { pm buf len unit seek -- bytes }
-	auto i
-	0 i!
-
-	auto pa
-	auto r
-	if (buf@ 4095 &)
-		pm@ buf@ VMWalk pa! r!
-
-		if (r@ iserr)
-			r@ bytes!
-			return
-		end
-	end
-
-	while (i@ len@ <)
-		if (buf@ 4095 & 0 ==)
-			pm@ buf@ VMWalk pa! r!
-
-			if (r@ iserr)
-				r@ bytes!
-				return
-			end
-		end
-
-		pa@ gb SerialPutc
-
-		1 pa +=
-		1 buf +=
-		1 i +=
-	end
-
-	len@ bytes!
+	pm@ buf@ len@ SerialTTY@ TTYWrite bytes!
 end
 
 extern KDebug { -- }

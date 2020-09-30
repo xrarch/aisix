@@ -750,15 +750,7 @@ fn Mkdir { path mode -- ok }
 	end
 end
 
-fn Chown { path owner -- ok }
-	auto vnode
-	path@ VFSPath vnode!
-
-	if (vnode@ iserr)
-		vnode@ ok!
-		return
-	end
-
+fn VChown { vnode owner -- ok }
 	auto fl
 	vnode@ VNode_Mount + @ Mount_Flags + @ fl!
 
@@ -785,11 +777,10 @@ fn Chown { path owner -- ok }
 	SUID ~ vnode@ VNode_Permissions + &=
 	1 vnode@ VNode_Dirty + !
 
-	vnode@ VNodePut
 	0 ok!
 end
 
-fn Chmod { path mode -- ok }
+fn Chown { path owner -- ok }
 	auto vnode
 	path@ VFSPath vnode!
 
@@ -798,6 +789,34 @@ fn Chmod { path mode -- ok }
 		return
 	end
 
+	vnode@ owner@ VChown ok!
+
+	vnode@ VNodePut
+end
+
+fn FChown { fd owner -- ok }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vn
+	filp@ FileP_VNode + @ vn!
+
+	if (vn@ VNodeLock)
+		-EINTR ok!
+		return
+	end
+
+	vn@ owner@ VChown ok!
+
+	vn@ VNodeUnlock
+end
+
+fn VChmod { vnode mode -- ok }
 	auto fl
 	vnode@ VNode_Mount + @ Mount_Flags + @ fl!
 
@@ -823,8 +842,43 @@ fn Chmod { path mode -- ok }
 	mode@ 1023 & vnode@ VNode_Permissions + !
 	1 vnode@ VNode_Dirty + !
 
-	vnode@ VNodePut
 	0 ok!
+end
+
+fn Chmod { path mode -- ok }
+	auto vnode
+	path@ VFSPath vnode!
+
+	if (vnode@ iserr)
+		vnode@ ok!
+		return
+	end
+
+	vnode@ mode@ VChmod ok!
+
+	vnode@ VNodePut
+end
+
+fn FChmod { fd mode -- ok }
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ ok!
+		return
+	end
+
+	auto vn
+	filp@ FileP_VNode + @ vn!
+
+	if (vn@ VNodeLock)
+		-EINTR ok!
+		return
+	end
+
+	vn@ mode@ VChmod ok!
+
+	vn@ VNodeUnlock
 end
 
 fn Seek { fd offset whence -- ok }

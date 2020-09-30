@@ -1,0 +1,8 @@
+# stores passwords for user IDs
+
+# uid:password
+# if password field is "any", allow login with any password
+# if password field is "none", don't allow login at all
+
+0:lk340W6Kyn7Su
+1:any
