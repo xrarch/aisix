@@ -186,6 +186,8 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 			return
 		end
 
+		(* TODO make this not make the process hang while it waits for I/O *)
+
 		dks@ DKS_Unit + @ DKSPortA DCitronOutl
 		DKSCmdSelect DKSCmdPort DCitronCommand
 

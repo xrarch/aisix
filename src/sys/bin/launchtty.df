@@ -27,6 +27,8 @@ fn Main { ... -- ret }
 		1 Exit
 	end
 
+	'\n' Putc
+
 	auto lpid
 	tty@ "/bin/login" Spawn lpid!
 
