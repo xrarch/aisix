@@ -2,7 +2,7 @@
 
 Major work-in-progress.
 
-Attempt to build a unix-like OS for the LIMNstation fantasy computer.
+Attempt to build an OS for the LIMNstation fantasy computer.
 
 A long-term goal is a tiled GUI, short(er) term goal is to get a half-usable kernel.
 
@@ -22,4 +22,6 @@ If it doesn't boot automatically, type this command at the firmware prompt:
 
 `boot /disks/0/a`
 
-AISIX should boot! (as far as it can at the moment)
+AISIX should boot to the `login:` prompt.
+
+Logging in as `guest` requires no password, and the default password for `root` is `aisix`.

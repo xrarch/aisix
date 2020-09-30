@@ -122,6 +122,7 @@ fn Main { ... -- ret }
 
 		if (ttys@ -1 ~=)
 			ttys@ Close drop
+			-1 ttys!
 		end
 
 		while (1)
@@ -166,6 +167,8 @@ fn Main { ... -- ret }
 		1 Terms +=
 	end
 
+	ttys@ Close drop
+
 	auto i
 	0 i!
 
@@ -190,8 +193,8 @@ fn Main { ... -- ret }
 		while (i@ Terms@ <)
 			i@ Terminal_SIZEOF * Terminals + tty!
 
-			if (ret@ 0 ==)
-				if (tty@ Terminal_ManagerPID + @ pid@ ==)
+			if (tty@ Terminal_ManagerPID + @ pid@ ==)
+				if (ret@ 0 ==)
 					(* terminal line, or UI or whatever this is, needs to be restarted *)
 					tty@ Terminal_DevName + -1 -1 -1 tty@ Terminal_ManagerProgram + SSpawn pid!
 
@@ -200,9 +203,9 @@ fn Main { ... -- ret }
 					end else
 						0 tty@ Terminal_ManagerPID + !
 					end
+				end else
+					0 tty@ Terminal_ManagerPID + !
 				end
-			end else
-				0 tty@ Terminal_ManagerPID + !
 			end
 
 			1 i +=

@@ -76,6 +76,8 @@ sysfiles:
 	$(FSTOOL) w /sys/user.fields ./src/sys/user.fields
 	$(FSTOOL) w /sys/passwd.fields ./src/sys/passwd.fields
 	$(FSTOOL) chmod /sys/passwd.fields 416
+	$(FSTOOL) w /home/guest/README ./src/README
+	$(FSTOOL) chown /home/guest/README 1
 
 rtaisixt:
 	./build-rtaisix.sh

@@ -368,6 +368,8 @@ fn Main { ... -- ret }
 
 			if (PassBuf "none" strcmp)
 				1 bad!
+			end elseif (PassBuf "any" strcmp)
+				break
 			end else
 				0 bad!
 			end
@@ -380,10 +382,6 @@ fn Main { ... -- ret }
 
 		if (bad@)
 			continue
-		end
-
-		if (PassBuf "any" strcmp)
-			break
 		end
 
 		if (InputBuf PassBuf gi Crypt PassBuf strcmp)

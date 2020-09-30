@@ -1,0 +1,17 @@
+    AISIX is a preemptively multitasking operating system. It's written chiefly
+for the purpose-built LIMNstation platform, which has a custom RISCy CPU and
+other cool stuff. The OS is written in a custom programming language called
+dragonfruit and aims to teach me (the author) more about computer architecture,
+compiler design, etc, and may even help someone else if they're masochistic
+enough to read any of my code. You could also say that it aims to prove that
+you can write an operating system in even the most contrived, borderline-turing-
+tarpit programming language and environment.
+
+    I hope to "finish" it some day, which will involve writing a LOT more
+syscalls and utilities, improving the kernel as much as I can, and eventually
+writing a window system. As a concept, this has been in development since late
+2016, so it has taken a pretty long time just to get to this point. I expect to
+spend a lot more time on it.
+
+Thanks for trying it out :)
+-will
