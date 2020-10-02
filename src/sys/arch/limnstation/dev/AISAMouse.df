@@ -93,9 +93,11 @@ fn (DevRead) MouseRead { pm buf len unit seek -- bytes }
 		auto rs
 		InterruptDisable rs!
 
-		if (ReadP@ WriteP@ ==)
-			0 ReadP!
-			0 WriteP!
+		while (ReadP@ WriteP@ >=)
+			if (ReadP@ WriteP@ ==)
+				0 ReadP!
+				0 WriteP!
+			end
 
 			if (MouseEvQ WaitQueue)
 				rs@ InterruptRestore
