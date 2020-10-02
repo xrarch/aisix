@@ -670,8 +670,6 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 	auto p
 	CurrentThread@ Thread_Process + @ p!
 
-	p@ Process_TTY + @ process@ Process_TTY + !
-
 	p@ Process_UID + @ process@ Process_UID + !
 
 	if (vnode@ VNode_Permissions + @ SUID &)
@@ -719,6 +717,9 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 	auto ofilen
 	process@ Process_OFiles + ofilen!
 
+	auto attached
+	3 attached!
+
 	if (mode@ NP_INHERIT ==)
 		auto i
 		0 i!
@@ -742,17 +743,29 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 		if (filp0@)
 			filp0@ FDup
 			filp0@ ofilen@ 0 + !
+		end else
+			1 attached -=
 		end
 
 		if (filp1@)
 			filp1@ FDup
 			filp1@ ofilen@ 4 + !
+		end else
+			1 attached -=
 		end
 
 		if (filp2@)
 			filp2@ FDup
 			filp2@ ofilen@ 8 + !
+		end else
+			1 attached -=
 		end
+	end
+
+	if (attached@)
+		p@ Process_TTY + @ process@ Process_TTY + !
+	end else
+		0 process@ Process_TTY + !
 	end
 
 	auto ity

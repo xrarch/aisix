@@ -107,7 +107,7 @@ fn Main { ... -- ret }
 	18 UMask drop
 
 	if (AISIXGetMode)
-		"-s: single-user mode.\nLaunch multi-user mode by striking ^D." SUserWhy!
+		"-s: single-user mode.\nLaunch multi-user mode by striking ^D.\n" SUserWhy!
 		SingleUser
 	end
 

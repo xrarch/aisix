@@ -46,5 +46,5 @@ fn Main { ... -- ret }
 		end
 	end
 
-	0 Exit
+	ret@ Exit
 end
