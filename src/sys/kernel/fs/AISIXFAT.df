@@ -385,7 +385,7 @@ fn BMap { bn reading vnode -- buf }
 
 	if (bn@ 16 >= bm@ ||)
 		if (bm@ 0 ==)
-			PMMFasterSinglePageAlloc bm!
+			PMMFasterSinglePageCalloc bm!
 
 			if (bm@ iserr)
 				bm@ buf!
@@ -540,13 +540,22 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 		return
 	end
 
-	if (vnode@ VNodeLock)
-		-EINTR bytes!
-		return
+	auto locktop
+	0 locktop!
+
+	if (vnode@ VNodeOwned ~~)
+		if (vnode@ VNodeLock)
+			-EINTR bytes!
+			return
+		end
+
+		1 locktop!
 	end
 
 	if (seek@ vnode@ VNode_Size + @ >=)
-		vnode@ VNodeUnlock
+		if (locktop@)
+			vnode@ VNodeUnlock
+		end
 		0 bytes!
 		return
 	end
@@ -566,7 +575,9 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
-			vnode@ VNodeUnlock
+			if (locktop@)
+				vnode@ VNodeUnlock
+			end
 			return
 		end
 
@@ -592,7 +603,9 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 		m@ tot +=
 	end
 
-	vnode@ VNodeUnlock
+	if (locktop@)
+		vnode@ VNodeUnlock
+	end
 
 	len@ bytes!
 end
@@ -608,13 +621,22 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 		return
 	end
 
-	if (vnode@ VNodeLock)
-		-EINTR bytes!
-		return
+	auto locktop
+	0 locktop!
+
+	if (vnode@ VNodeOwned ~~)
+		if (vnode@ VNodeLock)
+			-EINTR bytes!
+			return
+		end
+
+		1 locktop!
 	end
 
 	if (seek@ vnode@ VNode_Size + @ >)
-		vnode@ VNodeUnlock
+		if (locktop@)
+			vnode@ VNodeUnlock
+		end
 		0 bytes!
 		return
 	end
@@ -630,7 +652,9 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
-			vnode@ VNodeUnlock
+			if (locktop@)
+				vnode@ VNodeUnlock
+			end
 			return
 		end
 
@@ -666,7 +690,9 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 
 	len@ bytes!
 
-	vnode@ VNodeUnlock
+	if (locktop@)
+		vnode@ VNodeUnlock
+	end
 end
 
 fn private IAlloc { mount -- inum ino buf }

@@ -234,6 +234,8 @@ fn OpenConsole { name -- ok }
 	if (stdio@ iserr)
 		1 Exit
 	end
+
+	1 OpenedSTDIO!
 end
 
 fn SingleUser { -- }
@@ -243,8 +245,6 @@ fn SingleUser { -- }
 				1 Exit
 			end
 		end
-
-		1 OpenedSTDIO!
 	end
 
 	if (SUserWhy@)

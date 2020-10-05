@@ -8,6 +8,12 @@ extern PMMAlloc { pages -- addr }
 
 extern PMMCalloc { pages -- addr }
 
+extern PMMPowerOfTwoAlloc { power -- addr }
+
+extern PMMPowerOfTwoCalloc { power -- addr }
+
+extern PMMPowerOfTwoFree { power addr -- }
+
 extern PMMFasterSinglePageAlloc { -- addr }
 
 extern PMMFasterSinglePageCalloc { -- addr }

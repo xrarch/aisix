@@ -43,6 +43,11 @@ externptr VConsTTY
 externptr SerialTTY
 
 fn SelectConsole { -- }
+	if ("-novcons" ArgsCheck)
+		SerialTTY@ ConsTTY!
+		return
+	end
+
 	if (VConsTTY@)
 		1 ConsUseVid!
 		VConsTTY@ ConsTTY!

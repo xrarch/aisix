@@ -219,7 +219,7 @@ fn ThreadNew { process entry name kern pass0 pass1 -- thread }
 	process@ thread@ Thread_Process + !
 
 	auto stack
-	PMMFasterSinglePageCalloc stack!
+	PMMFasterSinglePageAlloc stack!
 
 	if (stack@ iserr)
 		thread@ ThreadFreeSlot

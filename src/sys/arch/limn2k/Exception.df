@@ -250,6 +250,8 @@ extern CPUKThreadEntry { -- }
 fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 	stack@ Context_SIZEOF - ctx!
 
+	ctx@ Context_SIZEOF 0 memset
+
 	if (kern@)
 		entry@ ctx@ Context_t0 + !
 		pointerof CPUKThreadEntry ctx@ Context_lr + !
@@ -262,6 +264,8 @@ fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 		a1@ ctx@ Context_a1 + !
 
 		Context_SIZEOF ctx -=
+
+		ctx@ Context_SIZEOF 0 memset
 
 		pointerof forkret ctx@ Context_lr + !
 	end

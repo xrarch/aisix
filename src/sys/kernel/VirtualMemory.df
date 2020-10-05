@@ -173,7 +173,38 @@ fn PMMAlloc { pages -- addr }
 	end
 end
 
-fn PMMFasterSinglePageAlloc { -- addr }
+table POTMasks
+	1
+	3
+	15
+	255
+endtable
+
+(*
+good thing: way fast compared to PMMAlloc
+bad thing: allocations must be aligned to their size, which causes more fragmentation
+this should be fine because this will only be used sparsely for kernel structures
+
+HOWEVER, this whole physical memory manager is a big fat FIXUP, all of these algorithms
+can definitely be consolidated into one that is
+1. faster
+2. less fragmenty
+
+I just need to stop being lazy and figure out how to do that
+
+*)
+
+fn PMMPowerOfTwoAlloc { power -- addr }
+	if (power@ 4 >=)
+		"PMMPowerOfTwoAlloc\n" Panic
+	end
+
+	auto pages
+	1 power@ << pages!
+
+	auto mask
+	[power@]POTMasks@ mask!
+
 	-ENOMEM addr!
 
 	while (1)
@@ -202,24 +233,26 @@ fn PMMFasterSinglePageAlloc { -- addr }
 						break
 					end
 
-					if (qp@ j@ >> 1 & 0 ==)
-						1 j@ << qp |=
+					if (qp@ j@ >> mask@ & 0 ==)
+						mask@ j@ << qp |=
 						qp@ pmb@!
 
 						i@ 12 << MachineRAMBase@ + addr!
 
-						1 Alloced +=
+						pages@ Alloced +=
 
 						rs@ InterruptRestore
 
 						return
 					end
 
-					1 j +=
-					1 i +=
+					pages@ j +=
+					pages@ i +=
 				end
 
-				break
+				if (i@ pc@ >=)
+					break
+				end
 			end
 
 			4 pmb +=
@@ -234,17 +267,17 @@ fn PMMFasterSinglePageAlloc { -- addr }
 	end
 end
 
-fn PMMFasterSinglePageCalloc { -- addr }
-	PMMFasterSinglePageAlloc addr!
+fn PMMPowerOfTwoCalloc { power -- addr }
+	power@ PMMPowerOfTwoAlloc addr!
 
 	if (addr@ iserr)
 		return
 	end
 
-	addr@ 4096 0 memset
+	addr@ 4096 power@ << 0 memset
 end
 
-fn PMMFasterSinglePageFree { addr -- }
+fn PMMPowerOfTwoFree { power addr -- }
 	auto pmb
 	PMMBitmap pmb!
 
@@ -256,9 +289,21 @@ fn PMMFasterSinglePageFree { addr -- }
 	auto off
 	page@ 31 & off!
 
-	1 off@ << ~ pmb@ &=
+	[power@]POTMasks@ off@ << ~ pmb@ &=
 
-	1 Alloced -=
+	1 power@ << Alloced -=
+end
+
+fn PMMFasterSinglePageAlloc { -- addr }
+	0 PMMPowerOfTwoAlloc addr!
+end
+
+fn PMMFasterSinglePageCalloc { -- addr }
+	0 PMMPowerOfTwoCalloc addr!
+end
+
+fn PMMFasterSinglePageFree { addr -- }
+	0 addr@ PMMPowerOfTwoFree
 end
 
 extern PlatformInvalidatePage { vpn proc -- }
