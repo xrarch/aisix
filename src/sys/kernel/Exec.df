@@ -639,6 +639,7 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 	process@ vnode@ udvec@ udcnt@ LoadLOFF loff!
 
 	if (loff@ iserr)
+		process@ Process_Pagemap + @ VMPagemapFree
 		process@ ProcessFreeSlot
 		loff@ process!
 		return
@@ -647,6 +648,7 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 	loff@ LOFFSummary_Entry + @ loff@ LOFFSummary_UData + @ udcnt@ process@ 0 ProcessAddMainThread ok!
 
 	if (ok@ iserr)
+		process@ Process_Pagemap + @ VMPagemapFree
 		process@ ProcessFreeSlot
 
 		loff@ LOFFSummary_TextSeg + @ VMSegDestruct drop

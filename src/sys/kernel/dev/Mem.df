@@ -42,13 +42,34 @@ fn (DevRead) MemRead { pm buf len unit seek -- bytes }
 
 		return
 	end elseif (unit@ 2 ==) (* /dev/mem *)
+		auto m
+		0 m!
+
+		if (seek@ 0x1000 <) (* avoid page 0 *)
+			0x1000 seek@ - len@ min m!
+
+			pm@ buf@ m@ 0 VMMemset bytes!
+
+			if (bytes@ iserr)
+				return
+			end
+
+			0x1000 seek!
+			m@ buf +=
+			m@ len -=
+
+			if (len@ 0 ==)
+				m@ bytes!
+				return
+			end
+		end
+
 		pm@ buf@ seek@ len@ VMCopyout bytes!
 
 		if (bytes@ iserr ~~)
-			len@ bytes!
+			len@ m@ + bytes!
 		end
 
-		len@ bytes!
 		return
 	end elseif (unit@ 3 ==) (* /dev/full *)
 		0 bytes!
@@ -64,10 +85,26 @@ fn (DevWrite) MemWrite { pm buf len unit seek -- bytes }
 		len@ bytes!
 		return
 	end elseif (unit@ 2 ==) (* /dev/mem *)
+		auto m
+		0 m!
+
+		if (seek@ 0x1000 <)
+			0x1000 seek@ - len@ min m!
+
+			0x1000 seek!
+			m@ buf +=
+			m@ len -=
+
+			if (len@ 0 ==)
+				m@ bytes!
+				return
+			end
+		end
+
 		pm@ seek@ buf@ len@ VMCopyin bytes!
 
 		if (bytes@ iserr ~~)
-			len@ bytes!
+			m@ len@ + bytes!
 		end
 
 		return

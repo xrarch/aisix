@@ -8,17 +8,22 @@ extern AISIX { ksz args -- ret }
 const CompatibleFirmware 30505
 
 var SavedEV 0
+var SavedTLBV 0
 
 asm "
 
 SaveEV:
 	la t0, SavedEV
 	s.l t0, zero, ev
+	la t0, SavedTLBV
+	s.l t0, zero, tlbv
 	ret
 
 RestoreEV:
 	la t0, SavedEV
 	l.l ev, t0, zero
+	la t0, SavedTLBV
+	l.l tlbv, t0, zero
 	ret
 
 "
@@ -103,6 +108,8 @@ fn PlatformInit { -- }
 
 	DeviceTree
 
+	FlushTLBAll
+
 	'\n' Putc
 end
 
@@ -140,6 +147,7 @@ fn PlatformAlertUser { early -- }
 end
 
 fn PlatformUnalertUser { -- }
+	(* nothing i guess *)
 end
 
 asm "
@@ -159,6 +167,10 @@ extern FlushTLB { vpn asid -- }
 
 fn FlushASID { asid -- }
 	-1 asid@ FlushTLB
+end
+
+fn FlushTLBAll { -- }
+	-1 -1 FlushTLB
 end
 
 fn PlatformInvalidatePage { vpn proc -- }

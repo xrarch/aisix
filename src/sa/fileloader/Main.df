@@ -299,7 +299,7 @@ fn Prompt { -- ret }
 
 				bootargs@ BootFile@ RunKernel ret!
 
-				if (ret@ 1 ~=)
+				if (ret@ 0 ~=)
 					break
 				end
 			end else

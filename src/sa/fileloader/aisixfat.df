@@ -225,10 +225,15 @@ fn AFSPrintList { path -- }
 	auto dirent
 	auto ino
 
-	if (path@ strlen 0 ==)
+	if (path@ 0 ==)
 		1 AFSIGet ino!
+		"/" path!
+	end elseif (path@ strlen 0 ==)
+		1 AFSIGet ino!
+		"/" path!
 	end elseif (path@ "/" strcmp)
 		1 AFSIGet ino!
+		"/" path!
 	end else
 		path@ AFSPath ino! dirent!
 
