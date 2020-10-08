@@ -14,9 +14,9 @@ Running `make` in this repository should then place an AISIX distribution image 
 
 ## Testing
 
-With the LIMNstation emulator (`./vm/`) and aisix repository (`./aisix/`) in your current directory, run this command:
+With the LIMNstation emulator (`./emu/`) and aisix repository (`./aisix/`) in your current directory, run this command:
 
-`./vm/vm.sh -dks ./aisix/dist/dist.img`
+`./emu/vm.sh -dks ./aisix/dist/dist.img`
 
 If it doesn't boot automatically, type this command at the firmware prompt:
 
