@@ -166,7 +166,6 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			end
 
 			if (be@)
-				endp@ ptr!
 				break
 			end
 

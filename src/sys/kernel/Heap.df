@@ -233,7 +233,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		ptr@ KHeapHeader_next + @ ptr!
 	end
 
-	if (ptr@ 0 ==)
+	if (ptr@ endp@ ==)
 		-ENOMEM ptr!
 		return
 	end
