@@ -1,6 +1,5 @@
 # maps user IDs to usernames
-
-# username:uid:gid:homedir:shell
+# format username:uid:gid:homedir:shell
 
 root:0:1:/:/bin/sh
 guest:1:1:/home/guest:/bin/sh

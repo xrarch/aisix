@@ -384,7 +384,7 @@ fn VMMap { pm virt phys flags -- ok }
 	virt@ 12 >> 1023 & 2 << pt@ + pdi!
 
 	if (pdi@@ 1 &)
-		virt@ 12 >> 1023 & "VMMap: vpn %x is already mapped!\n" Panic
+		virt@ 12 >> "VMMap: vpn %x is already mapped!\n" Panic
 	end
 
 	phys@ 12 >> 4 << flags@ | pdi@!
@@ -461,6 +461,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 	pm@ Pagemap_Data + @ start@ 22 >> 2 << + pd!
 
 	auto pt
+	pd@@ pt!
 
 	auto max
 	PAGEMAX max!
@@ -475,8 +476,17 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 	start@ cv!
 	start@ ava!
 
-	if (i@ 1023 &)
-		pd@ i@ 1023 & 2 << + @ pt!
+	auto rmnd
+	i@ 1023 & rmnd!
+
+	if (rmnd@)
+		if (pt@ 0 ==)
+			1024 rmnd@ - row!
+			1024 rmnd@ - i +=
+			0x400000 rmnd@ 12 << - cv +=
+		end else
+			rmnd@ 2 << pt +=
+		end
 
 		4 pd +=
 	end
@@ -611,7 +621,7 @@ fn (SegmentDestructor) VMSegDestruct { segment -- ok }
 	pb@ Free
 end
 
-fn VMAllocSegment { bytes -- seg }
+fn VMAllocSegment1 { bytes clear -- seg }
 	VMNewSegment seg!
 
 	if (seg@ iserr)
@@ -649,7 +659,17 @@ fn VMAllocSegment { bytes -- seg }
 	while (i@ pages@ <)
 		auto pg
 
-		PMMFasterSinglePageAlloc pg!
+		if (clear@ 0 ==)
+			PMMFasterSinglePageAlloc pg!
+		end elseif (clear@ 1 ==)
+			PMMFasterSinglePageCalloc pg!
+		end elseif (clear@ 2 ==)
+			if (i@ pages@ 1 - ==)
+				PMMFasterSinglePageCalloc pg!
+			end else
+				PMMFasterSinglePageAlloc pg!
+			end
+		end
 
 		if (pg@ iserr)
 			while (i@)
@@ -670,6 +690,18 @@ fn VMAllocSegment { bytes -- seg }
 		4 ptr +=
 		1 i +=
 	end
+end
+
+fn VMAllocSegment { bytes -- seg }
+	bytes@ 0 VMAllocSegment1 seg!
+end
+
+fn VMCallocSegment { bytes -- seg }
+	bytes@ 1 VMAllocSegment1 seg!
+end
+
+fn VMSallocSegment { bytes -- seg }
+	bytes@ 2 VMAllocSegment1 seg!
 end
 
 fn VMWalk { pm va -- ok pa }

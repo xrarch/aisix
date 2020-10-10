@@ -56,5 +56,5 @@ _MainTrampoline:
 
 .section bss
 
-.bytes 8192 0
+.bytes 4096 0
 StackTop:

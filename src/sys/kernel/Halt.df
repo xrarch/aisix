@@ -54,7 +54,9 @@ fn Halt { haltmode -- ok }
 
 	InterruptDisable rs!
 
-	TS_SUSPEND InitProcess@ Process_MainThread + @ Thread_Status + !
+	if (p@ InitProcess@ ~=)
+		TS_SUSPEND InitProcess@ Process_MainThread + @ Thread_Status + !
+	end
 
 	auto process
 
@@ -79,7 +81,9 @@ fn Halt { haltmode -- ok }
 	rs@ InterruptRestore
 
 	if (p@ Process_Exited + @ ~~)
-		"halt: self not killed\n" Panic
+		if (p@ InitProcess@ ~=)
+			"halt: self not killed\n" Panic
+		end
 	end
 
 	(* protect ourselves from weird business *)

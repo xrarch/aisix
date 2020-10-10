@@ -422,7 +422,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 	if (cts@)
 		cts@ textseg!
 	end else
-		sz@ VMAllocSegment textseg!
+		sz@ VMSallocSegment textseg!
 
 		if (textseg@ iserr)
 			loff@ Free
@@ -455,7 +455,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	udvec@ udcnt@ VecSize sz +=
 
-	sz@ VMAllocSegment dataseg!
+	sz@ VMSallocSegment dataseg!
 
 	if (dataseg@ iserr)
 		textseg@ UnrefSegment
@@ -486,7 +486,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	loff@ LOFFSummary_BSSSize + @ sz!
 
-	sz@ VMAllocSegment bssseg!
+	sz@ VMCallocSegment bssseg!
 
 	if (bssseg@ iserr)
 		textseg@ UnrefSegment
@@ -566,23 +566,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 		loff@ Free
 		-ENOEXEC loff!
-		return
-	end
-
-	pm@ loff@ LOFFSummary_BSSVAddr + @ loff@ LOFFSummary_BSSSize + @ 0 VMMemset ok!
-
-	if (ok@ iserr)
-		textseg@ VMSegDestruct drop
-		textseg@ Free
-
-		dataseg@ VMSegDestruct drop
-		dataseg@ Free
-
-		bssseg@ VMSegDestruct drop
-		bssseg@ Free
-
-		loff@ Free
-		ok@ loff!
 		return
 	end
 

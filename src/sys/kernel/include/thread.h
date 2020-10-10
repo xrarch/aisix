@@ -96,6 +96,8 @@ externptr KernelProcess
 
 externptr InitProcess
 
+externptr IdleThread
+
 const THREADMAX 128
 
 const PROCMAX 64

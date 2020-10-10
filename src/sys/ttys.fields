@@ -1,7 +1,5 @@
 # tells init how to set up each tty
+# format device:manager
 
-# video console
 /dev/ttyV0:/sys/bin/launchtty
-
-# serial port(s)
 /dev/ttyS0:/sys/bin/launchtty

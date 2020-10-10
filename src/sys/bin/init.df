@@ -26,6 +26,9 @@ fn GetLineRaw { fd -- more }
 			end
 
 			break
+		end elseif (r@ iserr)
+			0 more!
+			break
 		end
 
 		if (p@ gb '\n' ==)
@@ -33,6 +36,7 @@ fn GetLineRaw { fd -- more }
 		end
 
 		if (comment@)
+			0 p@ sb
 			continue
 		end
 
@@ -80,6 +84,8 @@ end
 
 buffer LoginStat Stat_SIZEOF
 
+buffer LTYStat Stat_SIZEOF
+
 struct Terminal
 	128 ManagerProgram
 	64 DevName
@@ -117,6 +123,7 @@ fn Main { ... -- ret }
 	auto ttys
 	-1 ttys!
 
+	(* make some basic checks and allow the user to try to fix stuff *)
 	while (bad@)
 		0 bad!
 
@@ -125,8 +132,9 @@ fn Main { ... -- ret }
 			-1 ttys!
 		end
 
+		auto logstat
+
 		while (1)
-			auto logstat
 			LoginStat "/bin/login" PStat logstat!
 
 			if (logstat@ iserr)
@@ -139,6 +147,23 @@ fn Main { ... -- ret }
 
 		if (LoginStat Stat_Mode + @ XMASK & 0 ==)
 			"/bin/login: not executable!" SUserWhy!
+			1 bad!
+			SingleUser
+		end
+
+		while (1)
+			LTYStat "/sys/bin/launchtty" PStat logstat!
+
+			if (logstat@ iserr)
+				"/sys/bin/launchtty: couldn't stat!" SUserWhy!
+				SingleUser
+			end else
+				break
+			end
+		end
+
+		if (LTYStat Stat_Mode + @ XMASK & 0 ==)
+			"/sys/bin/launchtty: not executable!" SUserWhy!
 			1 bad!
 			SingleUser
 		end
@@ -172,6 +197,9 @@ fn Main { ... -- ret }
 	auto i
 	0 i!
 
+	auto successful
+	0 successful!
+
 	auto pid
 
 	while (i@ Terms@ <)
@@ -181,12 +209,13 @@ fn Main { ... -- ret }
 
 		if (pid@ iserr ~~)
 			pid@ tty@ Terminal_ManagerPID + !
+			1 successful +=
 		end
 
 		1 i +=
 	end
 
-	while (1)
+	while (successful@)
 		Wait ret! pid!
 
 		0 i!
@@ -201,9 +230,11 @@ fn Main { ... -- ret }
 					if (pid@ iserr ~~)
 						pid@ tty@ Terminal_ManagerPID + !
 					end else
+						1 successful -=
 						0 tty@ Terminal_ManagerPID + !
 					end
 				end else
+					1 successful -=
 					0 tty@ Terminal_ManagerPID + !
 				end
 			end
@@ -211,6 +242,11 @@ fn Main { ... -- ret }
 			1 i +=
 		end
 	end
+
+	"no managed lines, or all failed" SUserWhy!
+	SingleUser
+
+	HALT_REBOOT Halt drop
 end
 
 var OpenedSTDIO 0
@@ -248,7 +284,7 @@ fn SingleUser { -- }
 	end
 
 	if (SUserWhy@)
-		SUserWhy@ "init: %s\n" Printf
+		SUserWhy@ "init: single-user: %s\n" Printf
 		0 SUserWhy!
 	end
 

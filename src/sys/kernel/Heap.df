@@ -160,10 +160,6 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		"Malloc: sz = 0\n" Panic
 	end
 
-	if (endp@ 0 ==)
-		KHeapStart@ KHeapSize@ + endp!
-	end
-
 	if (startp@ 0 ==)
 		KHeapStart@ startp!
 	end
@@ -175,7 +171,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 	startp@ ptr!
 
-	while (ptr@)
+	while (ptr@ endp@ ~=)
 		if (ptr@ 3 &)
 			ptr@ "Malloc: unaligned block %x\n" Panic
 		end

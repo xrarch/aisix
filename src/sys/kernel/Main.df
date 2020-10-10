@@ -85,6 +85,8 @@ fn AISIXInitialThread { -- }
 		end
 	end
 
+	CurrentThread@ IdleThread!
+
 	(* become an idle thread *)
 	while (1)
 		CPUHlt

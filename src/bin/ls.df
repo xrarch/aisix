@@ -100,6 +100,9 @@ var ItemsLeft 5
 
 buffer DirentB Dirent_SIZEOF
 
+const PATHBUFSZ 128
+buffer Pathbuf PATHBUFSZ
+
 fn ListDir { path fd -- }
 	auto ok
 
@@ -129,7 +132,16 @@ fn ListDir { path fd -- }
 
 		if (DirentB Dirent_Name + gb '.' ~= AFlag@ ||)
 			auto buf
-			DirentB Dirent_Name + strlen pl@ + 2 + Malloc buf!
+			auto alloced
+			0 alloced!
+
+			if (DirentB Dirent_Name + strlen pl@ + 2 + PATHBUFSZ >=)
+				(* avoid using heap if possible *)
+				DirentB Dirent_Name + strlen pl@ + 2 + Malloc buf!
+				1 alloced!
+			end else
+				Pathbuf buf!
+			end
 
 			buf@ path@ strcpy
 
@@ -141,13 +153,19 @@ fn ListDir { path fd -- }
 			if (ok@ iserr)
 				ok@ abs ok!
 				[ok@]ErrorNames@ buf@ "ls: couldn't stat %s: %s\n" STDERR FPrintf
-				buf@ Free
+
+				if (alloced@)
+					buf@ Free
+				end
+
 				continue
 			end
 
 			DirentB Dirent_Name + EInfo
 
-			buf@ Free
+			if (alloced@)
+				buf@ Free
+			end
 		end
 	end
 

@@ -3,10 +3,8 @@
 
 (* ported from ancient AISIX *)
 
-externptr _HeapStart
-externptr _HeapSize
-
 var KHeapStart 0
+var KHeapEnd 0
 var KHeapSize 0
 public KHeapSize
 public KHeapStart
@@ -18,10 +16,6 @@ public KHeapUsed
 const MAGIC 0xD8F77558
 const BADMAGICF 0xACA7BAB1
 const BADMAGICB 0xACA7BAB7
-
-const FRACTION 40
-
-const MINSIZE 32
 
 const RESETLAST 64
 
@@ -37,17 +31,7 @@ struct KHeapHeader
 endstruct
 
 fn _HeapInit { -- }
-	pointerof _HeapStart dup KHeapStart! KHeapLast!
-	pointerof _HeapSize @ KHeapSize!
 
-	0 KHeapLast!
-
-	KHeapSize@ KHeapStart@ KHeapHeader_size + !
-	0 KHeapStart@ KHeapHeader_last + !
-	0 KHeapStart@ KHeapHeader_allocated + !
-	0 KHeapStart@ KHeapHeader_next + !
-
-	MAGIC KHeapStart@ KHeapHeader_magic + !
 end
 
 fn HeapDumpBlock { ept -- }
@@ -84,9 +68,6 @@ end
 fn HeapDump { -- }
 	auto ept
 	KHeapStart@ ept!
-
-	auto max
-	KHeapStart@ KHeapSize@ + max!
 
 	auto tfree
 	0 tfree!
@@ -133,10 +114,6 @@ fn HeapDump { -- }
 		ept@ lept!
 		ept@ KHeapHeader_next + @ ept!
 
-		if (lept@ size@ + ept@ ~=)
-			"DISPARITY!\n" Printf
-		end
-
 		1 i +=
 	end
 
@@ -150,10 +127,6 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		"Malloc: sz = 0\n" Abort
 	end
 
-	if (endp@ 0 ==)
-		KHeapStart@ KHeapSize@ + endp!
-	end
-
 	if (startp@ 0 ==)
 		KHeapStart@ startp!
 	end
@@ -165,7 +138,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 	startp@ ptr!
 
-	while (ptr@)
+	while (ptr@ endp@ ~=)
 		if (ptr@ 3 &)
 			ptr@ "Malloc: unaligned block %x\n" Abort
 		end
@@ -193,6 +166,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 			end
 
 			if (be@)
+				endp@ ptr!
 				break
 			end
 
@@ -211,6 +185,8 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 			if (link@)
 				newblockp@ link@ KHeapHeader_last + !
+			end else
+				newblockp@ KHeapEnd!
 			end
 
 			mysize@ ptr@ KHeapHeader_size + !
@@ -227,7 +203,7 @@ fn Malloc1 { ac endp startp sz -- ptr }
 		ptr@ KHeapHeader_next + @ ptr!
 	end
 
-	if (ptr@ 0 ==)
+	if (ptr@ endp@ ==)
 		ERR ptr!
 		return
 	end
@@ -243,6 +219,69 @@ fn Malloc1 { ac endp startp sz -- ptr }
 
 		KHeapHeader_SIZEOF ptr +=
 	end
+end
+
+var MinimumSize 4096
+
+fn HeapExtend { size -- ok }
+	KHeapHeader_SIZEOF size +=
+
+	auto os
+	size@ os!
+
+	size@ 131072 min size +=
+
+	if (size@ MinimumSize@ <)
+		MinimumSize@ size!
+		
+		if (MinimumSize@ 4096 ==)
+			32768 MinimumSize!
+		end elseif (MinimumSize@ 32768 ==)
+			131072 MinimumSize!
+		end
+	end
+
+	0 ok!
+
+	auto sd
+	SEG_WRITABLE size@ AllocSegment sd!
+
+	if (sd@ iserr)
+		os@ size!
+		SEG_WRITABLE size@ AllocSegment sd!
+
+		if (sd@ iserr)
+			return
+		end
+	end
+
+	auto addr
+	sd@ pointerof _bss 0 MapSegment addr! ok!
+
+	if (ok@ iserr)
+		sd@ CloseSegment drop
+		0 ok!
+		return
+	end
+
+	size@ addr@ KHeapHeader_size + !
+	KHeapEnd@ addr@ KHeapHeader_last + !
+	0 addr@ KHeapHeader_next + !
+	0 addr@ KHeapHeader_allocated + !
+
+	MAGIC addr@ KHeapHeader_magic + !
+
+	if (KHeapStart@ 0 ==)
+		addr@ KHeapStart!
+	end
+
+	if (KHeapEnd@)
+		addr@ KHeapEnd@ KHeapHeader_next + !
+	end
+
+	addr@ KHeapEnd!
+
+	1 ok!
 end
 
 asm "
@@ -269,23 +308,41 @@ fn Malloc2 { ac size -- ptr }
 		0 Allocations!
 	end
 
-	ac@ 0 KHeapLast@ size@ Malloc1 ptr!
+	auto extended
+	0 extended!
 
-	if (ptr@ ERR ~=)
-		1 Allocations +=
+	while (1)
+		ac@ 0 KHeapLast@ size@ Malloc1 ptr!
 
-		return
+		if (ptr@ ERR ~=)
+			if (extended@)
+				0 KHeapLast!
+			end
+
+			1 Allocations +=
+
+			return
+		end
+
+		ac@ KHeapLast@ 0 size@ Malloc1 ptr!
+
+		if (ptr@ ERR ~=)
+			if (extended@)
+				0 KHeapLast!
+			end
+
+			1 Allocations +=
+
+			return
+		end
+
+		if (size@ HeapExtend ~~)
+			ERR ptr!
+			return
+		end
+
+		1 extended!
 	end
-
-	ac@ KHeapLast@ 0 size@ Malloc1 ptr!
-
-	if (ptr@ ERR ~=)
-		1 Allocations +=
-
-		return
-	end
-
-	ERR ptr! return
 end
 
 fn Malloc { size -- ptr }
@@ -325,6 +382,8 @@ fn Free { ptr -- }
 	auto link
 	nptr@ KHeapHeader_next + @ link!
 
+	auto tlink
+
 	if (link@)
 		if (link@ KHeapHeader_allocated + @ 0 ==)
 			link@ KHeapHeader_size + @ nptr@ KHeapHeader_size + +=
@@ -337,17 +396,17 @@ fn Free { ptr -- }
 				0 KHeapLast!
 			end
 
-			link@ KHeapHeader_next + @ link!
+			link@ KHeapHeader_next + @ tlink!
 
-			if (link@)
-				nptr@ link@ KHeapHeader_last + !
+			if (tlink@)
+				nptr@ tlink@ KHeapHeader_last + !
+			end else
+				nptr@ KHeapEnd!
 			end
 		end
 	end
 
 	nptr@ KHeapHeader_last + @ link!
-
-	auto tlink
 
 	if (link@)
 		if (link@ KHeapHeader_allocated + @ 0 ==)
@@ -361,6 +420,10 @@ fn Free { ptr -- }
 
 			if (tlink@)
 				link@ tlink@ KHeapHeader_last + !
+			end
+
+			if (nptr@ KHeapEnd@ ==)
+				link@ KHeapEnd!
 			end
 
 			if (nptr@ KHeapLast@ ==)

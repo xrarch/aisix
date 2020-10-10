@@ -1,13 +1,55 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/aisix.h"
 
+extern _rFPutc { fd c -- }
+
 fn Abort { ... fmt -- }
 	argv argc@ fmt@ STDERR VFPrintf
 
 	1 Exit
 end
 
+const MAXLINEBUF 64
+
+buffer _StdoutLine MAXLINEBUF
+
+var StdoutLineLen 0
+
+fn IOFlush { -- }
+	if (StdoutLineLen@ 0 ==)
+		return
+	end
+
+	_StdoutLine StdoutLineLen@ STDOUT Write drop
+	0 StdoutLineLen!
+end
+
+fn FPutc { fd c -- }
+	if (fd@ STDOUT ==)
+		c@ _StdoutLine StdoutLineLen@ + sb
+
+		1 StdoutLineLen +=
+
+		if (StdoutLineLen@ MAXLINEBUF == c@ '\n' == ||)
+			IOFlush
+		end
+	end else
+		fd@ c@ _rFPutc
+	end
+end
+
 fn FPuts { fd s -- }
+	if (fd@ STDOUT ==)
+		while (s@ gb)
+			STDOUT s@ gb FPutc
+			1 s +=
+		end
+
+		return
+	end elseif (fd@ STDERR ==)
+		IOFlush
+	end
+
 	s@ s@ strlen fd@ Write drop
 end
 

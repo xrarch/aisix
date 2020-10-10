@@ -41,7 +41,13 @@ extern VMRefSegment { seg -- }
 
 extern VMCloseSegment { seg -- ok }
 
+extern VMAllocSegment1 { bytes clear -- seg }
+
 extern VMAllocSegment { bytes -- seg }
+
+extern VMCallocSegment { bytes -- seg }
+
+extern VMSallocSegment { bytes -- seg }
 
 extern VMWalk { pm va -- ok pa }
 

@@ -305,8 +305,8 @@ _fchmod:
 	ret
 
 ; fd c --
-FPutc:
-.global FPutc
+_rFPutc:
+.global _rFPutc
 	subi.i sp, 4
 	s.l sp, zero, a0
 	mov a3, sp
@@ -338,6 +338,8 @@ end
 extern _read { buf len fd -- bytes }
 
 fn Read { buf len fd -- bytes }
+	IOFlush
+
 	buf@ len@ fd@ _read bytes!
 end
 
@@ -413,6 +415,8 @@ end
 extern _exit { ret -- }
 
 fn Exit { ret -- }
+	IOFlush
+
 	ret@ _exit
 end
 

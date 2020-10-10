@@ -7,8 +7,8 @@ LD  =  ../../sdk/link.sh link
 
 all: obj/rtaisix.o
 
-obj/rtaisix.o: $(OBJ) ./src/_start.o ./src/end.o
-	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) ./src/_start.o ./src/end.o
+obj/rtaisix.o: $(OBJ) ./src/_start.o
+	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) ./src/_start.o
 
 %.o: %.df
 	$(DC) $< $@ incdir=./headers/
@@ -19,8 +19,5 @@ obj/rtaisix.o: $(OBJ) ./src/_start.o ./src/end.o
 ./src/_start.o: ./src/_start.s
 	$(AS) ./src/_start.s ./src/_start.o
 
-./src/end.o: ./src/end.s
-	$(AS) ./src/end.s ./src/end.o
-
 cleanup:
-	rm -f $(OBJ) ./src/_start.o ./src/end.o obj/rtaisix.o
+	rm -f $(OBJ) ./src/_start.o obj/rtaisix.o

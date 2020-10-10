@@ -782,7 +782,7 @@ fn (Syscall) SysAllocSegment { tf -- ok }
 	tf@ Context_a2 + @ 1 << flags!
 
 	auto seg
-	bytes@ VMAllocSegment seg!
+	bytes@ VMCallocSegment seg!
 
 	if (seg@ iserr)
 		seg@ ok!
