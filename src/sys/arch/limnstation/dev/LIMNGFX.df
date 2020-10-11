@@ -149,18 +149,15 @@ fn (GFXBlitBits) LGFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
 	auto dest
 	y@ gfx@ GFX_Width + @ * 2 * x@ 2 * + gfx@ GFX_FBAddr + @ + dest!
 
-	ptr@
-	dest@
+	ptr@ dest@
 	1
-	2 w@ *
+	2 w@ * 16 min
 	bpr@
 	0
 	h@
-	gfx@ GFX_Width + @ w@ - 2 *
-	0
-	bitd@
-	bg@
-	fg@
+	gfx@ GFX_Width + @ 2 *
+	bpr@
+	bitd@ bg@ fg@
 	DMABitTransfer
 end
 
@@ -173,7 +170,7 @@ fn (GFXBlit) LGFXBlit { x y w h ptr gfx -- }
 	w@ 2 *
 	0
 	h@
-	gfx@ GFX_Width + @ w@ - 2 *
+	gfx@ GFX_Width + @ 2 *
 	0
 	DMATransfer
 end
