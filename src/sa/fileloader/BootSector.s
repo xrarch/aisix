@@ -5,3 +5,7 @@
 
 .dl 2
 .dl 14
+
+.dl 0
+
+.static aisixflake.bmp
