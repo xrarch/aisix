@@ -201,8 +201,6 @@ table ModeNames
 	"rwx"
 endtable
 
-const ANYX 73
-
 fn EInfo { name -- }
 	auto q
 	StatB Stat_Type + @ q!
@@ -220,7 +218,7 @@ fn EInfo { name -- }
 	if (q@ VNODE_DIR ==)
 		"/" ind!
 		1 pad!
-	end elseif (mode@ ANYX &)
+	end elseif (mode@ XMASK &)
 		"\[[91m" auxc!
 		"*" ind!
 		1 pad!

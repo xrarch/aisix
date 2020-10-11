@@ -9,7 +9,7 @@ fn Abort { ... fmt -- }
 	1 Exit
 end
 
-const MAXLINEBUF 64
+const MAXLINEBUF 80
 
 buffer _StdoutLine MAXLINEBUF
 

@@ -134,49 +134,64 @@ fn AKeyboardPopCode { id -- code }
 	rs@ InterruptRestore
 end
 
+var Capslock 0
+
 fn AKeyboardSpecial { code -- char }
+	ERR char!
+
 	if (code@ 50 ==)
 		'\n' char!
 	end elseif (code@ 51 ==)
 		'\b' char!
-	end else
-		ERR char!
 	end
 end
+
+var Shift 0
+var Ctrl 0
 
 fn AKeyboardRead { -- mod scan c }
 	auto id
 	KeybdID@ id!
 
+	0 mod!
+
 	id@ AKeyboardPopCode scan!
 
-	0 mod!
+	ERR c!
 
 	if (scan@ 0xFFFF ==)
 		ERR scan!
-		ERR c!
 		return
 	end
 
-	if (scan@ 0xF0 ==) (* shift *)
-		0xF0 mod!
+	if (scan@ 80 ==)
+		1 Ctrl!
+	end elseif (scan@ 82 ==)
+		1 Shift!
+	end elseif (scan@ 32848 ==)
+		0 Ctrl!
+	end elseif (scan@ 32850 ==)
+		0 Shift!
+	end elseif (scan@ 52 ==)
+		1 Capslock!
+		return
+	end elseif (scan@ 32820 ==)
+		0 Capslock!
+	end
 
-		id@ AKeyboardPopCode scan!
+	if (scan@ 80 >=)
+		return
+	end
 
-		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
+	if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
 
+	if (Shift@)
 		[scan@]AKeyboardLayoutShift@ c!
-	end elseif (scan@ 0xF1 ==) (* ctrl *)
-		0xF1 mod!
-
-		id@ AKeyboardPopCode scan!
-
-		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
-
+	end elseif (Ctrl@)
 		[scan@]AKeyboardLayoutCtrl@ c!
+	end elseif (Capslock@ scan@ 26 < &&)
+		[scan@]AKeyboardLayoutShift@ c!
 	end else
-		if (scan@ 50 >=) scan@ AKeyboardSpecial c! return end
-
 		[scan@]AKeyboardLayout@ c!
 	end
 end
@@ -202,11 +217,8 @@ fn (IntHandler) KeybdIntr { intn -- }
 			end
 		end
 
-		if (mod@)
-			mod@ KeybdIBufferRaw@ 0 IOBufPutc drop
-		end
-
-		scan@ KeybdIBufferRaw@ 0 IOBufPutc drop
+		scan@ 0xFF & KeybdIBufferRaw@ 0 IOBufPutc drop
+		scan@ 8 >> 0xFF & KeybdIBufferRaw@ 0 IOBufPutc drop
 
 		AKeyboardRead c! scan! mod!
 	end

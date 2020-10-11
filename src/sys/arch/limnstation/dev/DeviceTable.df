@@ -56,7 +56,7 @@ table DeviceTable
     "amtsu"  "bus"                    "AISA,amanatsu"     1
     pointerof DrvAmtsuFoundNode
 
-    "keybd"  "keyboard"               "AISA,keyboard"     1
+    "keybd"  "keyboard"               "AISA,keyboard"     2
     pointerof DrvKeybdFoundNode
 
     "mouse"  "mouse"                  "AISA,mouse"        1

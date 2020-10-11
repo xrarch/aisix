@@ -1,0 +1,14 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	0 ret!
+
+	auto nvfd
+	"/dev/nvram" O_RW Open nvfd!
+
+	if (nvfd@ iserr)
+		nvfd@ abs nvfd!
+		[nvfd@]ErrorNames@ "nvram: couldn't open /dev/nvram: %s\n" Abort
+	end
+end

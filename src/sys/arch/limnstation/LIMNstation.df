@@ -34,6 +34,8 @@ extern RestoreEV { -- }
 fn Main { ksz args -- ret }
 	0 ret!
 
+	InterruptDisable drop
+
 	(* manually clear BSS section, because fileloader only loads flat files,
 	and while the linker lets us spit out flat binary files with the BSS section
 	trimmed out rather than converted to a massive block of zeroes on disk,
