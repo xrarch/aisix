@@ -1,8 +1,77 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
+const NVRAMSIZE 65536
+
+const NVRAMVarCount 255
+
+const NVRAMMagic 0x3C001CA7
+
+struct NVRAMHeader
+	4 Magic
+endstruct
+
+struct NVRAMVariable
+	32 Name
+	224 Contents
+endstruct
+
+buffer NVRAM NVRAMSIZE
+
+var Modified 0
+
+fn Usage { -- }
+	"usage: nvram del|set|get|ls [variable] [contents]\n" STDERR FPrintf
+end
+
+const DELETE 1
+const SET 2
+const PRINT 3
+const LIST 4
+
 fn Main { ... -- ret }
 	0 ret!
+
+	if (argc@ 2 <)
+		Usage
+		1 Exit
+	end
+
+	auto cmd
+	[1]argv@ cmd!
+
+	if (cmd@ "del" strcmp)
+		if (argc@ 3 ~=)
+			Usage
+			1 Exit
+		end
+
+		DELETE cmd!
+	end elseif (cmd@ "set" strcmp)
+		if (argc@ 4 ~=)
+			Usage
+			1 Exit
+		end
+
+		SET cmd!
+	end elseif (cmd@ "get" strcmp)
+		if (argc@ 3 ~=)
+			Usage
+			1 Exit
+		end
+
+		PRINT cmd!
+	end elseif (cmd@ "ls" strcmp)
+		if (argc@ 2 ~=)
+			Usage
+			1 Exit
+		end
+
+		LIST cmd!
+	end else
+		Usage
+		1 Exit
+	end
 
 	auto nvfd
 	"/dev/nvram" O_RW Open nvfd!
@@ -10,5 +79,161 @@ fn Main { ... -- ret }
 	if (nvfd@ iserr)
 		nvfd@ abs nvfd!
 		[nvfd@]ErrorNames@ "nvram: couldn't open /dev/nvram: %s\n" Abort
+	end
+
+	auto bytes
+	NVRAM NVRAMSIZE nvfd@ Read bytes!
+
+	if (bytes@ iserr)
+		bytes@ abs bytes!
+		"nvram: couldn't read /dev/nvram: %s\n" Abort
+	end
+
+	if (bytes@ NVRAMSIZE <)
+		bytes@ NVRAMSIZE "nvram: expected %d bytes, only got %d\n" Abort
+	end
+
+	if (NVRAMCheck ~~)
+		"nvram: the NVRAM is not formatted correctly for this tool.\nIt may be corrupted, or this tool may be too old or too new.\n" Abort
+	end
+
+	if (cmd@ DELETE ==)
+		[2]argv@ NVRAMDeleteVar
+
+		nvfd@ NVRAMWrite
+	end	elseif (cmd@ SET ==)
+		[3]argv@ [2]argv@ NVRAMSetVar
+
+		nvfd@ NVRAMWrite
+	end elseif (cmd@ PRINT ==)
+		auto v
+		[2]argv@ NVRAMGetVar v!
+
+		if (v@)
+			v@ "%s\n" Printf
+		end
+	end elseif (cmd@ LIST ==)
+		auto i
+		0 i!
+
+		auto sp
+		NVRAMHeader_SIZEOF sp!
+		while (i@ NVRAMVarCount <)
+			if (sp@ NVRAMOffset gb 0 ~=)
+				sp@ NVRAMVariable_Contents + NVRAMOffset sp@ NVRAMOffset "%15s %s\n" Printf
+			end
+
+			NVRAMVariable_SIZEOF sp +=
+			1 i +=
+		end
+	end
+end
+
+fn NVRAMWrite { fd -- }
+	fd@ 0 SEEK_SET Seek drop
+
+	auto bytes
+	NVRAM NVRAMSIZE fd@ Write bytes!
+
+	if (bytes@ iserr)
+		bytes@ abs bytes!
+		[bytes@]ErrorNames@ "nvram: couldn't write /dev/nvram: %s\n" Abort
+	end
+end
+
+fn NVRAMOffset { loc -- nvaddr }
+	if (loc@ NVRAMSIZE >=)
+		0 nvaddr!
+		return
+	end
+
+	loc@ NVRAM + nvaddr!
+end
+
+fn NVRAMCheck { -- ok }
+	if (NVRAMHeader_Magic NVRAMOffset @ NVRAMMagic ==)
+		1 ok!
+	end else
+		0 ok!
+	end
+end
+
+fn NVRAMFindFree { -- free }
+	auto i
+	0 i!
+
+	auto sp
+	NVRAMHeader_SIZEOF sp!
+	while (i@ NVRAMVarCount <)
+		if (sp@ NVRAMOffset gb 0 ==)
+			sp@ NVRAMOffset free! return
+		end
+
+		sp@ NVRAMVariable_SIZEOF + sp!
+		1 i +=
+	end
+
+	0 free! return
+end
+
+fn NVRAMDeleteVar { name -- }
+	auto vl
+	name@ NVRAMGetVar vl!
+
+	if (vl@ 0 ==) return end
+
+	0 vl@ NVRAMVariable_Contents - sb
+end
+
+fn NVRAMSetVar { str name -- }
+	auto vl
+	name@ NVRAMGetVar vl!
+
+	if (vl@ 0 ==) (* doesnt exist, we need to make it *)
+		NVRAMFindFree vl!
+
+		if (vl@ 0 ==) (* no free space, abort *)
+			return
+		end
+
+		vl@ name@ strcpy
+		vl@ NVRAMVariable_Contents + str@ strcpy
+	end else
+		vl@ str@ strcpy
+	end
+end
+
+buffer NVRAMNumString 16
+
+fn NVRAMSetVarNum { num name -- }
+	num@ NVRAMNumString itoa
+	NVRAMNumString name@ NVRAMSetVar
+end
+
+fn NVRAMGetVar { name -- ptr }
+	auto i
+	0 i!
+
+	auto sp
+	NVRAMHeader_SIZEOF sp!
+	while (i@ NVRAMVarCount <)
+		if (sp@ NVRAMOffset name@ strcmp)
+			sp@ NVRAMVariable_Contents + NVRAMOffset ptr!
+			return
+		end
+
+		sp@ NVRAMVariable_SIZEOF + sp!
+		1 i +=
+	end
+
+	0 ptr!
+	return
+end
+
+fn NVRAMGetVarNum { var -- n }
+	var@ NVRAMGetVar n!
+
+	if (n@)
+		n@ atoi n!
 	end
 end
