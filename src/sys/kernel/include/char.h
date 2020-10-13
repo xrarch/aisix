@@ -7,6 +7,8 @@ struct IOBuffer
 	4 WriterF
 	4 TTY
 	4 Overwrite
+	4 DevData0
+	4 DevData1
 	EventQueue_SIZEOF ReadQ
 	EventQueue_SIZEOF WriteQ
 endstruct

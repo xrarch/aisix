@@ -3,8 +3,17 @@
 #include "<inc>/kernel.h"
 #include "<inc>/dev/citron.h"
 
-var SerialDataPort 0
-var SerialCmdPort 0
+struct SerialPort
+	4 TTY
+	4 DataPort
+	4 CmdPort
+	4 IBuffer
+	4 OBuffer
+endstruct
+
+const SERIALMAX 2
+
+buffer SerialPorts (SERIALMAX SerialPort_SIZEOF *)
 
 const SerialCmdWrite 1
 const SerialCmdRead 2
@@ -26,64 +35,101 @@ var SerialFound 0
 
 var SerialKDebug 0
 
-var SerialIBuffer 0
-
-var SerialOBuffer 0
+var SerialPortAIntr 0
+var SerialPortBIntr 0
 
 var SerialTTY 0
 public SerialTTY
 
 fn DrvSerialFoundNode { node -- }
-	if (SerialFound@)
+	if (SerialFound@ SERIALMAX >=)
 		return
 	end
 
-	1 SerialFound!
+	auto sport
+	SerialFound@ SerialPort_SIZEOF * SerialPorts + sport!
 
-	"serial,cmdPort" a3xDGetProperty SerialCmdPort!
+	auto cmd
+	auto data
 
-	if (SerialCmdPort@ 0 ==)
+	"serial,cmdPort" a3xDGetProperty cmd!
+
+	if (cmd@ 0 ==)
 		return
 	end
 
-	"serial,dataPort" a3xDGetProperty SerialDataPort!
+	"serial,dataPort" a3xDGetProperty data!
 
-	1024 AllocIOBuf SerialIBuffer!
+	cmd@ sport@ SerialPort_CmdPort + !
+	data@ sport@ SerialPort_DataPort + !
 
-	if (SerialIBuffer@ iserr)
+	auto ibuffer
+	1024 AllocIOBuf ibuffer!
+
+	if (ibuffer@ iserr)
 		"couldn't allocate SerialIBuffer\n" Panic
 	end
 
-	1 SerialIBuffer@ IOBuffer_Overwrite + !
+	1 ibuffer@ IOBuffer_Overwrite + !
 
-	0 AllocIOBuf SerialOBuffer!
+	auto obuffer
+	0 AllocIOBuf obuffer!
 
-	if (SerialOBuffer@ iserr)
+	if (obuffer@ iserr)
 		"couldn't allocate SerialOBuffer\n" Panic
 	end
 
-	pointerof SerialWriter SerialOBuffer@ IOBuffer_WriterF + !
+	sport@ obuffer@ IOBuffer_DevData0 + !
+
+	pointerof SerialWriter obuffer@ IOBuffer_WriterF + !
 
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
-	intn@ SerialDataPort@ SerialCmdPort@ "citron:%x,%x irq:%d" BootPrintf
+	if (SerialFound@ 0 ==)
+		intn@ SerialPortAIntr!
+	end elseif (SerialFound@ 1 ==)
+		intn@ SerialPortBIntr!
+	end
+
+	intn@ data@ cmd@ "citron:%x,%x irq:%d" BootPrintf
 
 	pointerof SerialIntr intn@ InterruptRegister
 
-	SerialIBuffer@ SerialOBuffer@ AllocTTY SerialTTY!
+	auto tty
+	ibuffer@ obuffer@ AllocTTY tty!
 
-	if (SerialTTY@ iserr)
-		SerialTTY@ abs SerialTTY!
-		[SerialTTY@]ErrorNames@ "couldn't allocate SerialTTY: %s\n" Panic
+	if (tty@ iserr)
+		tty@ abs tty!
+		[tty@]ErrorNames@ "couldn't allocate SerialTTY: %s\n" Panic
 	end
 
-	SerialIntrEnable
+	if (node@ "/serial" a3xDevTreeWalk ==)
+		tty@ SerialTTY!
+	end
+
+	tty@ sport@ SerialPort_TTY + !
+	obuffer@ sport@ SerialPort_OBuffer + !
+	ibuffer@ sport@ SerialPort_IBuffer + !
+
+	sport@ SerialIntrEnable
+
+	auto lilbuf
+	16 Calloc lilbuf!
+
+	if (lilbuf@ iserr)
+		"couldn't allocate serial port name\n" Panic
+	end
+
+	lilbuf@ "ttyS" strcpy
+	SerialFound@ lilbuf@ 4 + itoa
 
 	auto sdev
-	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "ttyS0" SerialDriver 0 DeviceRegister sdev!
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 lilbuf@ SerialDriver SerialFound@ DeviceRegister sdev!
 
-	SerialTTY@ sdev@ Device_TTY + !
+	tty@ sdev@ Device_TTY + !
+
+	1 SerialFound +=
 end
 
 fn (DevSysctl) SerialSysctl { op1 op2 op3 op4 unit -- ok }
@@ -103,93 +149,93 @@ fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
 end
 
 fn (DevRead) SerialRead { pm buf len unit seek -- bytes }
-	pm@ buf@ len@ SerialTTY@ TTYRead bytes!
+	pm@ buf@ len@
+	unit@ SerialPort_SIZEOF * SerialPorts + SerialPort_TTY + @
+	TTYRead bytes!
 end
 
 fn (DevWrite) SerialWrite { pm buf len unit seek -- bytes }
-	pm@ buf@ len@ SerialTTY@ TTYWrite bytes!
+	pm@ buf@ len@
+	unit@ SerialPort_SIZEOF * SerialPorts + SerialPort_TTY + @
+	TTYWrite bytes!
 end
 
-extern KDebug { -- }
-
 fn (IntHandler) SerialIntr { intn -- }
-	SerialIntrDisable
+	auto sport
+	if (intn@ SerialPortAIntr@ ==)
+		SerialPorts sport!
+	end elseif (intn@ SerialPortBIntr@ ==)
+		SerialPorts SerialPort_SIZEOF + sport!
+	end else
+		"SerialIntr\n" Panic
+	end
+
+	sport@ SerialIntrDisable
 
 	intn@ InterruptAck@ InterruptAcker
 
 	auto c
 
-	if (SerialKDebug@)
-		while (SerialGetc dup c! -1 ~=) end
+	auto ib
+	auto ob
 
-		auto sw
-		KLogWrite@ sw!
+	sport@ SerialPort_IBuffer + @ ib!
 
-		auto sr
-		KLogRead@ sr!
+	auto inputf
+	ib@ IOBuffer_InputF + @ inputf!
 
-		pointerof SerialGetc pointerof SerialPutc KLogAttach
-
-		KDebug
-
-		sr@ sw@ KLogAttach
-	end else
-		auto inputf
-		SerialIBuffer@ IOBuffer_InputF + @ inputf!
-
-		while (SerialGetc dup c! -1 ~=)
-			if (inputf@)
-				c@ SerialIBuffer@ inputf@ IOCharInput
-			end else
-				c@ SerialIBuffer@ 0 IOBufPutc drop
-				c@ SerialPutc
-			end
+	while (sport@ SerialGetc dup c! -1 ~=)
+		if (inputf@)
+			c@ ib@ inputf@ IOCharInput
+		end else
+			c@ ib@ 0 IOBufPutc drop
+			c@ sport@ SerialPutc
 		end
 	end
 
-	SerialIntrEnable
+	sport@ SerialIntrEnable
 end
 
-fn SerialIntrEnable { -- }
+fn SerialIntrEnable { s -- }
 	auto rs
 	InterruptDisable rs!
 
-	SerialCmdIntr SerialCmdPort@ DCitronCommand
+	SerialCmdIntr s@ SerialPort_CmdPort + @ DCitronCommand
 
 	rs@ InterruptRestore
 end
 
-fn SerialIntrDisable { -- }
+fn SerialIntrDisable { s -- }
 	auto rs
 	InterruptDisable rs!
 
-	SerialCmdIntrOff SerialCmdPort@ DCitronCommand
+	SerialCmdIntrOff s@ SerialPort_CmdPort + @ DCitronCommand
 
 	rs@ InterruptRestore
 end
 
 fn (IOBufWriter) SerialWriter { c buf -- written }
-	c@ SerialPutc
+	c@ buf@ IOBuffer_DevData0 + @ SerialPutc
 
 	1 written!
 end
 
-fn SerialPutc { c -- }
+fn SerialPutc { c s -- }
 	auto rs
 	InterruptDisable rs!
 
-	c@ SerialDataPort@ DCitronOutb
-	SerialCmdWrite SerialCmdPort@ DCitronCommand
+	c@ s@ SerialPort_DataPort + @ DCitronOutb
+	SerialCmdWrite s@ SerialPort_CmdPort + @ DCitronCommand
 
 	rs@ InterruptRestore
 end
 
-fn SerialGetc { -- c }
+fn SerialGetc { s -- c }
 	auto rs
 	InterruptDisable rs!
 
-	SerialCmdRead SerialCmdPort@ DCitronCommand
-	SerialDataPort@ DCitronIni c!
+	SerialCmdRead s@ SerialPort_CmdPort + @ DCitronCommand
+	s@ SerialPort_DataPort + @ DCitronIni c!
 
 	rs@ InterruptRestore
 

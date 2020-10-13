@@ -150,7 +150,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 			end
 		end
 
-		buf@ Buffer_Data + @ i@ 4 * 4096 % + @ bn!
+		buf@ Buffer_Data + @ i@ 2 << 4096 % + @ bn!
 
 		auto rq
 
@@ -167,7 +167,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 			end
 
 			(* allocate *)
-			link@ buf@ Buffer_Data + @ i@ 4 * 4096 % + !
+			link@ buf@ Buffer_Data + @ i@ 2 << 4096 % + !
 
 			buf@ bwrite
 
@@ -261,7 +261,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 	vd@ AVData_FirstBN + @ fb!
 
 	auto bm
-	vd@ AVData_BNCache + @ vd@ AVData_NextBN + @ fb@ - 4 * + bm!
+	vd@ AVData_BNCache + @ vd@ AVData_NextBN + @ fb@ - 2 << + bm!
 
 	auto buf
 
@@ -329,7 +329,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 			end
 		end
 
-		fatbuf@ Buffer_Data + @ b@ 4 * 4096 % + @ ent!
+		fatbuf@ Buffer_Data + @ b@ 2 << 4096 % + @ ent!
 
 		if (ent@ 0xFFFFFFFF ==)
 			if (reading@)
@@ -352,7 +352,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 
 			buf@ brelse
 
-			ent@ fatbuf@ Buffer_Data + @ b@ 4 * 4096 % + !
+			ent@ fatbuf@ Buffer_Data + @ b@ 2 << 4096 % + !
 
 			fatbuf@ bwrite
 		end
@@ -402,14 +402,14 @@ fn BMap { bn reading vnode -- buf }
 		auto cache
 
 		if (bn@ fb@ >= bn@ nb@ < &&)
-			bn@ fb@ - 4 * bm@ + @ bno!
+			bn@ fb@ - 2 << bm@ + @ bno!
 		end else
 			if (bn@ fb@ < nb@ 0 == ||)
 				vd@ AVData_Entry + @ bno!
 				bn@ cnt!
 				0 cache!
 			end elseif (bn@ nb@ >=)
-				nb@ 1 - fb@ - 4 * bm@ + @ bno!
+				nb@ 1 - fb@ - 2 << bm@ + @ bno!
 				bn@ nb@ - 1 + cnt!
 
 				if (bn@ fb@ - 1024 <)
@@ -501,9 +501,9 @@ fn TruncNode { vnode -- ok }
 			end
 		end
 
-		fatbuf@ Buffer_Data + @ ent@ 4 * 4096 % + @ ent!
+		fatbuf@ Buffer_Data + @ ent@ 2 << 4096 % + @ ent!
 
-		0 fatbuf@ Buffer_Data + @ le@ 4 * 4096 % + !
+		0 fatbuf@ Buffer_Data + @ le@ 2 << 4096 % + !
 
 		fatbuf@ bwrite
 	end

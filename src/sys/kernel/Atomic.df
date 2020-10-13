@@ -25,11 +25,13 @@ end
 
 extern GetSym { pc -- symbase symname }
 
-fn private LockMutex1 { mutex uninterruptible caller -- killed }
-	if (CurrentThread@ Thread_Killed + @)
-		if (uninterruptible@ ~~)
-			1 killed!
-			return
+fn LockMutex1 { mutex uninterruptible caller -- killed }
+	if (CurrentThread@)
+		if (CurrentThread@ Thread_Killed + @)
+			if (uninterruptible@ ~~)
+				1 killed!
+				return
+			end
 		end
 	end
 
@@ -99,7 +101,7 @@ fn UnlockMutex { mutex -- }
 	auto rs
 	InterruptDisable rs!
 
-	if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ~=)
+	if (mutex@ Mutex_OwnerThread + @ CurrentThread@ ~= mutex@ Mutex_Locked + @ ~~ ||)
 		auto mn
 
 		"unknown" mn!
@@ -108,7 +110,15 @@ fn UnlockMutex { mutex -- }
 			mutex@ Mutex_Name + @ mn!
 		end
 
-		mutex@ Mutex_OwnerThread + @ mn@ "UnlockMutex: never owned '%s', was owned by %x\n" Panic
+		auto es
+
+		if (mutex@ Mutex_Locked + @)
+			"it was never locked." es!
+		end else
+			"it was owned by" es!
+		end
+
+		mutex@ Mutex_OwnerThread + @ es@ mn@ "UnlockMutex: never owned '%s', %s %x\n" Panic
 	end
 
 	0 mutex@ Mutex_Locked + !

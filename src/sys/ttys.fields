@@ -2,4 +2,6 @@
 # format device:manager
 
 /dev/ttyV0:/sys/bin/launchtty
+
 /dev/ttyS0:/sys/bin/launchtty
+/dev/ttyS1:/sys/bin/launchtty
