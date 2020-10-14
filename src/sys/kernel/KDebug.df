@@ -16,6 +16,9 @@ endstruct
 externptr Panicked
 
 fn KDebug { -- }
+	auto rs
+	InterruptDisable rs!
+
 	auto op
 	Panicked@ op!
 
@@ -37,6 +40,8 @@ fn KDebug { -- }
 	MonitorLine@ Free
 
 	op@ Panicked!
+
+	rs@ InterruptRestore
 end
 
 const ConsoleAssumedHeight 22
@@ -377,7 +382,11 @@ fn MonitorCommandPages { -- }
 		return
 	end
 
-	proc@ Process_Pagemap + @ VMDumpWalk
+	if (proc@ Process_Pagemap + @)
+		proc@ Process_Pagemap + @ VMDumpWalk
+	end else
+		proc@ Process_Name + "%s has no page map\n" Printf
+	end
 end
 
 fn MonitorCommandHelp { -- }
@@ -433,7 +442,9 @@ end
 fn MonitorParseWord { -- word }
 	256 Calloc word!
 
-	MonitorLinePoint@ word@ ' ' 255 strntok MonitorLinePoint!
+	if (MonitorLinePoint@)
+		MonitorLinePoint@ word@ ' ' 255 strntok MonitorLinePoint!
+	end
 end
 
 fnptr MonitorCmd { -- }

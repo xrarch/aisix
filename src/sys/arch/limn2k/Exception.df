@@ -148,8 +148,18 @@ const EXCBREAK 6
 
 externptr DebugNextSched
 
+var ScaryTrapFrame 0
+public ScaryTrapFrame
+
 fn Exception { badaddr ecause tf -- }
-	tf@ CurrentThread@ Thread_TrapFrame + !
+	auto wth
+	CurrentThread@ 0 ~= wth!
+
+	if (wth@)
+		tf@ CurrentThread@ Thread_TrapFrame + !
+	end else
+		tf@ ScaryTrapFrame!
+	end
 
 	if (ecause@ EXCTIMER ==)
 		PlatformSetTimer
@@ -198,7 +208,9 @@ fn Exception { badaddr ecause tf -- }
 			end
 		end
 	end elseif (ecause@ EXCBREAK ==)
-		CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
+		if (wth@)
+			CurrentThread@ Thread_TID + @ "breakpoint (tid: %d)\n" Printf
+		end
 
 		1 DebugNextSched!
 	end else
@@ -216,8 +228,10 @@ fn Exception { badaddr ecause tf -- }
 		1 CurrentThread@ Thread_Killed + !
 	end
 
-	if (mode@ CurrentThread@ Thread_Killed + @ &&)
-		ThreadExit
+	if (wth@)
+		if (mode@ CurrentThread@ Thread_Killed + @ &&)
+			ThreadExit
+		end
 	end
 end
 
@@ -285,6 +299,11 @@ InterruptEnable:
 .global InterruptEnable
 	bseti rs, rs, 1
 	bseti rs, rs, 3
+	ret
+
+InterruptEnableNoPreempt:
+.global InterruptEnableNoPreempt
+	bseti rs, rs, 1
 	ret
 
 InterruptDisable:

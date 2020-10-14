@@ -14,6 +14,7 @@ extern DrvAmtsuFoundNode { node -- }
 extern DrvKeybdFoundNode { node -- }
 extern DrvMouseFoundNode { node -- }
 extern DrvNVRAMFoundNode { node -- }
+extern DrvDKSFoundBus { node -- }
 
 fnptr FoundNode { node -- }
 
@@ -23,7 +24,7 @@ externptr LSICFound
 
 externptr AmtsuFound
 
-const Devices 12
+const Devices 13
 
 const ElemPerDevice 5
 
@@ -64,6 +65,9 @@ table DeviceTable
 
     "nvram"  "nvram"                  "AISA,nvram"        1
     pointerof DrvNVRAMFoundNode
+
+    "dksbus" "disk-bus"               "AISA,satsuma"      1
+    pointerof DrvDKSFoundBus
 endtable
 public DeviceTable
 

@@ -211,6 +211,8 @@ end
 var TraceTF 0
 public TraceTF
 
+externptr ScaryTrapFrame
+
 fn Panic { ... fmt -- }
 	InterruptDisable drop
 
@@ -225,7 +227,7 @@ fn Panic { ... fmt -- }
 	auto procn
 
 	if (CurrentThread@ 0 ==)
-		"none yet" procn!
+		"no process" procn!
 	end else
 		CurrentThread@ Thread_Process + @ Process_Name + procn!
 	end
@@ -233,7 +235,7 @@ fn Panic { ... fmt -- }
 	auto thn
 
 	if (CurrentThread@ 0 ==)
-		"none yet" thn!
+		"no thread" thn!
 	end else
 		CurrentThread@ Thread_Name + thn!
 	end
@@ -248,7 +250,12 @@ fn Panic { ... fmt -- }
 		pointerof Panic PanicLink@ Trace
 	end else
 		auto tf
-		CurrentThread@ Thread_TrapFrame + @ tf!
+
+		if (CurrentThread@)
+			CurrentThread@ Thread_TrapFrame + @ tf!
+		end else
+			ScaryTrapFrame@ tf!
+		end
 
 		tf@ Context_epc + @ tf@ Context_sp + @ Trace
 	end

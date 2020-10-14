@@ -255,15 +255,13 @@ end
 
 extern CPUIdle { -- }
 
+var SchedulerContext 0
+
+externptr TTYKill
+
 var DebugNextSched 0
 public DebugNextSched
 
-var TTYKill 0
-public TTYKill
-
-var SchedulerContext 0
-
-(* scheduler *)
 fn Scheduler { -- }
 	auto thread
 
@@ -274,7 +272,14 @@ fn Scheduler { -- }
 
 	auto found
 
+	InterruptEnableNoPreempt
+
 	while (1)
+		if (DebugNextSched@)
+			0 DebugNextSched!
+			KDebug
+		end
+
 		auto i
 		0 i!
 
@@ -282,24 +287,11 @@ fn Scheduler { -- }
 		0 fc!
 
 		while (i@ THREADMAX <)
-			if (DebugNextSched@)
-				0 DebugNextSched!
-				KDebug
-			end
-
 			[i@]Threads@ thread!
 
 			if (thread@ 0 ==)
 				1 i +=
 				continue
-			end
-
-			auto kt
-			TTYKill@ kt!
-
-			if (kt@)
-				0 TTYKill!
-				kt@ KillTTY
 			end
 
 			if (thread@ Thread_Status + @ TS_READY ~=)
@@ -308,7 +300,7 @@ fn Scheduler { -- }
 			end
 
 			if (thread@ IdleThread@ ==)
-				if (found@)
+				if (found@ TTYKill@ ~~ &&)
 					1 i +=
 					continue
 				end

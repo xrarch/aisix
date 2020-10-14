@@ -4,6 +4,8 @@
 #include "<inc>/dev/citron.h"
 #include "<inc>/dev/dma.h"
 
+(* TODO pull DKS port information from device tree *)
+
 const DKSCmdPort 0x19
 const DKSPortA 0x1A
 const DKSPortB 0x1B
@@ -13,6 +15,8 @@ const DKSCmdRead 0x2
 const DKSCmdWrite 0x3
 const DKSCmdInfo 0x4
 const DKSCmdPoll 0x5
+const DKSCmdIntr 0x6
+const DKSCmdIntrOff 0x7
 
 const DKSBuffer 0xF8020000
 
@@ -43,8 +47,25 @@ const DKSNAMEMAX 32
 
 buffer DKSTable (DKSMAX DKS_SIZEOF *)
 
+var FoundBus 0
+
+fn DrvDKSFoundBus { node -- }
+	if (FoundBus@)
+		"DrvDKSFoundBus\n" Panic
+	end
+
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	pointerof DKSIntr intn@ InterruptRegister
+
+	DKSIntrEnable
+
+	1 FoundBus!
+end
+
 fn DrvDKSFoundNode { node -- }
-	if (DKSLastUnit@ DKSMAX ==)
+	if (DKSLastUnit@ DKSMAX >=)
 		return
 	end
 
@@ -157,6 +178,8 @@ fn private UnlockDKS { -- }
 	DKSLock UnlockMutex
 end
 
+buffer DKSQueue EventQueue_SIZEOF
+
 fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 	if (unit@ DKSMAX >=)
 		unit@ "dksread: unit too big %x\n" Panic
@@ -186,13 +209,26 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 			return
 		end
 
-		(* TODO make this not make the process hang while it waits for I/O *)
+		(* it's possible for the transfer completion interrupt to occur before we even wait [COUGH emulation COUGH COUGH]
+		so disable interrupts here just in case *)
+
+		auto rs
+		InterruptDisable rs!
 
 		dks@ DKS_Unit + @ DKSPortA DCitronOutl
 		DKSCmdSelect DKSCmdPort DCitronCommand
 
 		seek@ DKSPortA DCitronOutl
-		DKSCmdRead DKSCmdPort DCitronCommand
+		DKSCmdRead DKSCmdPort DCitronCommandASync
+
+		if (DKSQueue WaitQueue)
+			rs@ InterruptRestore
+			UnlockDKS
+			-EINTR blocks!
+			return
+		end
+
+		rs@ InterruptRestore
 
 		DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
 
@@ -235,11 +271,26 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 
 		buf@ DKSBuffer 4 4 1024 2 1 0 0 DMATransfer
 
+		(* it's possible for the transfer completion interrupt to occur before we even wait [COUGH emulation COUGH COUGH]
+		so disable interrupts here just in case *)
+
+		auto rs
+		InterruptDisable rs!
+
 		dks@ DKS_Unit + @ DKSPortA DCitronOutl
 		DKSCmdSelect DKSCmdPort DCitronCommand
 
 		seek@ DKSPortA DCitronOutl
-		DKSCmdWrite DKSCmdPort DCitronCommand
+		DKSCmdWrite DKSCmdPort DCitronCommandASync
+
+		if (DKSQueue WaitQueue)
+			rs@ InterruptRestore
+			UnlockDKS
+			-EINTR blocks!
+			return
+		end
+
+		rs@ InterruptRestore
 
 		UnlockDKS
 
@@ -247,4 +298,51 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 	end
 
 	len@ blocks!
+end
+
+const DKSBlockTransfer 0x0
+
+fn (IntHandler) DKSIntr { intn -- }
+	DKSIntrDisable
+
+	intn@ InterruptAck@ InterruptAcker
+
+	auto details
+	auto event
+	DKSInfo details! event!
+
+	if (event@ DKSBlockTransfer ==)
+		DKSQueue WakeQueue
+	end
+
+	DKSIntrEnable
+end
+
+fn DKSInfo { -- event details }
+	auto rs
+	InterruptDisable rs!
+
+	DKSCmdInfo DKSCmdPort DCitronCommand
+	DKSPortA DCitronInl event!
+	DKSPortB DCitronInl details!
+
+	rs@ InterruptRestore
+end
+
+fn DKSIntrEnable { -- }
+	auto rs
+	InterruptDisable rs!
+
+	DKSCmdIntr DKSCmdPort DCitronCommand
+
+	rs@ InterruptRestore
+end
+
+fn DKSIntrDisable { -- }
+	auto rs
+	InterruptDisable rs!
+
+	DKSCmdIntrOff DKSCmdPort DCitronCommand
+
+	rs@ InterruptRestore
 end

@@ -2,6 +2,8 @@ extern InterruptDisable { -- rs }
 
 extern InterruptRestore { rs -- }
 
+extern InterruptEnableNoPreempt { -- }
+
 extern InterruptEnable { -- }
 
 extern InterruptRegister { h n -- }

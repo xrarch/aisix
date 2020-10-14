@@ -53,6 +53,11 @@ extern SelectConsole { -- }
 
 extern CPUHlt { -- }
 
+var TTYKill 0
+public TTYKill
+
+extern KDebug { -- }
+
 fn AISIXInitialThread { -- }
 	VCacheInit
 
@@ -87,9 +92,18 @@ fn AISIXInitialThread { -- }
 
 	CurrentThread@ IdleThread!
 
-	(* become an idle thread *)
+	(* become an idle thread. also tty killer *)
 	while (1)
 		CPUHlt
+
+		auto kt
+		TTYKill@ kt!
+
+		if (kt@)
+			0 TTYKill!
+			kt@ KillTTY
+		end
+
 		Yield
 	end
 end

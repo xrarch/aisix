@@ -33,6 +33,8 @@ fn LockMutex1 { mutex uninterruptible caller -- killed }
 				return
 			end
 		end
+	end else
+		"LockMutex: no thread\n" Panic
 	end
 
 	auto rs
@@ -98,6 +100,10 @@ fn LockMutexUninterruptible { mutex -- }
 end
 
 fn UnlockMutex { mutex -- }
+	if (CurrentThread@ 0 ==)
+		"UnlockMutex: no thread\n" Panic
+	end
+
 	auto rs
 	InterruptDisable rs!
 
