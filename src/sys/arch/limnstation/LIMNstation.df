@@ -5,7 +5,7 @@
 
 extern AISIX { ksz args -- ret }
 
-const CompatibleFirmware 30505
+const CompatibleFirmware 30506
 
 var SavedEV 0
 var SavedTLBV 0

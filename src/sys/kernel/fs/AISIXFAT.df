@@ -155,7 +155,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 		auto rq
 
 		if (bn@ 0 ==)
-			i@ mount@ Mount_Device + @ bread rq!
+			i@ mount@ Mount_Device + @ bget rq!
 
 			if (rq@ iserr)
 				if (buf@ prefatbuf@ ~=)
@@ -178,6 +178,8 @@ fn BAlloc { link mount prefatbuf -- buf }
 			rq@ buf!
 
 			buf@ Buffer_Data + @ 4096 0 memset
+
+			1 buf@ Buffer_Valid + !
 
 			buf@ bwrite
 

@@ -28,10 +28,29 @@ endstruct
 fn DrvDMAFoundNode { node -- }
 	"address" a3xDGetProperty DMABase!
 
-	DMABase@ "0x%x" BootPrintf
+	auto intn
+	"interrupt#" a3xDGetProperty intn!
+
+	intn@ DMABase@ "0x%x irq:%d" BootPrintf
+
+	pointerof DMAIntr intn@ InterruptRegister
+
+	DMAIntrEnable
 
 	1 DMAFound!
 end
+
+buffer DMALock Mutex_SIZEOF
+
+fn private LockDMA { -- }
+	DMALock LockMutexUninterruptible
+end
+
+fn private UnlockDMA { -- }
+	DMALock UnlockMutex
+end
+
+buffer DMAQueue EventQueue_SIZEOF
 
 fn DMAWaitUnbusy { -- }
 	auto db
@@ -47,7 +66,27 @@ fn DMADoOperation { -- }
 	1 db@ DMA_Status + |=
 end
 
-fn private DMAFullTransfer { src dest srcinc destinc count mode lines destmod srcmod bitmode -- }
+fn DMAIntrEnable { -- }
+	auto db
+	DMABase@ db!
+
+	2 db@ DMA_Status + |=
+end
+
+fn DMAIntrDisable { -- }
+	auto db
+	DMABase@ db!
+
+	2 ~ db@ DMA_Status + &=
+end
+
+fn (IntHandler) DMAIntr { intn -- }
+	intn@ InterruptAck@ InterruptAcker
+
+	DMAQueue WakeQueue
+end
+
+fn DMAFullTransfer { src dest srcinc destinc count mode lines destmod srcmod bitmode -- }
 	auto db
 	DMABase@ db!
 
@@ -64,7 +103,8 @@ fn private DMAFullTransfer { src dest srcinc destinc count mode lines destmod sr
 	bitmode@ db@ DMA_BitMode + !
 
 	DMADoOperation
-	DMAWaitUnbusy
+
+	DMAQueue WaitQueueUninterruptible
 end
 
 fn DMABitTransfer { src dest srcinc destinc count mode lines destmod srcmod direction clearbyte setbyte -- }
@@ -74,11 +114,15 @@ fn DMABitTransfer { src dest srcinc destinc count mode lines destmod srcmod dire
 	auto rs
 	InterruptDisable rs!
 
+	LockDMA
+
 	clearbyte@ db@ DMA_ClearByte + !
 	setbyte@ db@ DMA_SetByte + !
 	direction@ db@ DMA_Direction + !
 
 	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 1 DMAFullTransfer
+
+	UnlockDMA
 
 	rs@ InterruptRestore
 end
@@ -87,7 +131,11 @@ fn DMATransfer { src dest srcinc destinc count mode lines destmod srcmod -- }
 	auto rs
 	InterruptDisable rs!
 
+	LockDMA
+
 	src@ dest@ srcinc@ destinc@ count@ mode@ lines@ destmod@ srcmod@ 0 DMAFullTransfer
+
+	UnlockDMA
 
 	rs@ InterruptRestore
 end

@@ -57,6 +57,8 @@ fn DrvDKSFoundBus { node -- }
 	auto intn
 	"interrupt#" a3xDGetProperty intn!
 
+	intn@ "irq:%d" BootPrintf
+
 	pointerof DKSIntr intn@ InterruptRegister
 
 	DKSIntrEnable
