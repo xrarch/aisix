@@ -308,6 +308,18 @@ fn VNodeGet { vnid mount -- vnode }
 	mount@ MountUnref
 end
 
+fn VNodeUpdateSize { newsize vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (newsize@ vnode@ VNode_Size + @ >)
+		newsize@ vnode@ VNode_Size + !
+		1 vnode@ VNode_Dirty + !
+	end
+
+	rs@ InterruptRestore
+end
+
 fn PrintVNodes { -- }
 	auto i
 	0 i!

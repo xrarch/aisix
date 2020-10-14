@@ -40,6 +40,12 @@ fn LockMutex1 { mutex uninterruptible caller -- killed }
 	auto rs
 	InterruptDisable rs!
 
+	if (mutex@ Mutex_Locked + @ ~~ mutex@ Mutex_LockQ + EventQueue_FirstWaiter + @ &&)
+		(* this mutex is unlocked, but someone is already waiting for it. be fair. *)
+		(* XXX this should be MUCH more targeted *)
+		Yield
+	end
+
 	0 killed!
 
 	while (mutex@ Mutex_Locked + @)

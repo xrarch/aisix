@@ -165,3 +165,5 @@ extern VFSUnmountAll { -- ok }
 extern VFSSync { -- ok }
 
 extern VFSCanonicalizePath { path -- canon }
+
+extern VNodeUpdateSize { newsize vnode -- }

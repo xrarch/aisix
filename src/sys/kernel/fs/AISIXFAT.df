@@ -371,6 +371,16 @@ fn WalkFAT { ent count reading vnode cache -- b }
 end
 
 fn BMap { bn reading vnode -- buf }
+	auto needslocked
+	vnode@ VNodeOwned ~~ needslocked!
+
+	if (needslocked@)
+		if (vnode@ VNodeLock)
+			-EINTR buf!
+			return
+		end
+	end
+
 	auto vd
 	vnode@ VNode_FSData + @ vd!
 
@@ -384,11 +394,16 @@ fn BMap { bn reading vnode -- buf }
 	vd@ AVData_BNCache + @ bm!
 
 	if (bn@ 16 >= bm@ ||)
-		if (bm@ 0 ==)
+		if (bm@ ~~)
 			PMMFasterSinglePageCalloc bm!
 
 			if (bm@ iserr)
 				bm@ buf!
+
+				if (needslocked@)
+					vnode@ VNodeUnlock
+				end
+
 				return
 			end
 
@@ -428,6 +443,10 @@ fn BMap { bn reading vnode -- buf }
 				0 vd@ AVData_FirstBN + !
 				0 vd@ AVData_NextBN + !
 
+				if (needslocked@)
+					vnode@ VNodeUnlock
+				end
+
 				bno@ buf!
 				return
 			end
@@ -449,6 +468,10 @@ fn BMap { bn reading vnode -- buf }
 
 	if (bno@ 0 ==)
 		"BMap: got superblock as part of file\n" Panic
+	end
+
+	if (needslocked@)
+		vnode@ VNodeUnlock
 	end
 
 	bno@ vnode@ VNode_Mount + @ Mount_Device + @ bread buf!
@@ -540,22 +563,7 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 		return
 	end
 
-	auto locktop
-	0 locktop!
-
-	if (vnode@ VNodeOwned ~~)
-		if (vnode@ VNodeLock)
-			-EINTR bytes!
-			return
-		end
-
-		1 locktop!
-	end
-
 	if (seek@ vnode@ VNode_Size + @ >=)
-		if (locktop@)
-			vnode@ VNodeUnlock
-		end
 		0 bytes!
 		return
 	end
@@ -567,6 +575,9 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 	auto tot
 	0 tot!
 
+	auto ntot
+	4096 ntot!
+
 	auto r
 
 	while (tot@ len@ <)
@@ -575,9 +586,6 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
-			if (locktop@)
-				vnode@ VNodeUnlock
-			end
 			return
 		end
 
@@ -603,10 +611,6 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 		m@ tot +=
 	end
 
-	if (locktop@)
-		vnode@ VNodeUnlock
-	end
-
 	len@ bytes!
 end
 
@@ -621,40 +625,27 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 		return
 	end
 
-	auto locktop
-	0 locktop!
-
-	if (vnode@ VNodeOwned ~~)
-		if (vnode@ VNodeLock)
-			-EINTR bytes!
-			return
-		end
-
-		1 locktop!
-	end
-
-	if (seek@ vnode@ VNode_Size + @ >)
-		if (locktop@)
-			vnode@ VNodeUnlock
-		end
-		0 bytes!
-		return
-	end
-
 	auto tot
 	0 tot!
+
+	auto lastgood
+	seek@ lastgood!
 
 	auto r
 
 	while (tot@ len@ <)
+		auto ot
+		seek@ ot!
+
 		auto bbuf
 		seek@ 4096 / 0 vnode@ BMap bbuf!
 
 		if (bbuf@ iserr)
-			bbuf@ bytes!
-			if (locktop@)
-				vnode@ VNodeUnlock
+			if (lastgood@ vnode@ VNode_Size + @ >)
+				lastgood@ vnode@ VNodeUpdateSize
 			end
+
+			bbuf@ bytes!
 			return
 		end
 
@@ -669,6 +660,10 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 		m@ VMCopyin r!
 
 		if (r@ iserr)
+			if (lastgood@ vnode@ VNode_Size + @ >)
+				lastgood@ vnode@ VNodeUpdateSize
+			end
+
 			r@ bytes!
 			bbuf@ brelse
 			return
@@ -678,24 +673,21 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 
 		bbuf@ brelse
 
+		seek@ lastgood!
+
 		m@ buf +=
 		m@ seek +=
 		m@ tot +=
 	end
 
 	if (seek@ vnode@ VNode_Size + @ >)
-		seek@ vnode@ VNode_Size + !
-		1 vnode@ VNode_Dirty + !
+		seek@ vnode@ VNodeUpdateSize
 	end
 
 	len@ bytes!
-
-	if (locktop@)
-		vnode@ VNodeUnlock
-	end
 end
 
-fn private IAlloc { mount -- inum ino buf }
+fn IAlloc { mount -- inum ino buf }
 	auto istart
 	mount@ Mount_FSData + @ AFSData_IStart + @ istart!
 
@@ -754,7 +746,7 @@ fn private IAlloc { mount -- inum ino buf }
 	-ENOSPC buf!
 end
 
-fn private DirentAlloc { vnode -- dirent buf }
+fn DirentAlloc { vnode -- dirent buf }
 	auto sz
 	vnode@ VNode_Size + @ sz!
 
