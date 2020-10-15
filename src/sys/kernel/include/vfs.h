@@ -84,7 +84,9 @@ struct VNode
 	4 DeleteLastRef
 	4 Dirty
 	4 DirParentVNID
-	4 CachedTextSegment
+
+	4 CachedTextSegmentWMO
+	4 UsingWMO
 endstruct
 
 const VNODE_FILE 1
@@ -139,6 +141,8 @@ extern VNodeOwned { vnode -- owned }
 extern VNodeLock { vnode -- killed }
 
 extern VNodeUnlock { vnode -- }
+
+extern VNodeLocked { vnode -- locked }
 
 extern VNodeRef { vnode -- }
 

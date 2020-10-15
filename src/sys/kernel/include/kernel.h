@@ -18,6 +18,7 @@
 #include "<inc>/seg.h"
 #include "<inc>/vm.h"
 #include "<inc>/halt.h"
+#include "<inc>/weak.h"
 
 extern Panic { ... fmt -- }
 

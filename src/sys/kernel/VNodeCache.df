@@ -50,12 +50,7 @@ fn VNodeUnref { vnode -- }
 
 			rs@ InterruptRestore
 
-			auto cseg
-			vnode@ VNode_CachedTextSegment + @ cseg!
-
-			if (cseg@)
-				cseg@ RemoveCachedSegment
-			end
+			vnode@ VNodeRemoveCachedText
 
 			vnode@ vnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Delete + @ FSDelete drop
 
@@ -74,17 +69,34 @@ fn VNodeUnref { vnode -- }
 	rs@ InterruptRestore
 end
 
+fn VNodeRemoveCachedText { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto wmo
+	vnode@ VNode_CachedTextSegmentWMO + @ wmo!
+
+	if (wmo@)
+		0 vnode@ VNode_CachedTextSegmentWMO + !
+
+		rs@ InterruptRestore
+
+		0 wmo@ WeakObject_Private0 + @ Segment_VNode + !
+
+		wmo@ WeakObject_Private0 + @ UnrefSegment
+
+		wmo@ RemoveWeakObject
+	end else
+		rs@ InterruptRestore
+	end
+end
+
 fn VNodeRemove { vnode -- res }
 	if (vnode@ VNode_Refs + @ 1 >)
 		"tried to remove vnode with hanging references!\n" Panic
 	end
 
-	auto cseg
-	vnode@ VNode_CachedTextSegment + @ cseg!
-
-	if (cseg@)
-		cseg@ RemoveCachedSegment
-	end
+	vnode@ VNodeRemoveCachedText
 
 	auto mount
 	vnode@ VNode_Mount + @ mount!
@@ -236,6 +248,10 @@ end
 
 fn VNodeUnlock { vnode -- }
 	vnode@ VNode_Mutex + UnlockMutex
+end
+
+fn VNodeLocked { vnode -- locked }
+	vnode@ VNode_Mutex + MutexLocked locked!
 end
 
 fn VNodePut { vnode -- }

@@ -1,0 +1,170 @@
+#include "<df>/dragonfruit.h"
+#include "<inc>/kernel.h"
+
+(*
+
+provides a way to keep track of, and purge, memory that does not need to stick around permanently
+e.g. large caches and stuff
+
+this is needed because swapping is complicated and i dont feel like it
+
+its useful anyway though
+
+*)
+
+var WeakObjListHead 0
+var WeakObjListTail 0
+
+fn WeakReclaim { bytespreferred -- bytesactual }
+	if (bytespreferred@ 0 ==)
+		"WeakReclaim\n" Panic
+	end
+
+	0 bytesactual!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto obj
+	WeakObjListHead@ obj!
+
+	while (obj@)
+		auto ns
+		0 ns!
+
+		auto destroyed
+		obj@ bytespreferred@ bytesactual@ - rs@ obj@ WeakObject_Callback + @ WeakObjectCallback destroyed! bytesactual +=
+
+		if (destroyed@)
+			obj@ WeakObject_Next + @ ns!
+
+			obj@ RemoveWeakObject
+		end
+
+		if (bytesactual@ bytespreferred@ >=)
+			rs@ InterruptRestore
+			return
+		end
+
+		if (ns@)
+			ns@ obj!
+		end else
+			obj@ WeakObject_Next + @ obj!
+		end
+	end
+
+	rs@ InterruptRestore
+end
+
+fn RemoveWeakObject { obj -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto ls
+	obj@ WeakObject_Prev + @ ls!
+
+	auto ns
+	obj@ WeakObject_Next + @ ns!
+
+	if (ls@)
+		ns@ ls@ WeakObject_Next + !
+	end
+
+	if (ns@)
+		ls@ ns@ WeakObject_Prev + !
+	end
+
+	if (WeakObjListHead@ obj@ ==)
+		ns@ WeakObjListHead!
+	end
+
+	if (WeakObjListTail@ obj@ ==)
+		ls@ WeakObjListTail!
+	end
+
+	obj@ Free
+
+	rs@ InterruptRestore
+end
+
+(* put at the end of the LRU queue *)
+fn TouchWeakObject { obj -- }
+	auto rs
+	InterruptDisable rs!
+
+	if (obj@ WeakObjListTail@ ==)
+		rs@ InterruptRestore
+		return
+	end
+
+	auto ls
+	obj@ WeakObject_Prev + @ ls!
+
+	auto ns
+	obj@ WeakObject_Next + @ ns!
+
+	if (ls@)
+		ns@ ls@ WeakObject_Next + !
+	end
+
+	if (ns@)
+		ls@ ns@ WeakObject_Prev + !
+	end else (* we weren't supposed to be the tail... *)
+		"TouchWeakObject\n" Panic
+	end
+
+	if (WeakObjListHead@ obj@ ==)
+		ns@ WeakObjListHead!
+	end
+
+	WeakObjListTail@ obj@ WeakObject_Prev + !
+	obj@ WeakObjListTail@ WeakObject_Next + !
+	obj@ WeakObjListTail!
+
+	0 obj@ WeakObject_Next + !
+
+	rs@ InterruptRestore
+end
+
+fn NewWeakObject { priv0 priv1 callback -- obj }
+	WeakObject_SIZEOF Calloc obj!
+
+	if (obj@ iserr)
+		return
+	end
+
+	callback@ obj@ WeakObject_Callback + !
+
+	priv0@ obj@ WeakObject_Private0 + !
+	priv1@ obj@ WeakObject_Private1 + !
+
+	auto rs
+	InterruptDisable rs!
+
+	if (WeakObjListTail@ 0 ==)
+		obj@ WeakObjListHead!
+		obj@ WeakObjListTail!
+	end else
+		WeakObjListTail@ obj@ WeakObject_Prev + !
+		obj@ WeakObjListTail@ WeakObject_Next + !
+		obj@ WeakObjListTail!
+	end
+
+	rs@ InterruptRestore
+end
+
+fn PrintWeaks { -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto obj
+	WeakObjListHead@ obj!
+
+	while (obj@)
+		obj@ WeakObject_Private1 + @ obj@ WeakObject_Private0 + @ obj@ WeakObject_Next + @ obj@ WeakObject_Prev + @ obj@ "%6x: %6x %6x %6x %6x\n" Printf
+
+		obj@ WeakObject_Next + @ obj!
+	end
+
+	rs@ InterruptRestore
+end

@@ -23,6 +23,10 @@ fn MutexOwned { mutex -- owned }
 	rs@ InterruptRestore
 end
 
+fn MutexLocked { mutex -- locked }
+	mutex@ Mutex_Locked + @ locked!
+end
+
 extern GetSym { pc -- symbase symname }
 
 fn LockMutex1 { mutex uninterruptible caller -- killed }

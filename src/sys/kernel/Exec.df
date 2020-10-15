@@ -3,88 +3,40 @@
 #include "<inc>/loff.h"
 #include "<inc>/limnmmu.h"
 
-var CachedSegmentListHead 0
-var CachedSegmentListTail 0
-
-fn RemoveCachedSegment { seg -- }
-	seg@ UnrefSegment
-	0 seg@ Segment_VNode + @ VNode_CachedTextSegment + !
-	0 seg@ Segment_VNode + !
-
-	auto ls
-	seg@ Segment_Prev + @ ls!
-
-	auto ns
-	seg@ Segment_Next + @ ns!
-
-	if (ls@)
-		ns@ ls@ Segment_Next + !
-	end
-
-	if (ns@)
-		ls@ ns@ Segment_Prev + !
-	end
-
-	if (CachedSegmentListHead@ seg@ ==)
-		ns@ CachedSegmentListHead!
-	end
-
-	if (CachedSegmentListTail@ seg@ ==)
-		ls@ CachedSegmentListTail!
-	end
-end
-
-fn ReclaimCachedText { -- cleared }
-	auto bytes
-	0 bytes!
-
-	auto rs
-	InterruptDisable rs!
-
+fn (WeakObjectCallback) FreeWeakText { obj bytespreferred rs -- bytesactual destroyed }
 	auto seg
-	CachedSegmentListHead@ seg!
+	obj@ WeakObject_Private0 + @ seg!
 
-	0 cleared!
+	auto vno
+	seg@ Segment_VNode + @ vno!
 
-	while (seg@)
-		auto vnode
-		seg@ Segment_VNode + @ vnode!
+	0 bytesactual!
+	0 destroyed!
 
-		if (vnode@ VNodeOwned)
-			seg@ Segment_Next + @ seg!
-			continue
+	if (seg@ Segment_Refs + @ 1 ==)
+		if (vno@ ~~)
+			seg@ "FreeWeakText: vno=0 seg=%x\n" Panic
 		end
 
-		vnode@ VNodeRef
-
-		if (vnode@ VNodeLock)
-			vnode@ VNodeUnref
-			rs@ InterruptRestore
+		if (vno@ VNode_CachedTextSegmentWMO + @ ~~)
 			return
 		end
 
-		if (vnode@ VNode_CachedTextSegment + @ 0 ==)
-			seg@ Segment_Next + @ seg!
-			vnode@ VNodePut
-			continue
+		if (vno@ VNodeOwned)
+			"FreeWeakText\n" Panic
 		end
 
-		if (seg@ Segment_Refs + @ 1 ==)
-			seg@ RemoveCachedSegment
+		0 vno@ VNode_CachedTextSegmentWMO + !
 
-			1 cleared!
-			vnode@ VNodePut
+		1 destroyed!
+		seg@ Segment_PageCount + @ 12 << bytesactual!
 
-			rs@ InterruptRestore
+		rs@ InterruptRestore
 
-			return
-		end
+		seg@ UnrefSegment
 
-		vnode@ VNodePut
-		seg@ Segment_Next + @ seg!
+		InterruptDisable rs!
 	end
-
-	rs@ InterruptRestore
 end
 
 fn GetEntry { header vnode loff -- ok }
@@ -416,12 +368,23 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	loff@ LOFFSummary_TextSize + @ sz!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto cts
-	vnode@ VNode_CachedTextSegment + @ cts!
+	vnode@ VNode_CachedTextSegmentWMO + @ cts!
 
 	if (cts@)
-		cts@ textseg!
+		cts@ WeakObject_Private0 + @ textseg!
+
+		textseg@ RefSegment (* so that it doesnt get purged *)
+
+		rs@ InterruptRestore
+
+		cts@ TouchWeakObject
 	end else
+		rs@ InterruptRestore
+
 		sz@ VMSallocSegment textseg!
 
 		if (textseg@ iserr)
@@ -437,6 +400,11 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	if (ok@ 0 ~=)
 		"LoadLOFF: open text\n" Panic
+	end
+
+	if (cts@)
+		(* it has a ref now, so it wont be purged anymore *)
+		textseg@ UnrefSegment
 	end
 
 	proc@ 0 loff@ LOFFSummary_TextVAddr + @ 1 MapSegment drop ok!
@@ -532,21 +500,15 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 			return
 		end
 
-		auto rs
 		InterruptDisable rs!
 
-		textseg@ RefSegment
+		textseg@ 0 pointerof FreeWeakText NewWeakObject cts!
 
-		textseg@ vnode@ VNode_CachedTextSegment + !
-		vnode@ textseg@ Segment_VNode + !
+		if (cts@ iserr ~~)
+			textseg@ RefSegment
 
-		if (CachedSegmentListTail@ 0 ==)
-			textseg@ CachedSegmentListHead!
-			textseg@ CachedSegmentListTail!
-		end else
-			CachedSegmentListTail@ textseg@ Segment_Prev + !
-			textseg@ CachedSegmentListTail@ Segment_Next + !
-			textseg@ CachedSegmentListTail!
+			cts@ vnode@ VNode_CachedTextSegmentWMO + !
+			vnode@ textseg@ Segment_VNode + !
 		end
 
 		rs@ InterruptRestore

@@ -94,6 +94,8 @@ extern PrintVNodes { -- }
 
 extern HeapDumpBlock { ept -- }
 
+extern PrintWeaks { -- }
+
 fn MonitorCommandsInit { -- }
 	ListCreate MonitorCommandList!
 
@@ -185,6 +187,11 @@ fn MonitorCommandsInit { -- }
 	"[pid] Dump the process's page table."
 	pointerof MonitorCommandPages
 	"pages"
+	MonitorAddCommand
+
+	"Dump weak memory objects."
+	pointerof PrintWeaks
+	"weaks"
 	MonitorAddCommand
 end
 

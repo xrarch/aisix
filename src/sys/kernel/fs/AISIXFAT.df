@@ -36,6 +36,7 @@ endstruct
 struct AVData
 	4 Entry
 	4 BNCache
+	4 BNCacheWMO
 	4 FirstBN
 	4 NextBN
 endstruct
@@ -69,6 +70,85 @@ struct INode
 	4 reserved2
 	4 bytesize
 endstruct
+
+fn (WeakObjectCallback) FreeAFSWeakCache { obj bytespreferred rs -- bytesactual destroyed }
+	auto bm
+	auto vno
+
+	obj@ WeakObject_Private0 + @ bm!
+	obj@ WeakObject_Private1 + @ vno!
+
+	0 destroyed!
+	0 bytesactual!
+
+	if (vno@ VNodeLocked)
+		return
+	end
+
+	1 destroyed!
+	4096 bytesactual!
+
+	bm@ PMMFasterSinglePageFree
+
+	auto vd
+	vno@ VNode_FSData + @ vd!
+
+	0 vd@ AVData_BNCacheWMO + !
+	0 vd@ AVData_BNCache + !
+	0 vd@ AVData_FirstBN + !
+	0 vd@ AVData_NextBN + !
+end
+
+fn FreeFATCache { vnode -- }
+	auto rs
+	InterruptDisable rs!
+
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	auto wmo
+	vd@ AVData_BNCacheWMO + @ wmo!
+
+	if (wmo@)
+		vd@ AVData_BNCache + @ PMMFasterSinglePageFree
+
+		0 vd@ AVData_BNCacheWMO + !
+		0 vd@ AVData_BNCache + !
+		0 vd@ AVData_FirstBN + !
+		0 vd@ AVData_NextBN + !
+	end
+
+	rs@ InterruptRestore
+end
+
+fn AllocFATCache { vnode -- bm }
+	PMMFasterSinglePageCalloc bm!
+
+	if (bm@ iserr)
+		return
+	end
+
+	auto rs
+	InterruptDisable rs!
+
+	auto wmo
+	bm@ vnode@ pointerof FreeAFSWeakCache NewWeakObject wmo!
+
+	if (wmo@ iserr)
+		rs@ InterruptRestore
+		bm@ PMMFasterSinglePageFree
+		wmo@ bm!
+		return
+	end
+
+	auto vd
+	vnode@ VNode_FSData + @ vd!
+
+	bm@ vd@ AVData_BNCache + !
+	wmo@ vd@ AVData_BNCacheWMO + !
+
+	rs@ InterruptRestore
+end
 
 fn BAlloc { link mount prefatbuf -- buf }
 	auto fsd
@@ -397,7 +477,7 @@ fn BMap { bn reading vnode -- buf }
 
 	if (bn@ 16 >= bm@ ||)
 		if (bm@ ~~)
-			PMMFasterSinglePageCalloc bm!
+			vnode@ AllocFATCache bm!
 
 			if (bm@ iserr)
 				bm@ buf!
@@ -410,8 +490,8 @@ fn BMap { bn reading vnode -- buf }
 			end
 
 			vd@ AVData_Entry + @ bm@ !
-
-			bm@ vd@ AVData_BNCache + !
+		end else
+			vd@ AVData_BNCacheWMO + @ TouchWeakObject
 		end
 
 		auto bno
@@ -489,8 +569,7 @@ fn TruncNode { vnode -- ok }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	0 vd@ AVData_FirstBN + !
-	0 vd@ AVData_NextBN + !
+	vnode@ FreeFATCache
 
 	0 vnode@ VNode_Size + !
 	0xFFFFFFFF vd@ AVData_Entry + !
@@ -1008,6 +1087,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	block@ mount@ Mount_Device + @ bread buf!
 
 	if (buf@ iserr)
+		"afs: bad\n" Printf
 		buf@ ok!
 		return
 	end
@@ -1022,9 +1102,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 
 	buf@ brelse
 
-	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
-		vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFasterSinglePageFree
-	end
+	vnode@ FreeFATCache
 
 	vnode@ VNode_FSData + @ Free
 end
@@ -1180,9 +1258,7 @@ end
 fn (FSPutNode) AISIXFSPutNode { vnode -- ok }
 	vnode@ UpdateNode ok!
 
-	if (vnode@ VNode_FSData + @ AVData_BNCache + @)
-		vnode@ VNode_FSData + @ AVData_BNCache + @ PMMFasterSinglePageFree
-	end
+	vnode@ FreeFATCache
 
 	vnode@ VNode_FSData + @ Free
 end

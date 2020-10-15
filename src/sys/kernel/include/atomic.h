@@ -14,6 +14,8 @@ extern InitMutex { name mutex -- }
 
 extern MutexOwned { mutex -- owned }
 
+extern MutexLocked { mutex -- locked }
+
 struct Mutex
 	4 Locked
 	4 OwnerThread

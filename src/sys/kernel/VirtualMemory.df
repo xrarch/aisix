@@ -121,6 +121,33 @@ fn PMMCalloc { pages -- addr }
 	end
 end
 
+fn PMMMakeRoom { pages -- room }
+	auto rs
+	InterruptDisable rs!
+
+	1 room!
+
+	if (pages@ Pages@ Alloced@ - >=)
+		auto margin
+		pages@ 4 + Pages@ Alloced@ - - margin!
+
+		rs@ InterruptRestore
+
+		auto actual
+		margin@ 12 << WeakReclaim actual!
+
+		InterruptDisable rs!
+
+		if (pages@ Pages@ Alloced@ - >=)
+			0 room!
+		end
+
+		rs@ InterruptRestore
+	end else
+		rs@ InterruptRestore
+	end
+end
+
 fn PMMAlloc { pages -- addr }
 	if (pages@ 0 ==)
 		"allocating zero pages\n" Panic
@@ -128,49 +155,47 @@ fn PMMAlloc { pages -- addr }
 
 	-ENOMEM addr!
 
-	while (1)
-		auto rs
-		InterruptDisable rs!
-
-		auto pmb
-		PMMBitmap pmb!
-
-		auto pc
-		Pages@ pc!
-
-		auto i
-		0 i!
-
-		while (i@ pages@ + pc@ <)
-			auto rb
-			pmb@ i@ 8 / + @ rb!
-
-			if (rb@ 0xFFFFFFFF ~=)
-				auto start
-				pages@ i@ CheckRow start!
-
-				if (start@ -1 ~=)
-					1 pages@ start@ PMMSetString
-
-					start@ 4096 * MachineRAMBase@ + addr!
-
-					pages@ Alloced +=
-
-					rs@ InterruptRestore
-
-					return
-				end
-			end
-
-			32 i +=
-		end
-
-		rs@ InterruptRestore
-
-		if (ReclaimCachedText ~~)
-			return
-		end
+	if (pages@ PMMMakeRoom ~~)
+		return
 	end
+
+	auto rs
+	InterruptDisable rs!
+
+	auto pmb
+	PMMBitmap pmb!
+
+	auto pc
+	Pages@ pc!
+
+	auto i
+	0 i!
+
+	while (i@ pages@ + pc@ <)
+		auto rb
+		pmb@ i@ 8 / + @ rb!
+
+		if (rb@ 0xFFFFFFFF ~=)
+			auto start
+			pages@ i@ CheckRow start!
+
+			if (start@ -1 ~=)
+				1 pages@ start@ PMMSetString
+
+				start@ 4096 * MachineRAMBase@ + addr!
+
+				pages@ Alloced +=
+
+				rs@ InterruptRestore
+
+				return
+			end
+		end
+
+		32 i +=
+	end
+
+	rs@ InterruptRestore
 end
 
 table POTMasks
@@ -207,64 +232,62 @@ fn PMMPowerOfTwoAlloc { power -- addr }
 
 	-ENOMEM addr!
 
-	while (1)
-		auto rs
-		InterruptDisable rs!
+	if (pages@ PMMMakeRoom ~~)
+		return
+	end
 
-		auto pmb
-		PMMBitmap pmb!
+	auto rs
+	InterruptDisable rs!
 
-		auto pc
-		Pages@ pc!
+	auto pmb
+	PMMBitmap pmb!
 
-		auto i
-		0 i!
+	auto pc
+	Pages@ pc!
 
-		while (i@ pc@ <)
-			auto qp
-			pmb@@ qp!
+	auto i
+	0 i!
 
-			if (qp@ 0xFFFFFFFF ~=)
-				auto j
-				0 j!
+	while (i@ pc@ <)
+		auto qp
+		pmb@@ qp!
 
-				while (j@ 32 <)
-					if (i@ pc@ >=)
-						break
-					end
+		if (qp@ 0xFFFFFFFF ~=)
+			auto j
+			0 j!
 
-					if (qp@ j@ >> mask@ & 0 ==)
-						mask@ j@ << qp |=
-						qp@ pmb@!
-
-						i@ 12 << MachineRAMBase@ + addr!
-
-						pages@ Alloced +=
-
-						rs@ InterruptRestore
-
-						return
-					end
-
-					pages@ j +=
-					pages@ i +=
-				end
-
+			while (j@ 32 <)
 				if (i@ pc@ >=)
 					break
 				end
+
+				if (qp@ j@ >> mask@ & 0 ==)
+					mask@ j@ << qp |=
+					qp@ pmb@!
+
+					i@ 12 << MachineRAMBase@ + addr!
+
+					pages@ Alloced +=
+
+					rs@ InterruptRestore
+
+					return
+				end
+
+				pages@ j +=
+				pages@ i +=
 			end
 
-			4 pmb +=
-			32 i +=
+			if (i@ pc@ >=)
+				break
+			end
 		end
 
-		rs@ InterruptRestore
-
-		if (ReclaimCachedText ~~)
-			return
-		end
+		4 pmb +=
+		32 i +=
 	end
+
+	rs@ InterruptRestore
 end
 
 fn PMMPowerOfTwoCalloc { power -- addr }
@@ -289,9 +312,14 @@ fn PMMPowerOfTwoFree { power addr -- }
 	auto off
 	page@ 31 & off!
 
+	auto rs
+	InterruptDisable rs!
+
 	[power@]POTMasks@ off@ << ~ pmb@ &=
 
 	1 power@ << Alloced -=
+
+	rs@ InterruptRestore
 end
 
 fn PMMFasterSinglePageAlloc { -- addr }
