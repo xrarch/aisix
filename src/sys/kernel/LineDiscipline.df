@@ -143,7 +143,7 @@ fn TTYRead { pm buf len tty -- bytes }
 	auto pa
 	auto r
 	if (buf@ 4095 &)
-		pm@ buf@ VMWalk pa! r!
+		pm@ buf@ 1 VMWalk pa! r!
 
 		if (r@ iserr)
 			r@ bytes!
@@ -186,7 +186,7 @@ fn TTYRead { pm buf len tty -- bytes }
 		end
 
 		if (buf@ 4095 & 0 ==)
-			pm@ buf@ VMWalk pa! r!
+			pm@ buf@ 1 VMWalk pa! r!
 
 			if (r@ iserr)
 				r@ bytes!
@@ -219,7 +219,7 @@ fn TTYWrite { pm buf len tty -- bytes }
 	auto pa
 	auto r
 	if (buf@ 4095 &)
-		pm@ buf@ VMWalk pa! r!
+		pm@ buf@ 0 VMWalk pa! r!
 
 		if (r@ iserr)
 			r@ bytes!
@@ -229,7 +229,7 @@ fn TTYWrite { pm buf len tty -- bytes }
 
 	while (bytes@ len@ <)
 		if (buf@ 4095 & 0 ==)
-			pm@ buf@ VMWalk pa! r!
+			pm@ buf@ 0 VMWalk pa! r!
 
 			if (r@ iserr)
 				r@ bytes!

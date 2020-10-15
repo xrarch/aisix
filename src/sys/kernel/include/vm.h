@@ -23,6 +23,7 @@ extern PMMFasterSinglePageFree { addr -- }
 struct Pagemap
 	4 Data
 	4 Process
+	4 Enforce
 endstruct
 
 extern VMPagemapAlloc { proc -- pm }
@@ -49,15 +50,13 @@ extern VMCallocSegment { bytes -- seg }
 
 extern VMSallocSegment { bytes -- seg }
 
-extern VMWalk { pm va -- ok pa }
+extern VMWalk { pm va write -- ok pa }
 
 extern VMMemset { pm va size word -- ok }
 
 extern VMCopyout { pm va src len -- ok }
 
 extern VMCopyin { pm dest va len -- ok }
-
-extern VMStrlen { pm va -- len }
 
 extern VMStrnCopyin { pm dest va max -- ok }
 

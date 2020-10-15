@@ -704,7 +704,7 @@ fn VMSallocSegment { bytes -- seg }
 	bytes@ 2 VMAllocSegment1 seg!
 end
 
-fn VMWalk { pm va -- ok pa }
+fn VMWalk { pm va write -- ok pa }
 	if (pm@ 0 ==)
 		0 ok!
 		va@ pa!
@@ -732,6 +732,12 @@ fn VMWalk { pm va -- ok pa }
 	pdi@@ pte!
 
 	if (pte@ 1 & 0 ==)
+		ERR ok!
+		rs@ InterruptRestore
+		return
+	end
+
+	if (pte@ 2 & ~~ write@ && pm@ Pagemap_Enforce + @ &&)
 		ERR ok!
 		rs@ InterruptRestore
 		return
@@ -784,7 +790,7 @@ fn VMMemset { pm va size word -- ok }
 	end else
 		while (size@)
 			auto pa
-			pm@ va@ VMWalk pa! ok!
+			pm@ va@ 1 VMWalk pa! ok!
 
 			if (ok@ iserr)
 				-EFAULT ok!
@@ -814,7 +820,7 @@ fn VMCopyout { pm va src len -- ok }
 	end else
 		while (len@)
 			auto pa
-			pm@ va@ VMWalk pa! ok!
+			pm@ va@ 1 VMWalk pa! ok!
 
 			if (ok@ iserr)
 				-EFAULT ok!
@@ -845,7 +851,7 @@ fn VMCopyin { pm dest va len -- ok }
 	end else
 		while (len@)
 			auto pa
-			pm@ va@ VMWalk pa! ok!
+			pm@ va@ 0 VMWalk pa! ok!
 
 			if (ok@ iserr)
 				-EFAULT ok!
@@ -882,7 +888,7 @@ fn VMMemcpy { destpm dest srcpm src len -- ok }
 		end else
 			while (len@)
 				auto destpa
-				destpm@ dest@ VMWalk destpa! ok!
+				destpm@ dest@ 1 VMWalk destpa! ok!
 
 				if (ok@ iserr)
 					-EFAULT ok!
@@ -890,7 +896,7 @@ fn VMMemcpy { destpm dest srcpm src len -- ok }
 				end
 
 				auto srcpa
-				srcpm@ src@ VMWalk srcpa! ok!
+				srcpm@ src@ 0 VMWalk srcpa! ok!
 
 				if (ok@ iserr)
 					-EFAULT ok!
@@ -920,42 +926,10 @@ fn VMMemcpy { destpm dest srcpm src len -- ok }
 	end
 end
 
-fn VMStrlen { pm va -- len }
-	auto pa
-	auto r
-	if (va@ 4095 &)
-		pm@ va@ VMWalk pa! r!
-
-		if (r@ iserr)
-			r@ len!
-			return
-		end
-	end
-
-	while (1)
-		if (va@ 4095 & 0 ==)
-			pm@ va@ VMWalk pa! r!
-
-			if (r@ iserr)
-				r@ len!
-				return
-			end
-		end
-
-		if (pa@ gb 0 ==)
-			return
-		end
-
-		1 len +=
-		1 pa +=
-		1 va +=
-	end
-end
-
 fn VMStrnCopyin { pm dest va max -- ok }
 	auto pa
 	if (va@ 4095 &)
-		pm@ va@ VMWalk pa! ok!
+		pm@ va@ 0 VMWalk pa! ok!
 
 		if (ok@ iserr)
 			return
@@ -967,7 +941,7 @@ fn VMStrnCopyin { pm dest va max -- ok }
 
 	while (1)
 		if (va@ 4095 & 0 ==)
-			pm@ va@ VMWalk pa! ok!
+			pm@ va@ 0 VMWalk pa! ok!
 
 			if (ok@ iserr)
 				return

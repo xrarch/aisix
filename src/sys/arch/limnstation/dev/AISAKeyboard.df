@@ -82,7 +82,7 @@ fn (DevRead) KeybdRead { pm buf len unit seek -- bytes }
 	auto pa
 	auto r
 	if (buf@ 4095 &)
-		pm@ buf@ VMWalk pa! r!
+		pm@ buf@ 1 VMWalk pa! r!
 
 		if (r@ iserr)
 			r@ bytes!
@@ -101,7 +101,7 @@ fn (DevRead) KeybdRead { pm buf len unit seek -- bytes }
 		end
 
 		if (buf@ 4095 & 0 ==)
-			pm@ buf@ VMWalk pa! r!
+			pm@ buf@ 1 VMWalk pa! r!
 
 			if (r@ iserr)
 				r@ bytes!

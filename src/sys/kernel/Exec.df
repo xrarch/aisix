@@ -628,6 +628,8 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 		return
 	end
 
+	1 process@ Process_Pagemap + @ Pagemap_Enforce + !
+
 	loff@ LOFFSummary_Entry + @ loff@ LOFFSummary_UData + @ udcnt@ process@ 0 ProcessAddMainThread ok!
 
 	if (ok@ iserr)
