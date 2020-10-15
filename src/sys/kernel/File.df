@@ -124,6 +124,15 @@ end
 fn FDup { filp -- }
 	filp@ RefFilp
 	filp@ FileP_VNode + @ VNodeRef
+
+	if (filp@ FileP_RWX + @ WORLD_W &)
+		auto rs
+		InterruptDisable rs!
+
+		1 filp@ FileP_VNode + @ VNode_Writers + +=
+
+		rs@ InterruptRestore
+	end
 end
 
 fn FilDup { fd1 -- fd2 }
@@ -311,6 +320,17 @@ fn Open { path mode pbits -- fd }
 		vnode@ VNode_Size + @ filp@ FileP_Seek + !
 	end
 
+	if (bits@ WORLD_W &)
+		auto rs
+		InterruptDisable rs!
+
+		1 vnode@ VNode_Writers + +=
+
+		rs@ InterruptRestore
+
+		vnode@ VNodeRemoveCachedText
+	end
+
 	vnode@ VNodeUnlock
 end
 
@@ -344,10 +364,14 @@ fn CloseP { filp -- ok }
 		0 ok!
 	end
 
-	vnode@ VNodeUnref
-
 	auto rs
 	InterruptDisable rs!
+
+	if (filp@ FileP_RWX + @ WORLD_W &)
+		1 vnode@ VNode_Writers + -=
+	end
+
+	vnode@ VNodeUnref
 
 	if (filp@ FileP_Count + @ 1 ==)
 		(* last holder, free resources associated with the filp *)

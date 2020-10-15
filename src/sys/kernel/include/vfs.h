@@ -85,6 +85,8 @@ struct VNode
 	4 Dirty
 	4 DirParentVNID
 
+	4 Writers
+
 	4 CachedTextSegmentWMO
 	4 UsingWMO
 endstruct
@@ -129,6 +131,8 @@ extern VTrunc { vnode -- ok }
 extern VFSPath  { path -- vnode }
 
 extern VFSPathX { path -- sook dirvnode vnode name }
+
+extern VNodeRemoveCachedText { vnode -- }
 
 extern VNodeNew { vnid mount -- vnode }
 

@@ -368,14 +368,23 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	loff@ LOFFSummary_TextSize + @ sz!
 
+	auto rs
+	InterruptDisable rs!
+
 	auto cts
 	vnode@ VNode_CachedTextSegmentWMO + @ cts!
 
 	if (cts@)
 		cts@ WeakObject_Private0 + @ textseg!
 
+		textseg@ RefSegment
+
+		rs@ InterruptRestore
+
 		cts@ TouchWeakObject
 	end else
+		rs@ InterruptRestore
+
 		sz@ VMSallocSegment textseg!
 
 		if (textseg@ iserr)
@@ -391,6 +400,10 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	if (ok@ 0 ~=)
 		"LoadLOFF: open text\n" Panic
+	end
+
+	if (cts@)
+		textseg@ UnrefSegment
 	end
 
 	proc@ 0 loff@ LOFFSummary_TextVAddr + @ 1 MapSegment drop ok!
@@ -486,16 +499,17 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 			return
 		end
 
-		auto rs
 		InterruptDisable rs!
 
-		textseg@ 0 pointerof FreeWeakText NewWeakObject cts!
+		if (vnode@ VNode_Writers + @ 0 ==)
+			textseg@ 0 pointerof FreeWeakText NewWeakObject cts!
 
-		if (cts@ iserr ~~)
-			textseg@ RefSegment
+			if (cts@ iserr ~~)
+				textseg@ RefSegment
 
-			cts@ vnode@ VNode_CachedTextSegmentWMO + !
-			vnode@ textseg@ Segment_VNode + !
+				cts@ vnode@ VNode_CachedTextSegmentWMO + !
+				vnode@ textseg@ Segment_VNode + !
+			end
 		end
 
 		rs@ InterruptRestore
