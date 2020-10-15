@@ -19,11 +19,11 @@ fn (WeakObjectCallback) FreeWeakText { obj bytespreferred rs -- bytesactual dest
 		end
 
 		if (vno@ VNode_CachedTextSegmentWMO + @ ~~)
-			return
+			seg@ "FreeWeakText: wmo=0 seg=%x\n" Panic
 		end
 
-		if (vno@ VNodeOwned)
-			"FreeWeakText\n" Panic
+		if (vno@ VNodeLocked)
+			return
 		end
 
 		0 vno@ VNode_CachedTextSegmentWMO + !
@@ -368,23 +368,14 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	loff@ LOFFSummary_TextSize + @ sz!
 
-	auto rs
-	InterruptDisable rs!
-
 	auto cts
 	vnode@ VNode_CachedTextSegmentWMO + @ cts!
 
 	if (cts@)
 		cts@ WeakObject_Private0 + @ textseg!
 
-		textseg@ RefSegment (* so that it doesnt get purged *)
-
-		rs@ InterruptRestore
-
 		cts@ TouchWeakObject
 	end else
-		rs@ InterruptRestore
-
 		sz@ VMSallocSegment textseg!
 
 		if (textseg@ iserr)
@@ -400,11 +391,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 
 	if (ok@ 0 ~=)
 		"LoadLOFF: open text\n" Panic
-	end
-
-	if (cts@)
-		(* it has a ref now, so it wont be purged anymore *)
-		textseg@ UnrefSegment
 	end
 
 	proc@ 0 loff@ LOFFSummary_TextVAddr + @ 1 MapSegment drop ok!
@@ -500,6 +486,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 			return
 		end
 
+		auto rs
 		InterruptDisable rs!
 
 		textseg@ 0 pointerof FreeWeakText NewWeakObject cts!
@@ -517,14 +504,9 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 	pm@ loff@ LOFFSummary_DataVAddr + @ loff@ LOFFSummary_DataSize + @ loff@ LOFFSummary_DataOffset + @ vnode@ VRead bytes!
 
 	if (bytes@ loff@ LOFFSummary_DataSize + @ s<)
-		textseg@ VMSegDestruct drop
-		textseg@ Free
-
-		dataseg@ VMSegDestruct drop
-		dataseg@ Free
-
-		bssseg@ VMSegDestruct drop
-		bssseg@ Free
+		textseg@ UnrefSegment
+		dataseg@ UnrefSegment
+		bssseg@ UnrefSegment
 
 		loff@ Free
 		-ENOEXEC loff!
@@ -543,14 +525,9 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		VecCopy ok!
 
 		if (ok@ iserr)
-			textseg@ VMSegDestruct drop
-			textseg@ Free
-
-			dataseg@ VMSegDestruct drop
-			dataseg@ Free
-
-			bssseg@ VMSegDestruct drop
-			bssseg@ Free
+			textseg@ UnrefSegment
+			dataseg@ UnrefSegment
+			bssseg@ UnrefSegment
 
 			loff@ Free
 			ok@ loff!
@@ -598,14 +575,9 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 		process@ Process_Pagemap + @ VMPagemapFree
 		process@ ProcessFreeSlot
 
-		loff@ LOFFSummary_TextSeg + @ VMSegDestruct drop
-		loff@ LOFFSummary_TextSeg + @ Free
-
-		loff@ LOFFSummary_DataSeg + @ VMSegDestruct drop
-		loff@ LOFFSummary_DataSeg + @ Free
-
-		loff@ LOFFSummary_BSSSeg + @ VMSegDestruct drop
-		loff@ LOFFSummary_BSSSeg + @ Free
+		loff@ LOFFSummary_TextSeg + @ UnrefSegment
+		loff@ LOFFSummary_DataSeg + @ UnrefSegment
+		loff@ LOFFSummary_BSSSeg + @ UnrefSegment
 
 		loff@ Free
 
