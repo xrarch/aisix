@@ -42,6 +42,8 @@ table Syscalls
 	pointerof SysTime
 	pointerof SysFChown
 	pointerof SysFChmod
+	pointerof SysProcessInfo
+	pointerof SysNextProcessInfo
 endtable
 public Syscalls
 
@@ -850,4 +852,109 @@ fn (Syscall) SysFChmod { tf -- ok }
 	tf@ Context_a2 + @ mode!
 
 	fd@ mode@ FChmod ok!
+end
+
+fn ProcessInfo { va proc -- ok }
+	auto kstat
+	ProcessStat_SIZEOF Calloc kstat!
+
+	if (kstat@ iserr)
+		kstat@ ok!
+		return
+	end
+
+	proc@ Process_Threads + @ kstat@ ProcessStat_Threads + !
+	proc@ Process_UID + @ kstat@ ProcessStat_UID + !
+	proc@ Process_EUID + @ kstat@ ProcessStat_EUID + !
+	proc@ Process_Zombie + @ kstat@ ProcessStat_Zombie + !
+	proc@ Process_PID + @ kstat@ ProcessStat_PID + !
+
+	kstat@ ProcessStat_CWDPathString + proc@ Process_CWDPathString + CWDPATHLEN 1 - strncpy
+	kstat@ ProcessStat_Name + proc@ Process_Name + PROCNAMELEN 1 - strncpy
+
+	auto tty
+	proc@ Process_TTY + @ tty!
+
+	if (tty@)
+		tty@ TTY_Device + @ tty!
+		if (tty@)
+			kstat@ ProcessStat_TTYName + tty@ Device_Name + PRSTATTTYLEN 1 - strncpy
+		end
+	end
+
+	auto mth
+	proc@ Process_MainThread + @ mth!
+
+	if (mth@)
+		mth@ Thread_Status + @ kstat@ ProcessStat_MTStatus + !
+		mth@ Thread_EvQ + @ kstat@ ProcessStat_MTEvQ + !
+	end
+
+	CurrentThread@ Thread_Process + @ Process_Pagemap + @ va@ kstat@ ProcessStat_SIZEOF VMCopyout ok!
+
+	kstat@ Free
+end
+
+fn (Syscall) SysProcessInfo { tf -- ok }
+	auto pid
+	tf@ Context_a1 + @ pid!
+
+	auto prstat
+	tf@ Context_a2 + @ prstat!
+
+	auto proc
+	pid@ CurrentThread@ Thread_Process + @ ProcessByPID proc!
+
+	if (proc@ iserr)
+		proc@ ok!
+		return
+	end
+
+	prstat@ proc@ ProcessInfo ok!
+end
+
+fn (Syscall) SysNextProcessInfo { tf -- ok }
+	auto i
+	tf@ Context_a1 + @ i!
+
+	auto prstat
+	tf@ Context_a2 + @ prstat!
+
+	auto su
+	CurrentThread@ Thread_Process + @ Process_EUID + @ 0 == su!
+
+	auto uid
+	CurrentThread@ Thread_Process + @ Process_UID + @ uid!
+
+	auto process
+	0 process!
+
+	while (i@ PROCMAX <)
+		auto rs
+		InterruptDisable rs!
+
+		[i@]Processes@ process!
+
+		if (process@)
+			if (process@ Process_UID + @ uid@ == su@ ||)
+				rs@ InterruptRestore
+
+				prstat@ process@ ProcessInfo ok!
+
+				if (ok@ iserr)
+					return
+				end
+
+				i@ 1 + ok!
+
+				return
+			end
+		end
+
+		rs@ InterruptRestore
+
+		1 i +=
+	end
+
+	-ESRCH ok!
 end

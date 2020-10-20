@@ -2,9 +2,10 @@ struct TTY
 	4 IBuffer
 	4 OBuffer
 	4 Mode
+	4 Device
 endstruct
 
-extern AllocTTY { ibuf obuf -- tty }
+extern AllocTTY { dev ibuf obuf -- tty }
 
 extern TTYRead { pm buf len tty -- bytes }
 

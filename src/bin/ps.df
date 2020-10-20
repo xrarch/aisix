@@ -1,0 +1,22 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+buffer ProcInfo ProcessStat_SIZEOF
+
+fn Main { ... -- ret }
+	0 ret!
+
+	"TTY" "PID" "%5s %9s NAME\n" Printf
+
+	auto ix
+	ProcInfo 0 NextProcessInfo ix!
+
+	while (ix@ iserr ~~)
+		ProcInfo ProcessStat_Name +
+		ProcInfo ProcessStat_TTYName +
+		ProcInfo ProcessStat_PID + @
+		"%5d %9s %s\n" Printf
+
+		ProcInfo ix@ NextProcessInfo ix!
+	end
+end

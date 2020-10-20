@@ -30,9 +30,9 @@ const OFILEMAX 64
 
 const OSEGMAX 32
 
-const PROCNAMELEN 32
+const PROCNAMELEN 64
 
-const CWDPATHLEN 384
+const CWDPATHLEN 256
 
 struct OSeg
 	4 Segment
@@ -84,6 +84,28 @@ struct Process
 	CWDPATHLEN CWDPathString
 
 	PROCNAMELEN Name
+endstruct
+
+const PRSTATTTYLEN 32
+
+struct ProcessStat
+	4 Threads
+	4 UID
+	4 EUID
+
+	4 Zombie
+
+	4 PID
+
+	4 MTStatus
+	4 MTEvQ
+
+	PRSTATTTYLEN TTYName
+
+	CWDPATHLEN CWDPathString
+	PROCNAMELEN Name
+
+	32 Reserved
 endstruct
 
 externptr CurrentThread
@@ -163,3 +185,5 @@ extern UnlockMe { -- }
 extern KillTTY { tty -- }
 
 extern Wait { -- pid ret }
+
+extern ProcessByPID { pid parent -- process }

@@ -36,9 +36,11 @@ const SYSMAPSEGMENT   32
 const SYSCLOSESEGMENT 33
 const SYSUNMAPSEGMENT 34
 const SYSAISIXGETMODE 35
-const SYSTIME    36
-const SYSFCHOWN  37
-const SYSFCHMOD  38
+const SYSTIME         36
+const SYSFCHOWN       37
+const SYSFCHMOD       38
+const SYSPROCINFO     39
+const SYSNEXTPROCINFO 40
 
 asm "
 
@@ -301,6 +303,20 @@ _fchmod:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSFCHMOD
+	sys
+	ret
+
+_procinfo:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSPROCINFO
+	sys
+	ret
+
+_nextprocinfo:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSNEXTPROCINFO
 	sys
 	ret
 
@@ -610,4 +626,16 @@ extern _time { -- sec ms }
 
 fn Time { -- sec ms }
 	_time ms! sec!
+end
+
+extern _procinfo { stat pid -- ok }
+
+fn ProcessInfo { stat pid -- ok }
+	stat@ pid@ _procinfo ok!
+end
+
+extern _nextprocinfo { stat oldindex -- newindex }
+
+fn NextProcessInfo { stat oldindex -- newindex }
+	stat@ oldindex@ _nextprocinfo newindex!
 end

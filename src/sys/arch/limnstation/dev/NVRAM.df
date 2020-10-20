@@ -12,7 +12,10 @@ fn DrvNVRAMFoundNode { node -- }
 
 	NVRAMBase@ NVRAMSize@ "%d bytes @ 0x%x" BootPrintf
 
-	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "nvram" NVRAMDriver 0 DeviceRegister drop
+	auto dev
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "nvram" NVRAMDriver 0 DeviceRegister dev!
+
+	NVRAMSize@ dev@ Device_Size + !
 end
 
 table NVRAMDriver

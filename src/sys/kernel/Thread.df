@@ -508,6 +508,9 @@ fn ProcessByPID { pid parent -- process }
 	auto i
 	0 i!
 
+	auto su
+	parent@ Process_EUID + @ 0 == su!
+
 	while (i@ PROCMAX <)
 		auto rs
 		InterruptDisable rs!
@@ -516,7 +519,7 @@ fn ProcessByPID { pid parent -- process }
 
 		if (process@)
 			if (process@ Process_PID + @ pid@ ==)
-				if (process@ Process_Parent + @ parent@ ==)
+				if (process@ Process_Parent + @ parent@ == su@ ||)
 					rs@ InterruptRestore
 					return
 				end else

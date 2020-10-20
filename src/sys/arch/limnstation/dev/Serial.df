@@ -96,8 +96,21 @@ fn DrvSerialFoundNode { node -- }
 
 	pointerof SerialIntr intn@ InterruptRegister
 
+	auto lilbuf
+	16 Calloc lilbuf!
+
+	if (lilbuf@ iserr)
+		"couldn't allocate serial port name\n" Panic
+	end
+
+	lilbuf@ "ttyS" strcpy
+	SerialFound@ lilbuf@ 4 + itoa
+
+	auto sdev
+	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 lilbuf@ SerialDriver SerialFound@ DeviceRegister sdev!
+
 	auto tty
-	ibuffer@ obuffer@ AllocTTY tty!
+	sdev@ ibuffer@ obuffer@ AllocTTY tty!
 
 	if (tty@ iserr)
 		tty@ abs tty!
@@ -113,19 +126,6 @@ fn DrvSerialFoundNode { node -- }
 	ibuffer@ sport@ SerialPort_IBuffer + !
 
 	sport@ SerialIntrEnable
-
-	auto lilbuf
-	16 Calloc lilbuf!
-
-	if (lilbuf@ iserr)
-		"couldn't allocate serial port name\n" Panic
-	end
-
-	lilbuf@ "ttyS" strcpy
-	SerialFound@ lilbuf@ 4 + itoa
-
-	auto sdev
-	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 lilbuf@ SerialDriver SerialFound@ DeviceRegister sdev!
 
 	tty@ sdev@ Device_TTY + !
 

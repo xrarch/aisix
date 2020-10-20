@@ -3,7 +3,7 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
 
-fn AllocTTY { ibuf obuf -- tty }
+fn AllocTTY { dev ibuf obuf -- tty }
 	TTY_SIZEOF Calloc tty!
 
 	if (tty@ iserr)
@@ -18,6 +18,8 @@ fn AllocTTY { ibuf obuf -- tty }
 	tty@ ibuf@ IOBuffer_TTY + !
 
 	obuf@ tty@ TTY_OBuffer + !
+
+	dev@ tty@ TTY_Device + !
 end
 
 const MAXPRINT 0x7E

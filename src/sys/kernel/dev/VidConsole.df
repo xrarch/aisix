@@ -203,15 +203,15 @@ fn VConsInit { -- }
 	vcw@ ThreadReady
 
 	if ("-h" ArgsCheck ~~)
-		kbd@ Device_IBuffer + @ VConsOBuffer@ AllocTTY VConsTTY!
+		auto vdev
+		OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "ttyV0" VConsDriver 0 DeviceRegister vdev!
+
+		vdev@ kbd@ Device_IBuffer + @ VConsOBuffer@ AllocTTY VConsTTY!
 
 		if (VConsTTY@ iserr)
 			VConsTTY@ abs VConsTTY!
 			[VConsTTY@]ErrorNames@ "couldn't allocate VConsTTY: %s\n" Panic
 		end
-
-		auto vdev
-		OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 "ttyV0" VConsDriver 0 DeviceRegister vdev!
 
 		VConsTTY@ vdev@ Device_TTY + !
 	end
