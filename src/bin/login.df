@@ -318,8 +318,16 @@ fn PrintFile { fd name -- }
 	end
 end
 
+buffer DName 32
+
 fn Main { ... -- ret }
-	0 ret!
+	DName STDOUT GetDeviceName ret!
+
+	if (ret@ 0 ~=)
+		"login: can't get tty name\n" Abort
+	end elseif (DName strlen 0 ==)
+		"login: not supported\n" Abort
+	end
 
 	"/sys/user.fields" O_READ Open NameTableFD!
 

@@ -86,3 +86,5 @@ extern Chmod { path mode -- ok }
 extern FChmod { fd mode -- ok }
 
 extern Seek { fd offset whence -- ok }
+
+extern GetDeviceName { fd -- name }

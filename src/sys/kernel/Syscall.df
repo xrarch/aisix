@@ -44,6 +44,7 @@ table Syscalls
 	pointerof SysFChmod
 	pointerof SysProcessInfo
 	pointerof SysNextProcessInfo
+	pointerof SysGetDeviceName
 endtable
 public Syscalls
 
@@ -957,4 +958,29 @@ fn (Syscall) SysNextProcessInfo { tf -- ok }
 	end
 
 	-ESRCH ok!
+end
+
+fn (Syscall) SysGetDeviceName { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto name
+	tf@ Context_a2 + @ name!
+
+	auto kname
+	fd@ GetDeviceName kname!
+
+	if (kname@ iserr)
+		kname@ ok!
+		return
+	end
+
+	if (kname@)
+		auto len
+		kname@ strlen 1 + 31 min len!
+
+		CurrentThread@ Thread_Process + @ Process_Pagemap + @ name@ kname@ len@ VMCopyout ok!
+	end else
+		0 ok!
+	end
 end

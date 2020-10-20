@@ -41,6 +41,7 @@ writebin:
 	$(foreach file, $(wildcard $(CMD_DIR)/*.LOFF), \
 		$(FSTOOL) w /bin/$(shell basename -s .LOFF $(file)) $(file) ; \
 		$(FSTOOL) chmod /bin/$(shell basename -s .LOFF $(file)) 493 ;)
+	$(FSTOOL) chmod /bin/login 1005
 
 sysbin:
 ifeq ($(REBUILD_CMD),yes)

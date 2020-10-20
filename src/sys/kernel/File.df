@@ -952,3 +952,34 @@ fn Seek { fd offset whence -- ok }
 
 	0 ok!
 end
+
+fn GetDeviceName { fd -- name }
+	auto rs
+	InterruptDisable rs!
+
+	auto filp
+	fd@ GetFilp filp!
+
+	if (filp@ iserr)
+		filp@ name!
+		rs@ InterruptRestore
+		return
+	end
+
+	auto vno
+	filp@ FileP_VNode + @ vno!
+
+	if (vno@)
+		if (vno@ VNode_Type + @ VNODE_CHAR ==)
+			vno@ VNode_FSData + @ Device_Name + name!
+
+			rs@ InterruptRestore
+
+			return
+		end
+	end
+
+	rs@ InterruptRestore
+
+	0 name!
+end

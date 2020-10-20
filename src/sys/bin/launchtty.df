@@ -30,7 +30,7 @@ fn Main { ... -- ret }
 	'\n' Putc
 
 	auto lpid
-	tty@ "/bin/login" Spawn lpid!
+	"/bin/login" Spawn lpid!
 
 	if (lpid@ iserr)
 		lpid@ abs lpid!

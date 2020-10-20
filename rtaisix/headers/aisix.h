@@ -98,6 +98,8 @@ extern ProcessInfo { stat pid -- ok }
 
 extern NextProcessInfo { stat oldindex -- newindex }
 
+extern GetDeviceName { buf fd -- ok }
+
 const HALT_SHUTDOWN 1
 const HALT_REBOOT 2
 

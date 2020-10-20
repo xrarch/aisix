@@ -41,6 +41,7 @@ const SYSFCHOWN       37
 const SYSFCHMOD       38
 const SYSPROCINFO     39
 const SYSNEXTPROCINFO 40
+const SYSGETDEVNAME   41
 
 asm "
 
@@ -317,6 +318,13 @@ _nextprocinfo:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSNEXTPROCINFO
+	sys
+	ret
+
+_getdevname:
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSGETDEVNAME
 	sys
 	ret
 
@@ -638,4 +646,10 @@ extern _nextprocinfo { stat oldindex -- newindex }
 
 fn NextProcessInfo { stat oldindex -- newindex }
 	stat@ oldindex@ _nextprocinfo newindex!
+end
+
+extern _getdevname { buf fd -- ok }
+
+fn GetDeviceName { buf fd -- ok }
+	buf@ fd@ _getdevname ok!
 end
