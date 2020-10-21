@@ -127,7 +127,7 @@ table VConsDriver
 	DEV_CHAR
 	pointerof VConsOpen
 	pointerof VConsClose
-	pointerof VConsIoctl
+	pointerof VConsIOCtl
 	pointerof VConsRead
 	pointerof VConsWrite
 	pointerof VConsSysctl
@@ -145,8 +145,8 @@ fn (DevClose) VConsClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) VConsIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) VConsIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevRead) VConsRead { pm buf len unit seek -- bytes }

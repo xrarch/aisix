@@ -8,7 +8,7 @@ table KeybdDriver
 	DEV_CHAR
 	pointerof KeybdOpen
 	pointerof KeybdClose
-	pointerof KeybdIoctl
+	pointerof KeybdIOCtl
 	pointerof KeybdRead
 	pointerof KeybdWrite
 	pointerof KeybdSysctl
@@ -71,8 +71,8 @@ fn (DevClose) KeybdClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) KeybdIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) KeybdIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevRead) KeybdRead { pm buf len unit seek -- bytes }

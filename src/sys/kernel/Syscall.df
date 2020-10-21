@@ -46,6 +46,7 @@ table Syscalls
 	pointerof SysNextProcessInfo
 	pointerof SysGetDeviceName
 	pointerof SysKill
+	pointerof SysIOCtl
 endtable
 public Syscalls
 
@@ -892,6 +893,13 @@ fn ProcessInfo { va proc -- ok }
 		mth@ Thread_EvQ + @ kstat@ ProcessStat_MTEvQ + !
 	end
 
+	auto parent
+	proc@ Process_Parent + @ parent!
+
+	if (parent@)
+		parent@ Process_PID + @ kstat@ ProcessStat_Parent + !
+	end
+
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ va@ kstat@ ProcessStat_SIZEOF VMCopyout ok!
 
 	kstat@ Free
@@ -1019,4 +1027,23 @@ fn (Syscall) SysKill { tf -- ok }
 	0 ok!
 
 	rs@ InterruptRestore
+end
+
+fn (Syscall) SysIOCtl { tf -- ok }
+	auto fd
+	tf@ Context_a1 + @ fd!
+
+	auto op4
+	tf@ Context_a2 + @ op4!
+
+	auto op3
+	tf@ Context_a3 + @ op3!
+
+	auto op2
+	tf@ Context_v0 + @ op2!
+
+	auto op1
+	tf@ Context_v1 + @ op1!
+
+	op1@ op2@ op3@ op4@ fd@ IOCtl ok!
 end

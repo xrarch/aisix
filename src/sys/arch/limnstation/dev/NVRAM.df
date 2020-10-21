@@ -23,7 +23,7 @@ table NVRAMDriver
 	DEV_CHAR
 	pointerof NVRAMOpen
 	pointerof NVRAMClose
-	pointerof NVRAMIoctl
+	pointerof NVRAMIOCtl
 	pointerof NVRAMRead
 	pointerof NVRAMWrite
 	pointerof NVRAMSysctl
@@ -41,8 +41,8 @@ fn (DevClose) NVRAMClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) NVRAMIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) NVRAMIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevRead) NVRAMRead { pm buf len unit seek -- bytes }

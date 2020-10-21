@@ -105,6 +105,8 @@ struct ProcessStat
 	CWDPATHLEN CWDPathString
 	PROCNAMELEN Name
 
+	4 Parent
+
 	32 Reserved
 endstruct
 

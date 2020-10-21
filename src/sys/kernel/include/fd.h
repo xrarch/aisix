@@ -88,3 +88,5 @@ extern FChmod { fd mode -- ok }
 extern Seek { fd offset whence -- ok }
 
 extern GetDeviceName { fd -- name }
+
+extern IOCtl { op1 op2 op3 op4 fd -- ok }

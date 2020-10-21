@@ -8,7 +8,7 @@ table MouseDriver
 	DEV_CHAR
 	pointerof MouseOpen
 	pointerof MouseClose
-	pointerof MouseIoctl
+	pointerof MouseIOCtl
 	pointerof MouseRead
 	pointerof MouseWrite
 	pointerof MouseSysctl
@@ -68,8 +68,8 @@ fn (DevClose) MouseClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) MouseIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) MouseIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 buffer MouseEvQ EventQueue_SIZEOF

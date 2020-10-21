@@ -102,6 +102,8 @@ extern GetDeviceName { buf fd -- ok }
 
 extern Kill { pid -- ok }
 
+extern IOCtl { op1 op2 op3 op4 fd -- ok }
+
 const HALT_SHUTDOWN 1
 const HALT_REBOOT 2
 
@@ -144,6 +146,8 @@ struct ProcessStat
 
 	256 CWDPathString
 	64 Name
+
+	4 Parent
 
 	32 Reserved
 endstruct

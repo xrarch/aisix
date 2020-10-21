@@ -43,6 +43,7 @@ const SYSPROCINFO     39
 const SYSNEXTPROCINFO 40
 const SYSGETDEVNAME   41
 const SYSKILL    42
+const SYSIOCTL   43
 
 asm "
 
@@ -332,6 +333,16 @@ _getdevname:
 _kill:
 	mov a1, a0
 	li a0, SYSKILL
+	sys
+	ret
+
+_ioctl:
+	lio.l v1, sp, 8
+	mov v0, a3
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSIOCTL
 	sys
 	ret
 
@@ -665,4 +676,10 @@ extern _kill { pid -- ok }
 
 fn Kill { pid -- ok }
 	pid@ _kill ok!
+end
+
+extern _ioctl { op1 op2 op3 op4 fd -- ok }
+
+fn IOCtl { op1 op2 op3 op4 fd -- ok }
+	op1@ op2@ op3@ op4@ fd@ _ioctl ok!
 end

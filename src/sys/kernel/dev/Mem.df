@@ -6,7 +6,7 @@ table MemDriver
 	DEV_CHAR
 	pointerof MemOpen
 	pointerof MemClose
-	pointerof MemIoctl
+	pointerof MemIOCtl
 	pointerof MemRead
 	pointerof MemWrite
 	pointerof MemSysctl
@@ -25,8 +25,8 @@ fn (DevClose) MemClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) MemIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) MemIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevRead) MemRead { pm buf len unit seek -- bytes }

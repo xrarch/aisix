@@ -25,7 +25,7 @@ table SerialDriver
 	DEV_CHAR
 	pointerof SerialOpen
 	pointerof SerialClose
-	pointerof SerialIoctl
+	pointerof SerialIOCtl
 	pointerof SerialRead
 	pointerof SerialWrite
 	pointerof SerialSysctl
@@ -144,8 +144,8 @@ fn (DevClose) SerialClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIoctl) SerialIoctl { op1 op2 op3 op4 unit -- ok }
-	0 ok!
+fn (DevIOCtl) SerialIOCtl { op1 op2 op3 op4 unit -- ok }
+	-ENOTBLK ok!
 end
 
 fn (DevRead) SerialRead { pm buf len unit seek -- bytes }
