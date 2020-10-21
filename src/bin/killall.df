@@ -1,0 +1,47 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn private Usage { -- }
+	"usage: killall name\n" STDERR FPrintf
+end
+
+buffer ProcInfo ProcessStat_SIZEOF
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 2 ~=)
+		Usage
+		1 Exit
+	end
+
+	auto name
+	[1]argv@ name!
+
+	auto found
+	0 found!
+
+	auto ix
+	ProcInfo 0 NextProcessInfo ix!
+
+	while (ix@ iserr ~~)
+		if (ProcInfo ProcessStat_Name + name@ strcmp)
+			ProcInfo ProcessStat_PID + @ Kill ret!
+
+			if (ret@ iserr)
+				ret@ abs ret!
+				[ret@]ErrorNames@ ProcInfo ProcessStat_PID + @ "killall: %d: %s\n" STDERR FPrintf
+			end
+
+			1 found!
+		end
+
+		ProcInfo ix@ NextProcessInfo ix!
+	end
+
+	0 ret!
+
+	if (found@ ~~)
+		"No matching processes belonging to you were found\n" STDERR FPrintf
+	end
+end

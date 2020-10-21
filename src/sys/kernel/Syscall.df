@@ -45,6 +45,7 @@ table Syscalls
 	pointerof SysProcessInfo
 	pointerof SysNextProcessInfo
 	pointerof SysGetDeviceName
+	pointerof SysKill
 endtable
 public Syscalls
 
@@ -983,4 +984,39 @@ fn (Syscall) SysGetDeviceName { tf -- ok }
 	end else
 		0 ok!
 	end
+end
+
+fn (Syscall) SysKill { tf -- ok }
+	auto pid
+	tf@ Context_a1 + @ pid!
+
+	auto rs
+	InterruptDisable rs!
+
+	auto proc
+	pid@ CurrentThread@ Thread_Process + @ ProcessByPID proc!
+
+	if (proc@ iserr)
+		rs@ InterruptRestore
+		proc@ ok!
+		return
+	end
+
+	if (proc@ KernelProcess@ == proc@ InitProcess@ == ||)
+		rs@ InterruptRestore
+		-EPERM ok!
+		return
+	end
+
+	if (proc@ Process_Zombie + @)
+		rs@ InterruptRestore
+		0 ok!
+		return
+	end
+
+	143 proc@ ProcessKill
+
+	0 ok!
+
+	rs@ InterruptRestore
 end

@@ -27,14 +27,18 @@ fn Main { ... -- ret }
 		1 Exit
 	end
 
+	if (stdio@ 0 FChown iserr)
+		1 Exit
+	end
+
 	'\n' Putc
 
 	auto lpid
-	"/bin/login" Spawn lpid!
+	"/sys/bin/consolelogin" Spawn lpid!
 
 	if (lpid@ iserr)
 		lpid@ abs lpid!
-		[lpid@]ErrorNames@ "launchtty: couldn't spawn /bin/login: %s\n" Abort
+		[lpid@]ErrorNames@ "launchtty: couldn't spawn /sys/bin/consolelogin: %s\n" Abort
 	end
 
 	while (1)
@@ -46,5 +50,9 @@ fn Main { ... -- ret }
 		end
 	end
 
-	ret@ Exit
+	if (ret@ 143 ==) (* it was nuked by the user, line does not need to be terminated *)
+		0 Exit
+	end else
+		ret@ Exit
+	end
 end

@@ -321,6 +321,10 @@ end
 buffer DName 32
 
 fn Main { ... -- ret }
+	if (GetUID 0 ~=)
+		"login: Please log-out by striking ^D instead of invoking this program directly.\n" Abort
+	end
+
 	DName STDOUT GetDeviceName ret!
 
 	if (ret@ 0 ~=)
@@ -425,6 +429,8 @@ fn Main { ... -- ret }
 	if (motd@ iserr ~~)
 		motd@ "/sys/motd.txt" PrintFile
 	end
+
+	"Strike ^D to log-out.\n" Printf
 
 	auto shpid
 	buf@ UserInfo_Shell + Spawn shpid!

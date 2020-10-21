@@ -2,21 +2,24 @@
 #include "<ll>/rtaisix/aisix.h"
 
 fn private Usage { -- }
-	"usage: chown owner file\n" STDERR FPrintf
+	"usage: kill pid\n" STDERR FPrintf
 end
 
 fn Main { ... -- ret }
 	0 ret!
 
-	if (argc@ 3 ~=)
+	if (argc@ 2 ~=)
 		Usage
 		1 Exit
 	end
 
-	[2]argv@ [1]argv@ atoi Chown ret!
+	auto pid
+	[1]argv@ atoi pid!
+
+	pid@ Kill ret!
 
 	if (ret@ iserr)
 		ret@ abs ret!
-		[ret@]ErrorNames@ [2]argv@ "chown: %s: %s\n" Abort
+		[ret@]ErrorNames@ "kill: %s\n" Abort
 	end
 end

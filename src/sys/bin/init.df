@@ -135,10 +135,10 @@ fn Main { ... -- ret }
 		auto logstat
 
 		while (1)
-			LoginStat "/bin/login" PStat logstat!
+			LoginStat "/sys/bin/consolelogin" PStat logstat!
 
 			if (logstat@ iserr)
-				"/bin/login: couldn't stat!" SUserWhy!
+				"/sys/bin/consolelogin: couldn't stat!" SUserWhy!
 				SingleUser
 			end else
 				break
@@ -146,7 +146,7 @@ fn Main { ... -- ret }
 		end
 
 		if (LoginStat Stat_Mode + @ XMASK & 0 ==)
-			"/bin/login: not executable!" SUserWhy!
+			"/sys/bin/consolelogin: not executable!" SUserWhy!
 			1 bad!
 			SingleUser
 		end

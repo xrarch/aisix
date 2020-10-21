@@ -42,6 +42,7 @@ const SYSFCHMOD       38
 const SYSPROCINFO     39
 const SYSNEXTPROCINFO 40
 const SYSGETDEVNAME   41
+const SYSKILL    42
 
 asm "
 
@@ -325,6 +326,12 @@ _getdevname:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSGETDEVNAME
+	sys
+	ret
+
+_kill:
+	mov a1, a0
+	li a0, SYSKILL
 	sys
 	ret
 
@@ -652,4 +659,10 @@ extern _getdevname { buf fd -- ok }
 
 fn GetDeviceName { buf fd -- ok }
 	buf@ fd@ _getdevname ok!
+end
+
+extern _kill { pid -- ok }
+
+fn Kill { pid -- ok }
+	pid@ _kill ok!
 end
