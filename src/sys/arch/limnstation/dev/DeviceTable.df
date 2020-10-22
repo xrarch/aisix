@@ -71,7 +71,7 @@ table DeviceTable
 endtable
 public DeviceTable
 
-fn private CheckDevTable { -- }
+fn CheckDevTable { -- }
 	auto i
 	0 i!
 
@@ -134,7 +134,7 @@ fn private CheckDevTable { -- }
 	end
 end
 
-fn private IterateNode { iter -- }
+fn IterateNode { iter -- }
 	while (iter@)
 		iter@ a3xDevIterate iter!
 			CheckDevTable
