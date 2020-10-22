@@ -1,0 +1,292 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+(* ported to dragonfruit from MINIX 1.5's dhrystone.c *)
+
+const LOOPS 50000
+
+fn Main { ... -- ret }
+	Proc0
+	0 Exit
+end
+
+fn MSTime { -- mstime }
+	auto sec
+	auto ms
+
+	Time ms! sec!
+
+	sec@ 1000 * ms@ + mstime!
+end
+
+struct Record
+	4 PtrComp
+	4 Discr
+	4 EnumComp
+	4 IntComp
+	32 StringComp
+endstruct
+
+var IntGlob 0
+var BoolGlob 0
+var Char1Glob 0
+var Char2Glob 0
+table Array1Glob[51]
+table Array2Glob[4096]
+var PtrGlb 0
+var PtrGlbNext 0
+
+const Ident1 1
+const Ident2 2
+const Ident3 3
+const Ident4 4
+const Ident5 5
+
+buffer String1Loc 32
+buffer String2Loc 32
+
+fn Proc0 { -- }
+	auto intloc1
+	auto intloc2
+	auto intloc3
+	auto enumloc
+	auto charindex
+
+	auto starttime
+	MSTime starttime!
+
+	auto i
+	0 i!
+
+	while (i@ LOOPS <)
+		1 i +=
+	end
+
+	auto nulltime
+	MSTime starttime@ - nulltime!
+
+	Record_SIZEOF Malloc PtrGlbNext!
+	Record_SIZEOF Malloc PtrGlb!
+
+	PtrGlbNext@ PtrGlb@ Record_PtrComp + !
+	Ident1 PtrGlb@ Record_Discr + !
+	Ident3 PtrGlb@ Record_EnumComp + !
+	40 PtrGlb@ Record_IntComp + !
+	PtrGlb@ Record_StringComp + "DHRYSTONE PROGRAM, SOME STRING" strcpy
+	String1Loc "DHRYSTONE PROGRAM, 1'ST STRING" strcpy
+
+	10 [415]Array2Glob!
+
+	MSTime starttime!
+
+	0 i!
+	while (i@ LOOPS <)
+		Proc5 Proc4
+		2 intloc1!
+		3 intloc2!
+		String2Loc "DHRYSTONE PROGRAM, 2'ND STRING" strcpy
+		Ident2 enumloc!
+		String1Loc String2Loc Func2 ~~ BoolGlob!
+
+		while (intloc1@ intloc2@ <)
+			intloc1@ 5 * intloc2@ - intloc3!
+			intloc1@ intloc2@ intloc3@ Proc7 intloc3!
+			1 intloc1 +=
+		end
+
+		Array1Glob Array2Glob intloc1@ intloc3@ Proc8
+		PtrGlb@ Proc1
+
+		'a' charindex!
+		while (charindex@ Char2Glob@ <=)
+			if (charindex@ 'c' Func1 enumloc@ ==)
+				Ident1 enumloc@ Proc6 enumloc!
+			end
+
+			1 charindex +=
+		end
+
+		intloc1@ intloc2@ * intloc3!
+		intloc3@ intloc1@ / intloc2!
+		intloc3@ intloc2@ - 7 * intloc1@ - intloc2!
+
+		intloc1@ Proc2 intloc1!
+
+		1 i +=
+	end
+
+	auto benchtime
+	MSTime starttime@ - nulltime@ - benchtime!
+
+	benchtime@ LOOPS "Dhrystone(df/aisix) time for %d passes = %dms\n" Printf
+
+	LOOPS benchtime@ 1000 / / "This machine benchmarks at %d dhrystones/second\n" Printf
+end
+
+fn Proc1 { ptrparin -- }
+	auto nr
+	ptrparin@ Record_PtrComp + @ nr!
+
+	nr@ PtrGlb@ Record_SIZEOF memcpy
+
+	5 ptrparin@ Record_IntComp + !
+	ptrparin@ Record_IntComp + @ nr@ Record_IntComp + !
+	ptrparin@ Record_PtrComp + @ nr@ Record_PtrComp + !
+	
+	nr@ Record_PtrComp + Proc3
+
+	if (nr@ Record_Discr + @ Ident1 ==)
+		6 nr@ Record_IntComp + !
+		ptrparin@ Record_EnumComp + @ nr@ Record_EnumComp + @ Proc6 nr@ Record_EnumComp + !
+		PtrGlb@ Record_PtrComp + @ nr@ Record_PtrComp + !
+		nr@ Record_IntComp + @ 10 nr@ Record_IntComp + @ Proc7 nr@ Record_IntComp + !
+	end else
+		ptrparin@ nr@ Record_SIZEOF memcpy
+	end
+end
+
+fn Proc2 { intparin -- intparout }
+	intparin@ intparout!
+
+	auto intloc
+	auto enumloc
+
+	intparin@ 10 + intloc!
+
+	while (1)
+		if (Char1Glob@ 'A' ==)
+			1 intloc -=
+			intloc@ IntGlob@ - intparout!
+			Ident1 enumloc!
+		end
+		if (enumloc@ Ident1 ==)
+			break
+		end
+	end
+end
+
+fn Proc3 { ptrparout -- }
+	if (PtrGlb@)
+		PtrGlb@ Record_PtrComp + @ ptrparout@!
+	end else
+		100 IntGlob!
+	end
+
+	auto pg
+	PtrGlb@ Record_IntComp + pg!
+
+	10 IntGlob@ pg@@ Proc7 pg@!
+end
+
+fn Proc4 { -- }
+	auto boolloc
+	Char1Glob@ 'A' == boolloc!
+	BoolGlob@ boolloc |=
+	'B' Char2Glob!
+end
+
+fn Proc5 { -- }
+	'A' Char1Glob!
+	0 BoolGlob!
+end
+
+fn Proc6 { enum1in enum2in -- enum2out }
+	enum1in@ enum2out!
+
+	if (enum1in@ Func3 ~~)
+		Ident4 enum2out!
+	end
+
+	if (enum1in@ Ident1 ==)
+		Ident1 enum2out!
+	end elseif (enum1in@ Ident2 ==)
+		if (IntGlob@ 100 >)
+			Ident1 enum2out!
+		end else
+			Ident4 enum2out!
+		end
+	end elseif (enum1in@ Ident3 ==)
+		Ident2 enum2out!
+	end elseif (enum1in@ Ident5 ==)
+		Ident3 enum2out!
+	end
+end
+
+fn Proc7 { int1 int2 int3in -- int3out }
+	auto intloc
+	int1@ 2 + intloc!
+	int2@ intloc@ + int3out!
+end
+
+fn Proc8 { array1 array2 int1 int2 -- }
+	auto intloc
+	auto intindex
+
+	int1@ 5 + intloc!
+	int2@ intloc@ 4 * array1@ + !
+	intloc@ 4 * array1@ + @ intloc@ 1 + 4 * array1@ + !
+	intloc@ intloc@ 30 + 4 * array1@ + !
+	
+	intloc@ intindex!
+	while (intindex@ intloc@ 1 + <=)
+		intloc@ intloc@ 204 * intindex@ 4 * + array2@ + !
+
+		1 intindex +=
+	end
+
+	1 intloc@ 204 * intloc@ 1 - 4 * + array2@ + +=
+	intloc@ 4 * array1@ + @ intloc@ 20 + 204 * intloc@ + 4 * array2@ + !
+	5 IntGlob!
+end
+
+fn Func1 { char1 char2 -- out }
+	auto charloc1
+	auto charloc2
+
+	char1@ charloc1!
+	charloc1@ charloc2!
+
+	if (charloc1@ char2@ ~=)
+		Ident1 out!
+	end else
+		Ident2 out!
+	end
+end
+
+fn Func2 { str1 str2 -- bool }
+	auto intloc
+	auto charloc
+
+	1 intloc!
+	while (intloc@ 1 <=)
+		if (str1@ intloc@ + gb str2@ intloc@ + 1 + gb Func1 Ident1 ==)
+			'A' charloc!
+			1 intloc +=
+		end
+	end
+
+	if (charloc@ 'W' >= charloc@ 'Z' <= &&)
+		7 intloc!
+	end
+	if (charloc@ 'X' ==)
+		1 bool!
+	end else
+		if (str1@ str2@ strcmp ~~) (* XXX this comparison is actually >0 in the original source but our strcmp doesnt do that *)
+			1 bool!
+			7 intloc +=
+		end else
+			0 bool!
+		end
+	end
+end
+
+fn Func3 { enum -- bool }
+	auto enumloc
+
+	enum@ enumloc!
+	if (enumloc@ Ident3 ==)
+		1 bool!
+	end else
+		0 bool!
+	end
+end
