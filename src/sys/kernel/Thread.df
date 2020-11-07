@@ -20,8 +20,6 @@ public InitProcess
 var IdleThread 0
 public IdleThread
 
-var TryNextThread 0
-
 const KERNELPID 1
 
 extern AISIXInitialThread { -- }
