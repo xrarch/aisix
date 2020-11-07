@@ -198,6 +198,8 @@ fn VNodeNew { vnid mount -- vnode }
 			"VNodeNew: VNodeRemove\n" Panic
 		end
 
+		(* XXX this isn't necessary but it reduces heap fragmentation and
+		is a net performance gain at the time of writing *)
 		vnode@ Free
 		VNode_SIZEOF Calloc vnode!
 
