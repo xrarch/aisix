@@ -10,6 +10,7 @@ endtable
 extern PlatformHalt { mode -- }
 
 var Halting 0
+public Halting
 
 fn Halt { haltmode -- ok }
 	auto p

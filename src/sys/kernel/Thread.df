@@ -128,14 +128,10 @@ fn ThreadKill { thread -- }
 	auto thst
 	thread@ Thread_Status + @ thst!
 
-	auto notnow
-	0 notnow!
+	auto killnow
+	thread@ Thread_InKernel + @ ~~ killnow!
 
-	if (thread@ Thread_InKernel + @)
-		1 notnow!
-	end
-
-	if (notnow@ ~~)
+	if (killnow@)
 		thread@ ThreadFree
 
 		auto process
@@ -179,7 +175,9 @@ fn ThreadKill { thread -- }
 		1 thread@ Thread_Killed + !
 
 		if (thread@ CurrentThread@ ~=)
-			TS_READY thread@ Thread_Status + !
+			if (thread@ Thread_Status + @ TS_EVENT_UNINTERRUPTIBLE ~=)
+				TS_READY thread@ Thread_Status + !
+			end
 		end
 	end
 

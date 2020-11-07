@@ -223,12 +223,7 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 		seek@ DKSPortA DCitronOutl
 		DKSCmdRead DKSCmdPort DCitronCommandASync
 
-		if (DKSQueue WaitQueue)
-			rs@ InterruptRestore
-			UnlockDKS
-			-EINTR blocks!
-			return
-		end
+		DKSQueue WaitQueueUninterruptible
 
 		rs@ InterruptRestore
 
