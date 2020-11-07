@@ -60,6 +60,8 @@ end
 extern GetSym { pc -- symbase symname }
 
 fn HeapDumpBlock { ept -- }
+	ept@ "\tptr: 0x%x\n" Printf
+
 	auto size
 	ept@ KHeapHeader_size + @ size!
 
@@ -81,14 +83,21 @@ fn HeapDumpBlock { ept -- }
 	auto ab
 	ept@ KHeapHeader_allocby + @ ab!
 
-	ept@ "\tptr: 0x%x\n" Printf
 	size@ "\tsize: %d bytes\n" Printf
 	asz@ "\treal size: %d bytes\n" Printf
 	last@ "\tlast: 0x%x\n" Printf
 	next@ "\tnext: 0x%x\n" Printf
 	alloc@ "\tallocated: %d\n" Printf
 	magic@ "\tmagic: %x\n" Printf
-	ab@ GetSym swap drop "\tallocby: <%s>\n" Printf
+
+	auto symname
+	ab@ GetSym swap drop symname!
+
+	if (symname@ ~~)
+		"UNKNOWN" symname!
+	end
+
+	symname@ "\tallocby: <%s>\n" Printf
 end
 
 fn HeapDump { -- }

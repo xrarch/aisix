@@ -384,6 +384,10 @@ fn CloseP { filp -- ok }
 		rs@ InterruptRestore
 
 		if (vd@)
+			if (vd@ VDirent_Cookie + @)
+				vd@ VDirent_Cookie + @ Free
+			end
+
 			vd@ Free
 		end
 	end else
@@ -508,6 +512,9 @@ fn ReadDir { dirent fd -- ok }
 		rs@ InterruptRestore
 
 		if (ok@ iserr)
+			if (dirent@ VDirent_Cookie + @)
+				dirent@ VDirent_Cookie + @ Free
+			end
 			0 filp@ FileP_VDirent + !
 			vd@ Free
 			return
@@ -523,11 +530,6 @@ fn ReadDir { dirent fd -- ok }
 	end
 
 	dirent@ Dirent_Name + vd@ VDirent_Name + @ 255 strncpy
-
-	if (vd@ VDirent_Cookie + @)
-		vd@ VDirent_Cookie + @ Free
-		0 vd@ VDirent_Cookie + !
-	end
 end
 
 fn VStat { stat vnode -- ok }

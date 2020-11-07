@@ -475,7 +475,14 @@ fn BMap { bn reading vnode -- buf }
 	auto bm
 	vd@ AVData_BNCache + @ bm!
 
-	if (bn@ 16 >= bm@ ||)
+	auto minm
+	16 minm!
+
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		2 minm!
+	end
+
+	if (bn@ minm@ >= bm@ ||)
 		if (bm@ ~~)
 			vnode@ AllocFATCache bm!
 
@@ -1267,6 +1274,22 @@ fn (FSRewindDir) AISIXFSRewindDir { dirent -- ok }
 	0 ok!
 
 	0 dirent@ VDirent_Index + !
+
+	if (dirent@ VDirent_Cookie + @)
+		dirent@ VDirent_Cookie + @ Free
+		0 dirent@ VDirent_Cookie + !
+	end
+
+	auto name
+	64 Calloc name!
+
+	if (name@ iserr)
+		name@ ok!
+		return
+	end
+
+	name@ dirent@ VDirent_Cookie + !
+	name@ dirent@ VDirent_Name + !
 end
 
 fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
@@ -1283,7 +1306,7 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 	0 buf!
 
 	if (index@ 4096 %)
-		index@ 4096 / 0 dirvn@ BMap buf!
+		index@ 4096 / 1 dirvn@ BMap buf!
 
 		if (buf@ iserr)
 			buf@ ok!
@@ -1314,13 +1337,9 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 			ent@ DirEnt_INum + @ dirent@ VDirent_VNID + !
 
 			auto name
-			60 Calloc name!
+			dirent@ VDirent_Name + @ name!
 
 			name@ ent@ DirEnt_name + 59 strncpy
-
-			name@ dirent@ VDirent_Name + !
-
-			name@ dirent@ VDirent_Cookie + !
 
 			buf@ brelse
 

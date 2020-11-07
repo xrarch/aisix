@@ -297,6 +297,9 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			if (ok@ VNODE_DIR ~=)
 				vnode@ VNodePut
 				pcomp@ Free
+				if (dirent@ VDirent_Cookie + @)
+					dirent@ VDirent_Cookie + @ Free
+				end
 				dirent@ Free
 				-ENOTDIR vnode!
 				return
@@ -311,6 +314,9 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			1 sook!
 			(* finished *)
 			pcomp@ name!
+			if (dirent@ VDirent_Cookie + @)
+				dirent@ VDirent_Cookie + @ Free
+			end
 			dirent@ Free
 			return
 		end
@@ -320,6 +326,9 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 		if (pr@ iserr)
 			vnode@ VNodePut
 			pcomp@ Free
+			if (dirent@ VDirent_Cookie + @)
+				dirent@ VDirent_Cookie + @ Free
+			end
 			dirent@ Free
 			pr@ vnode!
 			return
@@ -375,6 +384,10 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 
 					if (vnode@ iserr)
 						pcomp@ Free
+
+						if (dirent@ VDirent_Cookie + @)
+							dirent@ VDirent_Cookie + @ Free
+						end
 						dirent@ Free
 						return
 					end
@@ -395,6 +408,10 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 
 				if (vnode@ iserr)
 					pcomp@ Free
+
+					if (dirent@ VDirent_Cookie + @)
+						dirent@ VDirent_Cookie + @ Free
+					end
 					dirent@ Free
 					return
 				end
@@ -410,17 +427,15 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 		if (ok@ iserr)
 			vnode@ VNodePut
 			pcomp@ Free
+			if (dirent@ VDirent_Cookie + @)
+				dirent@ VDirent_Cookie + @ Free
+			end
 			dirent@ Free
 			ok@ vnode!
 			return
 		end
 
 		while (1)
-			if (dirent@ VDirent_Cookie + @)
-				dirent@ VDirent_Cookie + @ Free
-				0 dirent@ VDirent_Cookie + !
-			end
-
 			dirent@ fs@ Filesystem_ReadDir + @ FSReadDir ok!
 
 			if (ok@ iserr)
@@ -430,6 +445,9 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 
 				vnode@ dirvnode!
 				pcomp@ name!
+				if (dirent@ VDirent_Cookie + @)
+					dirent@ VDirent_Cookie + @ Free
+				end
 				dirent@ Free
 				ok@ vnode!
 				return
@@ -444,26 +462,20 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 
 				dirent@ VDirent_VNID + @ mount@ VNodeGet ok!
 
-				if (dirent@ VDirent_Cookie + @)
-					dirent@ VDirent_Cookie + @ Free
-					0 dirent@ VDirent_Cookie + !
-				end
-
 				ok@ vnode!
 
 				if (ok@ iserr)
 					pcomp@ Free
+
+					if (dirent@ VDirent_Cookie + @)
+						dirent@ VDirent_Cookie + @ Free
+					end
 					dirent@ Free
 					return
 				end
 
 				break
 			end
-		end
-
-		if (dirent@ VDirent_Cookie + @)
-			dirent@ VDirent_Cookie + @ Free
-			0 dirent@ VDirent_Cookie + !
 		end
 
 		if (vnode@ VNode_CoveredBy + @)
@@ -482,6 +494,10 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			if (vnode@ VNodeLock)
 				-EINTR vnode!
 				pcomp@ Free
+
+				if (dirent@ VDirent_Cookie + @)
+					dirent@ VDirent_Cookie + @ Free
+				end
 				dirent@ Free
 				return
 			end

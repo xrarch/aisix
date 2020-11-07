@@ -198,7 +198,17 @@ fn VNodeNew { vnid mount -- vnode }
 			"VNodeNew: VNodeRemove\n" Panic
 		end
 
-		vnode@ VNode_SIZEOF 0 memset
+		vnode@ Free
+		VNode_SIZEOF Calloc vnode!
+
+		if (vnode@ iserr)
+			if (vl@)
+				UnlockVCache
+			end
+			return
+		end
+
+		vnode@ [ln@]VNodeCache!
 
 		ln@ vnode@ VNode_Index + !
 
