@@ -6,6 +6,12 @@ fn Main { ... -- ret }
 		"shutdown: must be root!\n" Abort
 	end
 
+	Sync ret!
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "shutdown: sync error: %s\n" STDERR FPrintf
+	end
+
 	HALT_SHUTDOWN Halt ret!
 
 	if (ret@ iserr)

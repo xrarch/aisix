@@ -6,6 +6,12 @@ fn Main { ... -- ret }
 		"reboot: must be root!\n" Abort
 	end
 
+	Sync ret!
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "reboot: sync error: %s\n" STDERR FPrintf
+	end
+
 	HALT_REBOOT Halt ret!
 
 	if (ret@ iserr)
