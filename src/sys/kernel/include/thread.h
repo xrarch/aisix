@@ -23,6 +23,8 @@ struct Thread
 
 	4 Killed
 
+	4 CleaningUp
+
 	THREADNAMELEN Name
 endstruct
 

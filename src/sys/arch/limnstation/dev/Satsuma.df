@@ -195,7 +195,7 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 	end
 
 	if (seek@ dks@ DKS_Blocks + @ >=)
-		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
+		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Panic
 		-EIO blocks!
 		return
 	end
@@ -250,7 +250,7 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 	end
 	
 	if (seek@ dks@ DKS_Blocks + @ >=)
-		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Printf
+		dks@ DKS_Blocks + @ seek@ dks@ DKS_Name + @ "%s: seek=%d > size=%d\n" Panic
 		-EIO blocks!
 		return
 	end

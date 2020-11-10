@@ -403,7 +403,9 @@ fn WaitQueue1 { evq status -- killed }
 	auto rs
 	InterruptDisable rs!
 
-	if (CurrentThread@ Thread_Killed + @)
+	if (CurrentThread@ Thread_CleaningUp + @)
+		TS_EVENT_UNINTERRUPTIBLE status!
+	end elseif (CurrentThread@ Thread_Killed + @)
 		if (status@ TS_EVENT_UNINTERRUPTIBLE ~=)
 			rs@ InterruptRestore
 			1 killed!
@@ -433,6 +435,10 @@ fn WaitQueue1 { evq status -- killed }
 	0 CurrentThread@ Thread_EvQ + !
 
 	CurrentThread@ Thread_Killed + @ killed!
+
+	if (CurrentThread@ Thread_CleaningUp + @)
+		0 killed!
+	end
 
 	rs@ InterruptRestore
 end
@@ -799,6 +805,9 @@ fn ProcessKill { ret process -- }
 
 		rs@ InterruptRestore
 
+		(* allows us to lock mutexes and stuff even if we are dead, for the purpose of cleanup *)
+		1 CurrentThread@ Thread_CleaningUp + !
+
 		process@ ReparentChildren
 
 		process@ Process_CWDVNode + @ VNodeUnref
@@ -839,6 +848,8 @@ fn ProcessKill { ret process -- }
 		parent@ Process_WaitQ + WakeQueue
 
 		parent@ ParentUnlock
+
+		0 CurrentThread@ Thread_CleaningUp + !
 	end else
 		rs@ InterruptRestore
 	end

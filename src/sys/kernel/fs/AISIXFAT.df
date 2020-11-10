@@ -553,6 +553,15 @@ fn BMap { bn reading vnode -- buf }
 		end
 	end else
 		vd@ AVData_Entry + @ bn@ reading@ vnode@ 0 WalkFAT bno!
+
+		if (bno@ iserr)
+			if (needslocked@)
+				vnode@ VNodeUnlock
+			end
+
+			bno@ buf!
+			return
+		end
 	end
 
 	if (bno@ 0 ==)
@@ -1094,7 +1103,8 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	block@ mount@ Mount_Device + @ bread buf!
 
 	if (buf@ iserr)
-		"afs: bad\n" Printf
+		buf@ abs inode!
+		[inode@]ErrorNames@ "afs: bad: %s\n" Panic
 		buf@ ok!
 		return
 	end

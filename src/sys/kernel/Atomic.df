@@ -31,7 +31,9 @@ extern GetSym { pc -- symbase symname }
 
 fn LockMutex1 { mutex uninterruptible caller -- killed }
 	if (CurrentThread@)
-		if (CurrentThread@ Thread_Killed + @)
+		if (CurrentThread@ Thread_CleaningUp + @)
+			1 uninterruptible!
+		end elseif (CurrentThread@ Thread_Killed + @)
 			if (uninterruptible@ ~~)
 				1 killed!
 				return
