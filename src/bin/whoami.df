@@ -106,7 +106,15 @@ fn UserByUID { uid -- name }
 	while (fd@ GetLine)
 		NameBuf 63 ParseField
 
+		if (NameBuf gb 0 ==)
+			continue
+		end
+
 		TBuf 63 ParseField
+
+		if (TBuf gb 0 ==)
+			continue
+		end
 
 		if (TBuf atoi uid@ ==)
 			NameBuf name!
