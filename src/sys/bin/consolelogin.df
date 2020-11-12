@@ -208,6 +208,11 @@ fn GetLine { fd -- more }
 end
 
 fn ParseField { field m -- }
+	if (LBP@ ~~)
+		0 field@ sb
+		return
+	end
+
 	LBP@ field@ ':' m@ strntok LBP!
 end
 

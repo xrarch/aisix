@@ -242,9 +242,11 @@ fn Panic { ... fmt -- }
 
 	0 PlatformAlertUser
 
-	"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" Puts
+	if (ConsUseVid@)
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\[[41m\[c" Puts
+	end
 
-	"\[[41m\[c!!! AISIX PANIC !!!\n" Printf
+	"!!! AISIX PANIC !!!\n" Printf
 
 	if (TraceTF@ ~~)
 		pointerof Panic PanicLink@ Trace

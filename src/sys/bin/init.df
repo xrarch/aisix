@@ -79,6 +79,11 @@ fn GetLine { fd -- more }
 end
 
 fn ParseField { field m -- }
+	if (LBP@ ~~)
+		0 field@ sb
+		return
+	end
+
 	LBP@ field@ ':' m@ strntok LBP!
 end
 
@@ -187,7 +192,16 @@ fn Main { ... -- ret }
 		Terms@ Terminal_SIZEOF * Terminals + tty!
 
 		tty@ Terminal_DevName + 63 ParseField
+
+		if (tty@ Terminal_DevName + gb 0 ==)
+			continue
+		end
+
 		tty@ Terminal_ManagerProgram + 127 ParseField
+
+		if (tty@ Terminal_ManagerProgram + gb 0 ==)
+			continue
+		end
 
 		1 Terms +=
 	end
@@ -243,7 +257,7 @@ fn Main { ... -- ret }
 		end
 	end
 
-	"no managed lines, or all failed" SUserWhy!
+	"no managed lines, or all failed\n\nStrike ^D to reboot." SUserWhy!
 	SingleUser
 
 	HALT_REBOOT Halt drop
