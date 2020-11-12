@@ -945,6 +945,10 @@ fn VFSSyncWorker { -- }
 			"sync thread killed in its sleep\n" Panic
 		end
 
+		if (Halting@) (* die if system is shutting down *)
+			ThreadExit
+		end
+
 		auto ok
 		VFSSync ok!
 

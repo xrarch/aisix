@@ -45,6 +45,11 @@ fn Halt { haltmode -- ok }
 		return
 	end
 
+	0 p@ Process_Exited + !
+	0 CurrentThread@ Thread_Killed + !
+
+	TTYI_IGN CurrentThread@ Thread_Process + @ Process_IgnoreTTY + !
+
 	1 Halting!
 
 	rs@ InterruptRestore
@@ -55,6 +60,7 @@ fn Halt { haltmode -- ok }
 
 	InterruptDisable rs!
 
+	(* suspend init, unless we're init *)
 	if (p@ InitProcess@ ~=)
 		TS_SUSPEND InitProcess@ Process_MainThread + @ Thread_Status + !
 	end
@@ -107,8 +113,8 @@ fn Halt { haltmode -- ok }
 		[i@]Threads@ thread!
 
 		if (thread@)
-			if (thread@ CurrentThread@ ~=)
-				if (thread@ KernelProcess@ Process_MainThread + @ ~=) (* keep the idle thread around *)
+			if (thread@ CurrentThread@ ~=) (* don't suspend ourselves *)
+				if (thread@ Thread_Process + @ KernelProcess@ ~=) (* keep the kernel threads around *)
 					TS_SUSPEND thread@ Thread_Status + !
 				end
 			end

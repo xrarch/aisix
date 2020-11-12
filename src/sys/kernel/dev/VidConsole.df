@@ -219,6 +219,11 @@ end
 
 fn VConsPump { sleep buf -- ok }
 	while (1)
+		if (sleep@ Halting@ &&)
+			0 ok!
+			return
+		end
+
 		auto c
 		buf@ sleep@ IOBufGetc c!
 
@@ -240,6 +245,10 @@ fn VConsWorker { -- }
 	auto ok
 
 	1 VConsOBuffer@ VConsPump ok!
+
+	if (ok@ 0 ==) (* die if system is shutting down *)
+		ThreadExit
+	end
 
 	ok@ abs ok!
 	[ok@]ErrorNames "vcons worker: %s\n" Panic
