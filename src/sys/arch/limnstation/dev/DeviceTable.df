@@ -145,7 +145,6 @@ fn IterateNode { iter -- }
 end
 
 fn DeviceTree { -- }
-
 	"DEVICE INFO" "DEVICE MODEL" "\[[40m\[[97m %20s   %30s \[[0m\n" BootPrintf
 
 	"/platform" a3xDeviceSelect

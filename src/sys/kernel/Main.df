@@ -26,15 +26,17 @@ fn AISIX { ksz args -- ret }
 
 	KLogInit
 
-	"\[[33mAISIX is preparing your system\[[0m\n" Printf
+	if (TriviaSwitch@ ~~)
+		"\[[33mAISIX is preparing your system\[[0m\n" Printf
+	end else
+		ksz@ TriviaTable
+	end
 
 	PlatformInit
 
 	BlockInit
 
 	ThreadInit
-
-	ksz@ TriviaTable
 
 	Scheduler
 
@@ -68,8 +70,6 @@ fn AISIXInitialThread { -- }
 	SelectConsole
 
 	VFSMountRoot
-
-	'\n' Putc
 
 	auto vnode
 	"/sys/bin/init" VFSPath vnode!

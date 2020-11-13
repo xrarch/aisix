@@ -36,7 +36,7 @@ fn Main { ksz args -- ret }
 
 	InterruptDisable drop
 
-	(* manually clear BSS section, because fileloader only loads flat files,
+	(* manually clear BSS section, because sash only loads flat files,
 	and while the linker lets us spit out flat binary files with the BSS section
 	trimmed out rather than converted to a massive block of zeroes on disk,
 	it does mean we have to clear it ourselves. *)

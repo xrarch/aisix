@@ -34,10 +34,10 @@ fn GetBootFile { -- }
 
 	if (ab@ ~~)
 		"/nvram" a3xDeviceSelect
-			"load-file" "getVar" a3xDCallMethod drop drop drop ab!
+			"sash,load-file" "getVar" a3xDCallMethod drop drop drop ab!
 
 			if (ab@ 0 ==)
-				"/sys/aisix.A3X" "load-file" "setVar" a3xDCallMethod drop drop drop drop
+				"/sys/aisix.A3X" "sash,load-file" "setVar" a3xDCallMethod drop drop drop drop
 
 				"/sys/aisix.A3X" ab!
 			end
@@ -130,9 +130,11 @@ fn Main { args -- ret }
 	a3xDeviceExit
 
 	if (TotalRAM@ LoadBase <)
-		LoadBase 1024 / "fileloader: I refuse to run with less than %dKB of RAM.\n" Printf
+		LoadBase 1024 / "sash: I refuse to run with less than %dKB of RAM.\n" Printf
 		-1 a3xReturn
 	end
+
+	"sash - standalone shell\n" Printf
 
 	GetBootDrive
 
@@ -154,7 +156,7 @@ fn Main { args -- ret }
 			end
 
 			if (vs@ ~~)
-				BootPath@ "load-file = %s\n" Printf
+				BootPath@ "sash,load-file = %s\n" Printf
 
 				args@ BootFile@ RunKernel ret!
 			end
@@ -238,7 +240,6 @@ fn DoFile { arg buf -- ret }
 		(* this bootloader uses the same protocol as a3x but just with file size added *)
 		(* also the base is 0x80000 instead of 0x40000 *)
 
-
 		sz@ a3xCIPtr@ IDiskBD@ arg@ LoadBase 4 + @ StandaloneEntry ret!
 
 		"\[[0m" Printf
@@ -259,9 +260,7 @@ fn Prompt { -- ret }
 	auto word
 	256 Calloc word!
 
-	if (Mounted@)
-		"/" AFSPrintList
-	end
+	'\n' Putc
 
 	"Type the name of a standalone program. OR,
  'exit' to return to the BIOS,
@@ -317,7 +316,7 @@ fn Prompt { -- ret }
 end
 
 fn Panic { ... fmt -- }
-	"panic: " Printf
+	"sash: panic: " Printf
 
 	argv argc@ fmt@ VPrintf
 

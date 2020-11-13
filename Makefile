@@ -14,7 +14,7 @@ else
 	OFFSET     := 0
 endif
 
-FILELOADER_DIR := src/sa/fileloader
+SASH_DIR       := src/sa/sash
 DIAG_DIR       := src/sa/diag
 LIMNVOL_DIR    := src/sa/limnvol
 CMD_DIR        := src/bin
@@ -66,9 +66,9 @@ limnvol:
 	$(FSTOOL) w /sa/limnvol.A3X $(LIMNVOL_DIR)/limnvol.a3x
 
 bootable:
-	make --directory=$(FILELOADER_DIR)
-	dd if=$(FILELOADER_DIR)/BootSector.bin of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
-	dd if=$(FILELOADER_DIR)/loader.a3x of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((2 + $(OFFSET))) 2>/dev/null
+	make --directory=$(SASH_DIR)
+	dd if=$(SASH_DIR)/BootSector.bin of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
+	dd if=$(SASH_DIR)/sash.a3x of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((2 + $(OFFSET))) 2>/dev/null
 
 sysfiles:
 	$(FSTOOL) w /sys/motd.txt ./src/sys/motd.txt

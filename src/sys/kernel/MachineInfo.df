@@ -35,22 +35,18 @@ externptr KHeapSize
 externptr KHeapStart
 
 fn TriviaTable { ksz -- }
-	if (TriviaSwitch@ ~~)
-		return
-	end
-
 	"CONTENT" "KERNEL INFO" "\[[40m\[[97m %20s   %30s \[[0m\n" Printf
 
 	"Machine" MachineType@ Trivia
 	"CPU" MachineCPU@ Trivia
-	"Bus" MachineBus@ Trivia
+	(* "Bus" MachineBus@ Trivia *)
 	"Available RAM" MachineRAMSize@ TriviaD
-	"RAM address" MachineRAMBase@ TriviaX
+	(* "RAM address" MachineRAMBase@ TriviaX *)
 	"Block buffers" NBUF TriviaD
 	"Max processes" PROCMAX TriviaD
 	"Max threads" THREADMAX TriviaD
-	"Heap size" KHeapSize@ TriviaD
-	"Heap address" KHeapStart@ TriviaX
+	(* "Heap size" KHeapSize@ TriviaD *)
+	(* "Heap address" KHeapStart@ TriviaX *)
 	"Kernel image size" ksz@ TriviaD
 
 	'\n' Putc

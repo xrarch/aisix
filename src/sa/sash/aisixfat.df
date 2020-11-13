@@ -60,12 +60,12 @@ fn AFSMount { -- success }
 	AFSSuperblockNumber AFSSuperblockCache IReadBlock
 
 	if (AFSSuperblockCache AFSSuperblock_Magic + @ AFSSuperblockMagic ~=)
-		"fileloader: invalid superblock\n" Printf
+		"sash: invalid superblock\n" Printf
 		return
 	end
 
 	if (AFSSuperblockCache AFSSuperblock_Version + @ AFSSuperblockVersion ~=)
-		"fileloader: bad version on superblock\n" Printf
+		"sash: bad version on superblock\n" Printf
 		return
 	end
 
