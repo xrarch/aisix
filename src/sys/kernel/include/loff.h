@@ -28,7 +28,7 @@ struct LOFFSymbol
 	4 Value
 endstruct
 
-const LOFFMagic 0x4C4F4632
+const LOFFMagic 0x4C4F4633
 const LOFFArch 2
 
 const LOFFGLOBAL 1
