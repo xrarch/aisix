@@ -129,6 +129,9 @@ fn DrvSerialFoundNode { node -- }
 
 	tty@ sdev@ Device_TTY + !
 
+	80 tty@ TTY_Width + !
+	25 tty@ TTY_Height + !
+
 	1 SerialFound +=
 end
 
@@ -144,8 +147,10 @@ fn (DevClose) SerialClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIOCtl) SerialIOCtl { op1 op2 op3 op4 unit -- ok }
-	-ENOTBLK ok!
+fn (DevIOCtl) SerialIOCtl { pm op1 op2 op3 op4 unit -- ok }
+	pm@ op1@ op2@ op3@ op4@
+	unit@ SerialPort_SIZEOF * SerialPorts + SerialPort_TTY + @
+	TTYIOCtl ok!
 end
 
 fn (DevRead) SerialRead { pm buf len unit seek -- bytes }

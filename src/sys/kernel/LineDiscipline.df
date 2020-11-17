@@ -43,7 +43,7 @@ table TTYCtrl
 	' '
 endtable
 
-fn TTYRubout { ib ob -- ro }
+fn TTYRubout { ib ob echo -- ro }
 	auto c
 	ib@ IOBufRubout c!
 
@@ -66,23 +66,25 @@ fn TTYRubout { ib ob -- ro }
 
 	1 ro!
 
-	if (c@ MAXPRINT >)
-		return
-	end
+	if (echo@)
+		if (c@ MAXPRINT >)
+			return
+		end
 
-	auto rt
-	1 rt!
+		auto rt
+		1 rt!
 
-	if (c@ 0x20 <)
-		2 rt!
-	end
+		if (c@ 0x20 <)
+			2 rt!
+		end
 
-	while (rt@)
-		'\b' ob@ 0 IOBufPutc drop
-		' ' ob@ 0 IOBufPutc drop
-		'\b' ob@ 0 IOBufPutc drop
+		while (rt@)
+			'\b' ob@ 0 IOBufPutc drop
+			' ' ob@ 0 IOBufPutc drop
+			'\b' ob@ 0 IOBufPutc drop
 
-		1 rt -=
+			1 rt -=
+		end
 	end
 end
 
@@ -97,28 +99,36 @@ fn (IOCharInput) TTYInput { c buf -- }
 	auto ob
 	tty@ TTY_OBuffer + @ ob!
 
+	auto mode
+	tty@ TTY_Mode + @ mode!
+
+	auto noecho
+	mode@ TTY_MODE_NOECHO & noecho!
+
 	if (ob@ 0 ==)
 		return
 	end
 
 	if (c@ '\b' ==)
-		buf@ ob@ TTYRubout drop
+		buf@ ob@ noecho@ ~~ TTYRubout drop
 	end elseif (c@ 21 ==) (* ^U *)
-		while (buf@ ob@ TTYRubout) end
+		while (buf@ ob@ noecho@ ~~ TTYRubout) end
 	end else
 		if (c@ buf@ 0 IOBufPutc 1 ==)
 			if (c@ MAXPRINT >)
 				return
 			end
 
-			if (c@ '\n' ==)
-				c@ ob@ 0 IOBufPutc drop
-				return
-			end
-
 			if (c@ 0x20 <)
-				'^' ob@ 0 IOBufPutc drop
-				[c@]TTYCtrl@ ob@ 0 IOBufPutc drop
+				if (noecho@ ~~)
+					if (c@ '\n' ==)
+						c@ ob@ 0 IOBufPutc drop
+						return
+					end
+
+					'^' ob@ 0 IOBufPutc drop
+					[c@]TTYCtrl@ ob@ 0 IOBufPutc drop
+				end
 
 				if (c@ 3 ==)
 					(* defer to scheduler to avoid killing the process we might have interrupted *)
@@ -126,7 +136,7 @@ fn (IOCharInput) TTYInput { c buf -- }
 					scheduling frequency but you never know i guess *)
 					tty@ TTYKill!
 				end
-			end else
+			end elseif (noecho@ ~~)
 				c@ ob@ 0 IOBufPutc drop
 			end
 		end
@@ -249,5 +259,45 @@ fn TTYWrite { pm buf len tty -- bytes }
 		1 pa +=
 		1 buf +=
 		1 bytes +=
+	end
+end
+
+fn TTYIOCtl { pm op1 op2 op3 op4 tty -- ok }
+	auto kinfo
+
+	if (op1@ TTY_IOCTL_INFO ==)
+		TTYInfo_SIZEOF Calloc kinfo!
+
+		if (kinfo@ iserr)
+			kinfo@ ok!
+			return
+		end
+
+		tty@ TTY_Width + @ kinfo@ TTYInfo_Width + !
+		tty@ TTY_Height + @ kinfo@ TTYInfo_Height + !
+		tty@ TTY_Mode + @ kinfo@ TTYInfo_Mode + !
+
+		pm@ op2@ kinfo@ TTYInfo_SIZEOF VMCopyout ok!
+
+		kinfo@ Free
+	end elseif (op1@ TTY_IOCTL_SET ==)
+		TTYInfo_SIZEOF Calloc kinfo!
+
+		if (kinfo@ iserr)
+			kinfo@ ok!
+			return
+		end
+
+		pm@ kinfo@ op2@ TTYInfo_SIZEOF VMCopyin ok!
+
+		if (ok@ iserr)
+			return
+		end
+
+		kinfo@ TTYInfo_Mode + @ tty@ TTY_Mode + !
+
+		kinfo@ Free
+	end else
+		-ENOTBLK ok!
 	end
 end

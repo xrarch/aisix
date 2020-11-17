@@ -1,6 +1,8 @@
 #include "<df>/dragonfruit.h"
 #include "<ll>/rtaisix/aisix.h"
 
+buffer TTYInfoBuf TTYInfo_SIZEOF
+
 fn Main { ... -- ret }
 	0 ret!
 
@@ -13,22 +15,38 @@ fn Main { ... -- ret }
 
 	auto stdio
 	tty@ O_READ Open stdio!
-	if (stdio@ 0 ~=)
+	if (stdio@ STDIN ~=)
 		1 Exit
 	end
 
 	tty@ O_WRITE Open stdio!
-	if (stdio@ 1 ~=)
+	if (stdio@ STDOUT ~=)
 		1 Exit
 	end
 
 	tty@ O_WRITE Open stdio!
-	if (stdio@ 2 ~=)
+	if (stdio@ STDERR ~=)
 		1 Exit
 	end
 
 	if (stdio@ 0 FChown iserr)
-		1 Exit
+		tty@ "launchtty: couldn't chown %s for root\n" Abort
+	end
+
+	TTY_IOCTL_INFO TTYInfoBuf 0 0 STDOUT IOCtl ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "launchtty: couldn't get tty info: %s\n" Abort
+	end
+
+	0 TTYInfoBuf TTYInfo_Mode + !
+
+	TTY_IOCTL_SET TTYInfoBuf 0 0 STDOUT IOCtl ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "launchtty: couldn't reset tty: %s\n" Abort
 	end
 
 	'\n' Putc

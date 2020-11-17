@@ -672,9 +672,6 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 	auto tot
 	0 tot!
 
-	auto ntot
-	4096 ntot!
-
 	auto r
 
 	while (tot@ len@ <)

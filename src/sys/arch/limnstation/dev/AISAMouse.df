@@ -68,7 +68,7 @@ fn (DevClose) MouseClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIOCtl) MouseIOCtl { op1 op2 op3 op4 unit -- ok }
+fn (DevIOCtl) MouseIOCtl { pm op1 op2 op3 op4 unit -- ok }
 	-ENOTBLK ok!
 end
 

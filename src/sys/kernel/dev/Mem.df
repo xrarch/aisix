@@ -25,7 +25,7 @@ fn (DevClose) MemClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIOCtl) MemIOCtl { op1 op2 op3 op4 unit -- ok }
+fn (DevIOCtl) MemIOCtl { pm op1 op2 op3 op4 unit -- ok }
 	-ENOTBLK ok!
 end
 

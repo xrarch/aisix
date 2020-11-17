@@ -145,8 +145,8 @@ fn (DevClose) VConsClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIOCtl) VConsIOCtl { op1 op2 op3 op4 unit -- ok }
-	-ENOTBLK ok!
+fn (DevIOCtl) VConsIOCtl { pm op1 op2 op3 op4 unit -- ok }
+	pm@ op1@ op2@ op3@ op4@ VConsTTY@ TTYIOCtl ok!
 end
 
 fn (DevRead) VConsRead { pm buf len unit seek -- bytes }
@@ -212,6 +212,9 @@ fn VConsInit { -- }
 			VConsTTY@ abs VConsTTY!
 			[VConsTTY@]ErrorNames@ "couldn't allocate VConsTTY: %s\n" Panic
 		end
+
+		GCWidth@ VConsTTY@ TTY_Width + !
+		GCHeight@ VConsTTY@ TTY_Height + !
 
 		VConsTTY@ vdev@ Device_TTY + !
 	end

@@ -71,7 +71,7 @@ fn (DevClose) KeybdClose { unit -- ok }
 	0 ok!
 end
 
-fn (DevIOCtl) KeybdIOCtl { op1 op2 op3 op4 unit -- ok }
+fn (DevIOCtl) KeybdIOCtl { pm op1 op2 op3 op4 unit -- ok }
 	-ENOTBLK ok!
 end
 

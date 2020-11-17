@@ -109,6 +109,19 @@ const HALT_REBOOT 2
 
 extern RealPath { path -- canon }
 
+const TTY_MODE_RAW 1
+const TTY_MODE_NOECHO 2
+
+const TTY_IOCTL_INFO 1
+const TTY_IOCTL_SET 2
+
+struct TTYInfo
+	4 Width
+	4 Height
+	4 Mode
+	48 Reserved
+endstruct
+
 struct Stat
 	4 Mode
 	4 UID

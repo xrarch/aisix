@@ -127,7 +127,8 @@ fn DeviceWrite { pm buf len seek dev -- bytes }
 	dev@ Device_Driver + @ Driver_Write + @ DevWrite bytes!
 end
 
-fn DeviceIOCtl { op1 op2 op3 op4 dev -- ok }
+fn DeviceIOCtl { pm op1 op2 op3 op4 dev -- ok }
+	pm@
 	op1@
 	op2@
 	op3@

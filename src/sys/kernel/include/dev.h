@@ -15,7 +15,7 @@ fnptr DevOpen { unit -- ok }
 
 fnptr DevClose { unit -- ok }
 
-fnptr DevIOCtl { op1 op2 op3 op4 unit -- ok }
+fnptr DevIOCtl { pm op1 op2 op3 op4 unit -- ok }
 
 fnptr DevRead { pm buf len unit seek -- bytes }
 
@@ -58,7 +58,7 @@ extern DeviceOpen { dev -- ok }
 
 extern DeviceClose { dev -- ok }
 
-extern DeviceIOCtl { op1 op2 op3 op4 dev -- ok }
+extern DeviceIOCtl { pm op1 op2 op3 op4 dev -- ok }
 
 extern DevByName { name -- dev }
 

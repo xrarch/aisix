@@ -325,6 +325,29 @@ end
 
 buffer DName 32
 
+buffer TTYInfoBuf TTYInfo_SIZEOF
+
+fn SetEcho { doecho -- }
+	auto mode
+	TTYInfoBuf TTYInfo_Mode + @ mode!
+
+	if (doecho@)
+		TTY_MODE_NOECHO ~ mode &=
+	end else
+		TTY_MODE_NOECHO mode |=
+	end
+
+	mode@ TTYInfoBuf TTYInfo_Mode + !
+
+	auto ok
+	TTY_IOCTL_SET TTYInfoBuf 0 0 STDOUT IOCtl ok!
+
+	if (ok@ iserr)
+		ok@ abs ok!
+		[ok@]ErrorNames@ "login: couldn't set echo: %s\n" Abort
+	end
+end
+
 fn Main { ... -- ret }
 	if (GetUID 0 ~=)
 		"login: Please log-out by striking ^D instead of invoking this program directly.\n" Abort
@@ -350,6 +373,13 @@ fn Main { ... -- ret }
 	if (PasswdTableFD@ iserr)
 		PasswdTableFD@ abs PasswdTableFD!
 		[PasswdTableFD@]ErrorNames@ "login: couldn't open /sys/passwd.fields: %s\n" Abort
+	end
+
+	TTY_IOCTL_INFO TTYInfoBuf 0 0 STDOUT IOCtl ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ "login: couldn't get tty info: %s\n" Abort
 	end
 
 	auto bad
@@ -394,8 +424,14 @@ fn Main { ... -- ret }
 			1 bad!
 		end
 
+		0 SetEcho
+
 		"password: " Printf
 		InputBuf 127 Gets
+
+		'\n' Putc
+
+		1 SetEcho
 
 		if (bad@)
 			continue
