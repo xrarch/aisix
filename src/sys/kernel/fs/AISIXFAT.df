@@ -31,6 +31,7 @@ struct AFSData
 	4 ICount
 	4 VolSize
 	4 LastFreeBlock
+	Mutex_SIZEOF RenameLock
 endstruct
 
 struct AVData
@@ -946,8 +947,104 @@ fn (FSCreate) AISIXFSCreate { dirvnode name type uid permissions -- vnid }
 	debuf@ brelse
 end
 
-fn (FSRename) AISIXFSRename { srcdirvnode srcname destdirvnode destname -- ok }
-	-EPERM ok!
+fn (FSRename) AISIXFSRename { srcdirvnode srcvnode srcname destdirvnode destname -- ok }
+	auto mount
+	srcvnode@ VNode_Mount + @ mount!
+
+	auto locked
+	0 locked!
+
+	auto vnid
+
+	if (srcvnode@ VNode_Type + @ VNODE_DIR ==)
+		if (srcvnode@ destdirvnode@ ==)
+			-EINVAL ok!
+			return
+		end
+
+		1 locked!
+
+		if (mount@ Mount_FSData + @ AFSData_RenameLock + LockMutex)
+			-EINTR ok!
+			return
+		end
+		(* check if the requested operation will create a cycle in the filesystem tree *)
+
+		if (destdirvnode@ mount@ Mount_Root + @ ~=)
+			destdirvnode@ ok!
+
+			while (1)
+				if (ok@ mount@ Mount_Root + @ ==)
+					if (ok@ destdirvnode@ ~=)
+						ok@ VNodePut
+					end
+
+					break
+				end
+
+				if (ok@ VNode_DirParentVNID + @ srcvnode@ VNode_VNID + @ ==)
+					if (ok@ destdirvnode@ ~=)
+						ok@ VNodePut
+					end
+
+					-EINVAL ok!
+
+					break
+				end
+
+				ok@ VNode_DirParentVNID + @ vnid!
+
+				if (ok@ destdirvnode@ ~=)
+					ok@ VNodePut
+				end
+
+				vnid@ mount@ VNodeGet ok!
+
+				if (ok@ iserr)
+					break
+				end
+			end
+
+			if (ok@ iserr)
+				mount@ Mount_FSData + @ AFSData_RenameLock + UnlockMutex
+
+				return
+			end
+		end
+	end
+
+	auto dirent
+	auto buf
+	destdirvnode@ DirentAlloc buf! dirent!
+
+	if (buf@ 0 ==)
+		"AFSRename: DirentAlloc\n" Panic
+	end
+
+	if (buf@ iserr)
+		buf@ ok!
+
+		if (locked@)
+			mount@ Mount_FSData + @ AFSData_RenameLock + UnlockMutex
+		end
+
+		return
+	end
+
+	dirent@ DirEnt_name + destname@ 59 strncpy
+	srcvnode@ VNode_VNID + @ dirent@ DirEnt_INum + !
+
+	buf@ bwrite
+	buf@ brelse
+
+	destdirvnode@ VNode_VNID + @ srcvnode@ VNode_DirParentVNID + !
+	1 srcvnode@ VNode_Dirty + !
+
+	srcdirvnode@ srcvnode@ srcname@ AFSUnlink ok!
+
+	if (locked@)
+		mount@ Mount_FSData + @ AFSData_RenameLock + UnlockMutex
+	end
 end
 
 fn private HasEntries { vnode -- has }
@@ -994,30 +1091,7 @@ fn private HasEntries { vnode -- has }
 	end
 end
 
-fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
-	if (name@ "." strcmp)
-		-EINVAL ok!
-		return
-	end
-
-	if (name@ ".." strcmp)
-		-EINVAL ok!
-		return
-	end
-
-	if (name@ gb 0 ==)
-		-EINVAL ok!
-		return
-	end
-
-	if (vnode@ VNode_Type + @ VNODE_DIR ==)
-		vnode@ HasEntries ok!
-
-		if (ok@ iserr)
-			return
-		end
-	end
-
+fn private AFSUnlink { dirvnode vnode name -- ok }
 	0 ok!
 
 	auto sz
@@ -1071,8 +1145,37 @@ fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
 	buf@ bwrite
 
 	buf@ brelse
+end
 
-	1 vnode@ VNode_DeleteLastRef + !
+fn (FSUnlink) AISIXFSUnlink { dirvnode vnode name -- ok }
+	if (name@ "." strcmp)
+		-EINVAL ok!
+		return
+	end
+
+	if (name@ ".." strcmp)
+		-EINVAL ok!
+		return
+	end
+
+	if (name@ gb 0 ==)
+		-EINVAL ok!
+		return
+	end
+
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		vnode@ HasEntries ok!
+
+		if (ok@ iserr)
+			return
+		end
+	end
+
+	dirvnode@ vnode@ name@ AFSUnlink ok!
+
+	if (ok@ iserr ~~)
+		1 vnode@ VNode_DeleteLastRef + !
+	end
 end
 
 fn (FSDelete) AISIXFSDelete { vnode -- ok }

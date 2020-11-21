@@ -17,7 +17,7 @@ table ErrorNames
 	"Operation not supported"
 	"Device or resource busy"
 	"File or directory already exists"
-	"Cross-device link"
+	"Attempt to move across filesystems"
 	"No such device"
 	"Not a directory"
 	"Is a directory"

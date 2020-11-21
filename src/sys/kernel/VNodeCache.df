@@ -255,10 +255,34 @@ fn VNodeOwned { vnode -- owned }
 end
 
 fn VNodeLock { vnode -- killed }
+	if (vnode@ VNodeOwned)
+		if (vnode@ VNode_LockCount + @ vnode@ VNode_LockMax + @ <=)
+			1 vnode@ VNode_LockCount + +=
+			0 killed!
+			return
+		end else
+			"VNodeLock\n" Panic
+		end
+	end
+
 	vnode@ VNode_Mutex + LockMutex killed!
+
+	if (killed@ ~~)
+		0 vnode@ VNode_LockMax + !
+		1 vnode@ VNode_LockCount + !
+	end
 end
 
 fn VNodeUnlock { vnode -- }
+	if (vnode@ VNode_LockCount + @ 1 >)
+		1 vnode@ VNode_LockCount + -=
+		return
+	end elseif (vnode@ VNode_LockCount + @ 0 ==)
+		"VNodeUnlock\n" Panic
+	end
+
+	1 vnode@ VNode_LockCount + -=
+
 	vnode@ VNode_Mutex + UnlockMutex
 end
 

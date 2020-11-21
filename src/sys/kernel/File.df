@@ -1002,3 +1002,138 @@ fn IOCtl { op1 op2 op3 op4 fd -- ok }
 		return
 	end
 end
+
+fn Rename { srcname destname -- ok }
+	auto sook
+
+	auto srcvnode
+	auto srcdirvnode
+	auto srcename
+
+	srcname@ VFSPathX srcename! srcvnode! srcdirvnode! sook!
+
+	if (srcvnode@ iserr srcdirvnode@ ~~ ||)
+		if (srcename@)
+			srcename@ Free
+		end
+
+		if (srcdirvnode@ iserr ~~)
+			if (srcdirvnode@)
+				srcdirvnode@ VNodePut
+			end
+		end
+
+		if (srcdirvnode@ ~~)
+			(* this means this is the root directory of a filesystem, we don't support moving those yet *)
+			if (srcvnode@ iserr ~~)
+				if (srcvnode@)
+					srcvnode@ VNodePut
+				end
+			end
+
+			-EPERM ok!
+		end else
+			srcvnode@ ok!
+		end
+
+		return
+	end
+
+	1 srcvnode@ VNode_LockMax + !
+	1 srcdirvnode@ VNode_LockMax + !
+
+	auto destvnode
+	auto destdirvnode
+	auto destename
+
+	destname@ VFSPathX destename! destvnode! destdirvnode! sook!
+
+	if (destvnode@ -ENOENT ~= sook@ ~~ || destdirvnode@ ~~ ||)
+		if (destename@)
+			destename@ Free
+		end
+
+		if (srcename@)
+			srcename@ Free
+		end
+
+		srcvnode@ VNodePut
+
+		srcdirvnode@ VNodePut
+
+		if (destdirvnode@ iserr ~~)
+			if (destdirvnode@)
+				destdirvnode@ VNodePut
+			end
+		end
+
+		if (destvnode@ iserr ~~)
+			destvnode@ VNodePut
+			-EEXIST ok!
+		end else
+			destvnode@ ok!
+		end
+
+		return
+	end
+
+	auto uid
+	CurrentThread@ Thread_Process + @ Process_EUID + @ uid!
+
+	srcdirvnode@ WORLD_W uid@ VForbidden ok!
+
+	if (ok@ iserr)
+		destename@ Free
+		srcename@ Free
+		srcvnode@ VNodePut
+		srcdirvnode@ VNodePut
+		destdirvnode@ VNodePut
+
+		return
+	end
+
+	if (srcdirvnode@ destdirvnode@ ~=)
+		destdirvnode@ WORLD_W uid@ VForbidden ok!
+
+		if (ok@ iserr)
+			destename@ Free
+			srcename@ Free
+			srcvnode@ VNodePut
+			srcdirvnode@ VNodePut
+			destdirvnode@ VNodePut
+
+			return
+		end
+	end
+
+	if (srcvnode@ VNode_Mount + @ destdirvnode@ VNode_Mount + @ ~=)
+		destename@ Free
+		srcename@ Free
+		srcvnode@ VNodePut
+		srcdirvnode@ VNodePut
+		destdirvnode@ VNodePut
+
+		-EXDEV ok!
+		return
+	end
+
+	if (srcvnode@ VNode_Mount + @ Mount_Flags + @ FS_READONLY &)
+		destename@ Free
+		srcename@ Free
+		srcvnode@ VNodePut
+		srcdirvnode@ VNodePut
+		destdirvnode@ VNodePut
+
+		-EROFS ok!
+		return
+	end
+
+	srcdirvnode@ srcvnode@ srcename@ destdirvnode@ destename@
+	srcvnode@ VNode_Mount + @ Mount_Filesystem + @ Filesystem_Rename + @ FSRename ok!
+
+	destename@ Free
+	srcename@ Free
+	srcvnode@ VNodePut
+	srcdirvnode@ VNodePut
+	destdirvnode@ VNodePut
+end

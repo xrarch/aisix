@@ -44,6 +44,7 @@ const SYSNEXTPROCINFO 40
 const SYSGETDEVNAME   41
 const SYSKILL    42
 const SYSIOCTL   43
+const SYSRENAME  44
 
 asm "
 
@@ -343,6 +344,15 @@ _ioctl:
 	mov a2, a1
 	mov a1, a0
 	li a0, SYSIOCTL
+	sys
+	ret
+
+_rename:
+	mov v0, a3
+	mov a3, a2
+	mov a2, a1
+	mov a1, a0
+	li a0, SYSRENAME
 	sys
 	ret
 
@@ -682,4 +692,10 @@ extern _ioctl { op1 op2 op3 op4 fd -- ok }
 
 fn IOCtl { op1 op2 op3 op4 fd -- ok }
 	op1@ op2@ op3@ op4@ fd@ _ioctl ok!
+end
+
+extern _rename { srclen srcname destlen destname -- ok }
+
+fn Rename { srcname destname -- ok }
+	srcname@ strlen srcname@ destname@ strlen destname@ _rename ok!
 end

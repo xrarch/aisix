@@ -47,6 +47,7 @@ table Syscalls
 	pointerof SysGetDeviceName
 	pointerof SysKill
 	pointerof SysIOCtl
+	pointerof SysRename
 endtable
 public Syscalls
 
@@ -1046,4 +1047,39 @@ fn (Syscall) SysIOCtl { tf -- ok }
 	tf@ Context_v1 + @ op1!
 
 	op1@ op2@ op3@ op4@ fd@ IOCtl ok!
+end
+
+fn (Syscall) SysRename { tf -- ok }
+	auto destname
+	tf@ Context_a1 + @ destname!
+
+	auto destlen
+	tf@ Context_a2 + @ destlen!
+
+	destname@ destlen@ GetString destname!
+
+	if (destname@ iserr)
+		destname@ ok!
+		return
+	end
+
+	auto srcname
+	tf@ Context_a3 + @ srcname!
+
+	auto srclen
+	tf@ Context_v0 + @ srclen!
+
+	srcname@ srclen@ GetString srcname!
+
+	if (srcname@ iserr)
+		destname@ Free
+		srcname@ ok!
+		return
+	end
+
+	srcname@ destname@ Rename ok!
+
+	srcname@ Free
+
+	destname@ Free
 end

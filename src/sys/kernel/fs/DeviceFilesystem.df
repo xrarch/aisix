@@ -345,7 +345,7 @@ fn (FSCreate) DevFSCreate { dirvnode name type uid permissions -- vnid }
 	-EPERM vnid!
 end
 
-fn (FSRename) DevFSRename { srcdirvnode srcname destdirvnode destname -- ok }
+fn (FSRename) DevFSRename { srcdirvnode srcvnode srcname destdirvnode destname -- ok }
 	-EPERM ok!
 end
 

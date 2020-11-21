@@ -40,7 +40,7 @@ fnptr FSWrite { pm buf len seek vnode -- bytes }
 
 fnptr FSCreate { dirvnode name type uid permissions -- vnid }
 
-fnptr FSRename { srcdirvnode srcname destdirvnode destname -- ok }
+fnptr FSRename { srcdirvnode srcvnode srcname destdirvnode destname -- ok }
 
 fnptr FSUnlink { dirvnode vnode name -- ok }
 
@@ -89,6 +89,9 @@ struct VNode
 
 	4 CachedTextSegmentWMO
 	4 UsingWMO
+
+	4 LockMax
+	4 LockCount
 endstruct
 
 const VNODE_FILE 1

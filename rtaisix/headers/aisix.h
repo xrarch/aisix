@@ -104,6 +104,8 @@ extern Kill { pid -- ok }
 
 extern IOCtl { op1 op2 op3 op4 fd -- ok }
 
+extern Rename { srcname destname -- ok }
+
 const HALT_SHUTDOWN 1
 const HALT_REBOOT 2
 
