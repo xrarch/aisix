@@ -1037,8 +1037,10 @@ fn (FSRename) AISIXFSRename { srcdirvnode srcvnode srcname destdirvnode destname
 	buf@ bwrite
 	buf@ brelse
 
-	destdirvnode@ VNode_VNID + @ srcvnode@ VNode_DirParentVNID + !
-	1 srcvnode@ VNode_Dirty + !
+	if (destdirvnode@ srcdirvnode@ ~=)
+		destdirvnode@ VNode_VNID + @ srcvnode@ VNode_DirParentVNID + !
+		1 srcvnode@ VNode_Dirty + !
+	end
 
 	srcdirvnode@ srcvnode@ srcname@ AFSUnlink ok!
 
