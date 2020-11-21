@@ -1,0 +1,141 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Usage { -- }
+	"usage: cp source target\n" STDERR FPrintf
+end
+
+fn LastComp { str -- lcomp }
+	str@ lcomp!
+
+	auto ins
+	0 ins!
+
+	while (str@ gb)
+		if (str@ gb '/' ==)
+			1 ins!
+		end elseif (ins@)
+			0 ins!
+			str@ lcomp!
+		end
+
+		1 str +=
+	end
+
+	if (ins@)
+		1 str -=
+		while (str@ gb '/' ==)
+			0 str@ sb
+			1 str -=
+		end
+	end
+end
+
+buffer StatB Stat_SIZEOF
+
+fn Main { ... -- ret }
+	if (argc@ 3 ~=)
+		Usage
+		1 Exit
+	end
+
+	auto destpath
+	[2]argv@ destpath!
+
+	StatB destpath@ PStat ret!
+
+	if (ret@ iserr ~~)
+		if (StatB Stat_Type + @ VNODE_DIR ==)
+			auto lcomp
+			[1]argv@ LastComp lcomp!
+
+			if (lcomp@ gb)
+				auto dpl
+				destpath@ strlen dpl!
+
+				dpl@ lcomp@ strlen + 2 + Calloc destpath!
+
+				destpath@ [2]argv@ strcpy
+
+				if (destpath@ dpl@ + 1 - gb '/' ~=)
+					'/' destpath@ dpl@ + sb
+
+					destpath@ dpl@ + 1 + lcomp@ strcpy
+				end else
+					destpath@ dpl@ + lcomp@ strcpy
+				end
+			end
+		end
+	end
+
+	[1]argv@ destpath@ Copy ret!
+
+	if (ret@ iserr)
+		ret@ abs ret!
+		[ret@]ErrorNames@ destpath@ [1]argv@ "cp: copy %s to %s: %s\n" Abort
+	end
+
+	0 ret!
+end
+
+const CATUNIT 16384
+
+buffer CatBuffer CATUNIT
+
+fn Copy { source dest -- ok }
+	0 ok!
+
+	StatB source@ PStat ok!
+
+	if (ok@ iserr)
+		return
+	end
+
+	if (StatB Stat_Type + @ VNODE_FILE ~=)
+		-EISDIR ok!
+		return
+	end
+
+	auto srcfd
+	source@ O_READ Open srcfd!
+
+	if (srcfd@ iserr)
+		srcfd@ ok!
+		return
+	end
+
+	auto destfd
+	dest@ O_WRITE StatB Stat_Mode + @ Create destfd!
+
+	if (destfd@ iserr)
+		destfd@ ok!
+		return
+	end
+
+	auto bytes
+
+	CatBuffer CATUNIT srcfd@ Read bytes!
+
+	if (bytes@ iserr)
+		bytes@ ok!
+		return
+	end
+
+	auto r
+
+	while (bytes@)
+		CatBuffer bytes@ destfd@ Write r!
+
+		if (r@ iserr)
+			r@ ok!
+			return
+		end
+
+		CatBuffer CATUNIT srcfd@ Read bytes!
+
+		if (bytes@ iserr)
+			bytes@ ok!
+			return
+		end
+	end
+end
