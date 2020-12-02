@@ -21,4 +21,4 @@ sash.a3x: $(OBJ)
 	$(DC) $< $@
 
 cleanup:
-	rm -f *.o *.bin *.LOFF
+	rm -f ${OBJ} *.bin *.LOFF *.a3x

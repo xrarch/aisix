@@ -15,4 +15,4 @@ diag.a3x: $(OBJ)
 	$(DC) $< $@
 
 cleanup:
-	rm -f *.o *.a3x
+	rm -f ${OBJ} *.bin *.LOFF *.a3x

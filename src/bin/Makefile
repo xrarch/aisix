@@ -20,4 +20,4 @@ all: $(LOFF)
 	$(DC) $< $@
 
 cleanup:
-	rm -f *.o *.LOFF
+	rm -f ${OBJ} ${LOFF}
