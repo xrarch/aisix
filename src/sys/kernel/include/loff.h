@@ -7,7 +7,9 @@ struct LOFFHeader
 	4 TargetArchitecture
 	4 EntrySymbol
 	4 Stripped
-	28 Reserved
+	4 ImportTableOffset
+	4 ImportCount
+	20 Reserved
 	4 TextHeader
 	4 DataHeader
 	4 BSSHeader
@@ -26,9 +28,10 @@ struct LOFFSymbol
 	4 Section
 	4 Type
 	4 Value
+	4 ImportIndex
 endstruct
 
-const LOFFMagic 0x4C4F4633
+const LOFFMagic 0x4C4F4634
 const LOFFArch 2
 
 const LOFFGLOBAL 1
