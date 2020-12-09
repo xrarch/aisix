@@ -656,6 +656,10 @@ fn VMAllocSegment1 { bytes clear -- seg }
 		return
 	end
 
+	if (bytes@ 0 ==)
+		4096 bytes!
+	end
+
 	if (bytes@ 4095 &)
 		4096 bytes +=
 	end
