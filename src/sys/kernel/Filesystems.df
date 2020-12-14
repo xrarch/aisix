@@ -86,7 +86,7 @@ fn VFSMountRoot { -- }
 	auto rootmount
 
 	auto dp
-	128 Malloc dp!
+	128 alloc dp!
 
 	if (dp@ iserr)
 		"oh no\n" Panic
@@ -97,8 +97,6 @@ fn VFSMountRoot { -- }
 	dp@ 5 + rd@ Device_Name + strcpy
 
 	0 0 "aisixfs" FSByName rd@ dp@ VFSMount rootmount!
-
-	dp@ Free
 
 	if (rootmount@ iserr)
 		rootmount@ abs rootmount!
@@ -145,13 +143,7 @@ fn VFSCanonicalizePath { path -- canon }
 	end
 
 	auto pcomp
-	256 Calloc pcomp!
-
-	if (pcomp@ iserr)
-		canon@ Free
-		pcomp@ canon!
-		return
-	end
+	256 alloc pcomp!
 
 	if (path@ gb '/' ==)
 		'/' canon@ sb
@@ -226,8 +218,6 @@ fn VFSCanonicalizePath { path -- canon }
 		pr@ lenleft@ min ci +=
 		pr@ lenleft@ min lenleft -=
 	end
-
-	pcomp@ Free
 end
 
 fn VFSPath { path -- vnode }
@@ -275,7 +265,9 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 	auto pr
 
 	auto dirent
-	VDirent_SIZEOF Calloc dirent!
+	VDirent_SIZEOF alloc dirent!
+
+	dirent@ VDirent_SIZEOF 0 memset
 
 	auto mount
 	vnode@ VNode_Mount + @ mount!
@@ -300,7 +292,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 				if (dirent@ VDirent_Cookie + @)
 					dirent@ VDirent_Cookie + @ Free
 				end
-				dirent@ Free
 				-ENOTDIR vnode!
 				return
 			end
@@ -317,7 +308,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			if (dirent@ VDirent_Cookie + @)
 				dirent@ VDirent_Cookie + @ Free
 			end
-			dirent@ Free
 			return
 		end
 
@@ -329,7 +319,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			if (dirent@ VDirent_Cookie + @)
 				dirent@ VDirent_Cookie + @ Free
 			end
-			dirent@ Free
 			pr@ vnode!
 			return
 		end
@@ -388,7 +377,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 						if (dirent@ VDirent_Cookie + @)
 							dirent@ VDirent_Cookie + @ Free
 						end
-						dirent@ Free
 						return
 					end
 
@@ -412,7 +400,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 					if (dirent@ VDirent_Cookie + @)
 						dirent@ VDirent_Cookie + @ Free
 					end
-					dirent@ Free
 					return
 				end
 
@@ -430,7 +417,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 			if (dirent@ VDirent_Cookie + @)
 				dirent@ VDirent_Cookie + @ Free
 			end
-			dirent@ Free
 			ok@ vnode!
 			return
 		end
@@ -448,7 +434,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 				if (dirent@ VDirent_Cookie + @)
 					dirent@ VDirent_Cookie + @ Free
 				end
-				dirent@ Free
 				ok@ vnode!
 				return
 			end
@@ -470,7 +455,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 					if (dirent@ VDirent_Cookie + @)
 						dirent@ VDirent_Cookie + @ Free
 					end
-					dirent@ Free
 					return
 				end
 
@@ -498,7 +482,6 @@ fn VFSPathX { path -- sook dirvnode vnode name }
 				if (dirent@ VDirent_Cookie + @)
 					dirent@ VDirent_Cookie + @ Free
 				end
-				dirent@ Free
 				return
 			end
 

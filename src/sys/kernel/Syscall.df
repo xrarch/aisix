@@ -372,23 +372,15 @@ fn (Syscall) SysReadDir { tf -- ok }
 	tf@ Context_a2 + @ udirent!
 
 	auto dirent
-	Dirent_SIZEOF Malloc dirent!
-
-	if (dirent@ iserr)
-		dirent@ ok!
-		return
-	end
+	Dirent_SIZEOF alloc dirent!
 
 	dirent@ fd@ ReadDir ok!
 
 	if (ok@ iserr)
-		dirent@ Free
 		return
 	end
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ udirent@ dirent@ Dirent_SIZEOF VMCopyout ok!
-
-	dirent@ Free
 end
 
 fn (Syscall) SysPStat { tf -- ok }
@@ -414,25 +406,17 @@ fn (Syscall) SysPStat { tf -- ok }
 	end
 
 	auto stat
-	Stat_SIZEOF Malloc stat!
-
-	if (stat@ iserr)
-		stat@ ok!
-		return
-	end
+	Stat_SIZEOF alloc stat!
 
 	stat@ path@ PStat ok!
 
 	path@ Free
 
 	if (ok@ iserr)
-		stat@ Free
 		return
 	end
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ ustat@ stat@ Stat_SIZEOF VMCopyout ok!
-
-	stat@ Free
 end
 
 fn (Syscall) SysFStat { tf -- ok }
@@ -448,23 +432,15 @@ fn (Syscall) SysFStat { tf -- ok }
 	end
 
 	auto stat
-	Stat_SIZEOF Malloc stat!
-
-	if (stat@ iserr)
-		stat@ ok!
-		return
-	end
+	Stat_SIZEOF alloc stat!
 
 	stat@ fd@ FStat ok!
 
 	if (ok@ iserr)
-		stat@ Free
 		return
 	end
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ ustat@ stat@ Stat_SIZEOF VMCopyout ok!
-
-	stat@ Free
 end
 
 fn (Syscall) SysChdir { tf -- ok }
@@ -533,12 +509,9 @@ fn (Syscall) SysUName { tf -- ok }
 	tf@ Context_a1 + @ uname!
 
 	auto kuname
-	UNameS_SIZEOF Calloc kuname!
+	UNameS_SIZEOF alloc kuname!
 
-	if (kuname@ iserr)
-		kuname@ ok!
-		return
-	end
+	kuname@ UNameS_SIZEOF 0 memset
 
 	kuname@ UNameS_Sysname +  "AISIX" strcpy
 	kuname@ UNameS_Nodename + "unk" strcpy
@@ -560,8 +533,6 @@ fn (Syscall) SysUName { tf -- ok }
 	kuname@ UNameS_Processor + MachineCPU@ 255 strncpy
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ uname@ kuname@ UNameS_SIZEOF VMCopyout ok!
-
-	kuname@ Free
 end
 
 fn (Syscall) SysMkdir { tf -- ok }
@@ -860,12 +831,9 @@ end
 
 fn ProcessInfo { va proc -- ok }
 	auto kstat
-	ProcessStat_SIZEOF Calloc kstat!
+	ProcessStat_SIZEOF alloc kstat!
 
-	if (kstat@ iserr)
-		kstat@ ok!
-		return
-	end
+	kstat@ ProcessStat_SIZEOF 0 memset
 
 	proc@ Process_Threads + @ kstat@ ProcessStat_Threads + !
 	proc@ Process_UID + @ kstat@ ProcessStat_UID + !
@@ -902,8 +870,6 @@ fn ProcessInfo { va proc -- ok }
 	end
 
 	CurrentThread@ Thread_Process + @ Process_Pagemap + @ va@ kstat@ ProcessStat_SIZEOF VMCopyout ok!
-
-	kstat@ Free
 end
 
 fn (Syscall) SysProcessInfo { tf -- ok }

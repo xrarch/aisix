@@ -110,57 +110,35 @@ struct LOFFSummary
 	4 UData
 endstruct
 
-fn ParseLOFF { pm vnode -- loff }
-	LOFFSummary_SIZEOF Malloc loff!
-
-	if (loff@ iserr)
-		return
-	end
-
+fn ParseLOFF { pm vnode loff -- ok }
 	auto header
-	LOFFHeader_SIZEOF Malloc header!
-
-	if (header@ iserr)
-		loff@ Free
-		-ENOMEM loff!
-		return
-	end
+	LOFFHeader_SIZEOF alloc header!
 
 	auto bytes
 
 	0 header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
 
 	if (bytes@ LOFFHeader_SIZEOF s<)
-		loff@ Free
 		if (bytes@ iserr)
-			bytes@ loff!
+			bytes@ ok!
 		end else
-			-ENOEXEC loff!
+			-ENOEXEC ok!
 		end
-		header@ Free
 		return
 	end
 
 	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
-		loff@ Free
-		-ENOEXEC loff!
-		header@ Free
+		-ENOEXEC ok!
 		return
 	end
 
 	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
-		loff@ Free
-		-ENOEXEC loff!
-		header@ Free
+		-ENOEXEC ok!
 		return
 	end
 
-	auto ok
 	header@ vnode@ loff@ GetEntry ok!
 	if (ok@ iserr)
-		header@ Free
-		loff@ Free
-		ok@ loff!
 		return
 	end
 
@@ -173,26 +151,16 @@ fn ParseLOFF { pm vnode -- loff }
 	auto bh
 	header@ LOFFHeader_BSSHeader + @ bh!
 
-	header@ Free
-
-	LOFFSectionHeader_SIZEOF Malloc header!
-
-	if (header@ iserr)
-		loff@ Free
-		header@ loff!
-		return
-	end
+	// XXX there's an assumption here that LOFFSectionHeader_SIZEOF < LOFFHeader_SIZEOF
 
 	0 header@ LOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF s<)
-		loff@ Free
 		if (bytes@ iserr)
-			bytes@ loff!
+			bytes@ ok!
 		end else
-			-ENOEXEC loff!
+			-ENOEXEC ok!
 		end
-		header@ Free
 		return
 	end
 
@@ -202,9 +170,7 @@ fn ParseLOFF { pm vnode -- loff }
 	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_TextVAddr + !
 	if (vaddr@ 4095 &)
-		loff@ Free
-		header@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 
@@ -213,9 +179,7 @@ fn ParseLOFF { pm vnode -- loff }
 	header@ LOFFSectionHeader_SectionOffset + @ offset!
 	offset@ loff@ LOFFSummary_TextOffset + !
 	if (offset@ 0x3 &)
-		loff@ Free
-		header@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 	
@@ -224,31 +188,25 @@ fn ParseLOFF { pm vnode -- loff }
 	0 header@ LOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF s<)
-		loff@ Free
 		if (bytes@ iserr)
-			bytes@ loff!
+			bytes@ ok!
 		end else
-			-ENOEXEC loff!
+			-ENOEXEC ok!
 		end
-		header@ Free
 		return
 	end
 
 	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_DataVAddr + !
 	if (vaddr@ 4095 &)
-		loff@ Free
-		header@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 
 	header@ LOFFSectionHeader_SectionOffset + @ offset!
 	offset@ loff@ LOFFSummary_DataOffset + !
 	if (offset@ 0x3 &)
-		loff@ Free
-		header@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 
@@ -257,28 +215,22 @@ fn ParseLOFF { pm vnode -- loff }
 	0 header@ LOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
 
 	if (bytes@ LOFFSectionHeader_SIZEOF s<)
-		loff@ Free
 		if (bytes@ iserr)
-			bytes@ loff!
+			bytes@ ok!
 		end else
-			-ENOEXEC loff!
+			-ENOEXEC ok!
 		end
-		header@ Free
 		return
 	end
 
 	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_BSSVAddr + !
 	if (vaddr@ 4095 &)
-		loff@ Free
-		header@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 
 	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_BSSSize + !
-
-	header@ Free
 end
 
 (* look through udvec and calculate how much memory needs to be appended to the end of
@@ -348,13 +300,13 @@ fn VecCopy { pm udvec udcnt ubase -- ok }
 	tdvec@ Free
 end
 
-fn LoadLOFF { proc vnode udvec udcnt -- loff }
+fn LoadLOFF { proc vnode udvec udcnt loff -- ok }
 	auto pm
 	proc@ Process_Pagemap + @ pm!
 
-	pm@ vnode@ ParseLOFF loff!
+	pm@ vnode@ loff@ ParseLOFF ok!
 
-	if (loff@ iserr)
+	if (ok@ iserr)
 		return
 	end
 
@@ -388,13 +340,10 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		sz@ VMSallocSegment textseg!
 
 		if (textseg@ iserr)
-			loff@ Free
 			textseg@ loff!
 			return
 		end
 	end
-
-	auto ok
 
 	proc@ textseg@ 0 OpenSegment ok!
 
@@ -411,8 +360,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 	if (ok@ iserr)
 		textseg@ UnrefSegment
 
-		loff@ Free
-		ok@ loff!
 		return
 	end
 
@@ -427,8 +374,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 	if (dataseg@ iserr)
 		textseg@ UnrefSegment
 
-		loff@ Free
-		dataseg@ loff!
+		dataseg@ ok!
 		return
 	end
 
@@ -444,8 +390,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		textseg@ UnrefSegment
 		dataseg@ UnrefSegment
 
-		loff@ Free
-		ok@ loff!
 		return
 	end
 
@@ -459,8 +403,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		textseg@ UnrefSegment
 		dataseg@ UnrefSegment
 
-		loff@ Free
-		bssseg@ loff!
+		bssseg@ ok!
 		return
 	end
 
@@ -477,8 +420,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		dataseg@ UnrefSegment
 		bssseg@ UnrefSegment
 
-		loff@ Free
-		ok@ loff!
 		return
 	end
 
@@ -494,8 +435,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 			dataseg@ UnrefSegment
 			bssseg@ UnrefSegment
 
-			loff@ Free
-			-ENOEXEC loff!
+			-ENOEXEC ok!
 			return
 		end
 
@@ -522,8 +462,7 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 		dataseg@ UnrefSegment
 		bssseg@ UnrefSegment
 
-		loff@ Free
-		-ENOEXEC loff!
+		-ENOEXEC ok!
 		return
 	end
 
@@ -543,8 +482,6 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 			dataseg@ UnrefSegment
 			bssseg@ UnrefSegment
 
-			loff@ Free
-			ok@ loff!
 			return
 		end
 	end else
@@ -552,6 +489,8 @@ fn LoadLOFF { proc vnode udvec udcnt -- loff }
 	end
 
 	udata@ loff@ LOFFSummary_UData + !
+
+	0 ok!
 end
 
 fn VNewProcess1 { vnode name udvec udcnt -- process }
@@ -571,13 +510,14 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 	end
 
 	auto loff
+	LOFFSummary_SIZEOF alloc loff!
 
-	process@ vnode@ udvec@ udcnt@ LoadLOFF loff!
+	process@ vnode@ udvec@ udcnt@ loff@ LoadLOFF ok!
 
-	if (loff@ iserr)
+	if (ok@ iserr)
 		process@ Process_Pagemap + @ VMPagemapFree
 		process@ ProcessFreeSlot
-		loff@ process!
+		ok@ process!
 		return
 	end
 
@@ -593,14 +533,10 @@ fn VNewProcess1 { vnode name udvec udcnt -- process }
 		loff@ LOFFSummary_DataSeg + @ UnrefSegment
 		loff@ LOFFSummary_BSSSeg + @ UnrefSegment
 
-		loff@ Free
-
 		ok@ process!
 
 		return
 	end
-
-	loff@ Free
 
 	auto p
 	CurrentThread@ Thread_Process + @ p!
