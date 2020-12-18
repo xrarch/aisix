@@ -68,8 +68,8 @@ fn HeapDumpBlock { ept -- }
 	auto asz
 	size@ KHeapHeader_SIZEOF - asz!
 
-	auto alloc
-	ept@ KHeapHeader_allocated + @ alloc!
+	auto alloct
+	ept@ KHeapHeader_allocated + @ alloct!
 
 	auto last
 	ept@ KHeapHeader_last + @ last!
@@ -87,7 +87,7 @@ fn HeapDumpBlock { ept -- }
 	asz@ "\treal size: %d bytes\n" Printf
 	last@ "\tlast: 0x%x\n" Printf
 	next@ "\tnext: 0x%x\n" Printf
-	alloc@ "\tallocated: %d\n" Printf
+	alloct@ "\tallocated: %d\n" Printf
 	magic@ "\tmagic: %x\n" Printf
 
 	auto symname
@@ -128,14 +128,14 @@ fn HeapDump { -- }
 		auto size
 		ept@ KHeapHeader_size + @ size!
 
-		auto alloc
-		ept@ KHeapHeader_allocated + @ alloc!
+		auto alloct
+		ept@ KHeapHeader_allocated + @ alloct!
 
 		i@ "block %d:\n" Printf
 
 		ept@ HeapDumpBlock
 
-		if (alloc@ 1 ==)
+		if (alloct@ 1 ==)
 			talloc@ size@ + talloc!
 		end else
 			tfree@ size@ + tfree!
