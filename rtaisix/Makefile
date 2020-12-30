@@ -8,6 +8,7 @@ LD  =  ../../sdk/link.sh link
 all: obj/rtaisix.o
 
 obj/rtaisix.o: $(OBJ) ./src/_start.o
+	mkdir -p obj
 	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) ./src/_start.o
 
 %.o: %.df
