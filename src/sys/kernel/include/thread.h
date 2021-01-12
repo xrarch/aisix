@@ -79,9 +79,9 @@ struct Process
 
 	EventQueue_SIZEOF WaitQ
 
-	256 OFiles (* dragonfruit is dumb so we can't use a nice constant here, but this is OFILEMAX=64 * 4 *)
+	(OFILEMAX 4 *) OFiles
 
-	384 OSegs (* OSEGMAX=32 * 12 *)
+	(OSEGMAX OSeg_SIZEOF *) OSegs
 
 	CWDPATHLEN CWDPathString
 
