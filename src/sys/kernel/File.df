@@ -669,6 +669,23 @@ fn Unlink { path -- ok }
 		return
 	end
 
+	if (vnode@ VNode_Type + @ VNODE_DIR ==)
+		if (vnode@ VNode_Refs + @ 1 >)
+			if (name@)
+				name@ Free
+			end
+
+			if (dirvnode@)
+				dirvnode@ VNodePut
+			end
+
+			vnode@ VNodePut
+
+			-EPERM ok!
+			return
+		end
+	end
+
 	auto fs
 	vnode@ VNode_Mount + @ Mount_Filesystem + @ fs!
 
