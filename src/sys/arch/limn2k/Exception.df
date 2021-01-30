@@ -215,12 +215,18 @@ fn Exception { badaddr ecause tf -- }
 		1 DebugNextSched!
 	end else
 		if (mode@ 0 ==)
-			(* kernel mode exception, panic *)
+			// kernel mode exception, panic
+
 			1 TraceTF!
-			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ "unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
+			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@
+			"unexpected kernel mode exception!\necause=%x\nepc=%x\ners=%x\nbadaddr=%x\n" Panic
 		end else
+			// user mode exception, terminate the thread
+
 			CurrentThread@ Thread_Process + @ Process_Name + "killed: %s\n" Printf
-			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@ " %9xECAUSE\n %9xEPC\n %9xERS\n %9xBADADDR\n" Printf
+
+			badaddr@ tf@ Context_ers + @ tf@ Context_epc + @ ecause@
+			" %9xECAUSE\n %9xEPC\n %9xERS\n %9xBADADDR\n" Printf
 		end
 
 		139 CurrentThread@ Thread_Process + @ Process_ReturnValue + !
