@@ -31,7 +31,7 @@ struct LOFFSymbol
 	4 ImportIndex
 endstruct
 
-const LOFFMagic 0x4C4F4634
+const LOFFMagic 0x4C4F4635
 const LOFFArch 2
 
 const LOFFGLOBAL 1

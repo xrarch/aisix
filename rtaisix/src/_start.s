@@ -27,26 +27,26 @@ _MainTrampoline:
 
 	beq a0, zero, .done
 
-	subi a0, a0, 1
-	addi a1, a1, 8
+	sub a0, a0, 1
+	add a1, a1, 8
 
-	lshi t1, a0, 3
+	lsh t1, a0, 3
 	sub sp, sp, t1
 
 .loop:
 	beq t0, a0, .done
 
-	l.l t1, a1, zero
-	s.l sp, t3, t1
+	mov t1, long [a1]
+	mov long [sp + t3], t1
 
-	addi a1, a1, 8
-	addi t0, t0, 1
-	addi t3, t3, 4
+	add a1, a1, 8
+	add t0, t0, 1
+	add t3, t3, 4
 	b .loop
 
 .done:
-	swd.l sp, zero, lr
-	swd.l sp, zero, t2
+	push lr
+	push t2
 
 	jal Main
 

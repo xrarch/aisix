@@ -193,7 +193,7 @@ asm "
 
 GetLink:
 	la t0, PanicLink
-	s.l t0, zero, sp
+	mov long [t0], sp
 	ret
 
 "

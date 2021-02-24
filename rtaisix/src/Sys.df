@@ -80,10 +80,10 @@ _read:
 	ret
 
 _newprocess:
-	lio.l t2, sp, 20
-	lio.l t1, sp, 16
-	lio.l t0, sp, 12
-	lio.l v1, sp, 8
+	mov t2, long [sp + 20]
+	mov t1, long [sp + 16]
+	mov t0, long [sp + 12]
+	mov v1, long [sp + 8]
 	mov v0, a3
 	mov a3, a2
 	mov a2, a1
@@ -193,9 +193,9 @@ _umask:
 	ret
 
 _mount:
-	lio.l t1, sp, 16
-	lio.l t0, sp, 12
-	lio.l v1, sp, 8
+	mov t1, long [sp + 16]
+	mov t0, long [sp + 12]
+	mov v1, long [sp + 8]
 	mov v0, a3
 	mov a3, a2
 	mov a2, a1
@@ -255,8 +255,8 @@ _halt:
 _meminfo:
 	li a0, SYSMEMINFO
 	sys
-	sio.l sp, 8, t0
-	sio.l sp, 12, t1
+	mov long [sp + 8], t0
+	mov long [sp + 12], t1
 	ret
 
 _allocsegment:
@@ -338,7 +338,7 @@ _kill:
 	ret
 
 _ioctl:
-	lio.l v1, sp, 8
+	mov v1, long [sp + 8]
 	mov v0, a3
 	mov a3, a2
 	mov a2, a1
@@ -359,14 +359,14 @@ _rename:
 ; fd c --
 _rFPutc:
 .global _rFPutc
-	subi.i sp, 4
-	s.l sp, zero, a0
+	sub sp, 4
+	mov long [sp], a0
 	mov a3, sp
 	li a2, 1
 	;mov a1, a1 ;already in a1 due to ABI
 	li a0, SYSWRITE
 	sys
-	addi.i sp, 4
+	add sp, 4
 	ret
 
 "

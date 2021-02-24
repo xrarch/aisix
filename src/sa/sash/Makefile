@@ -9,7 +9,7 @@ LD      =  $(OBJTOOL) link
 all: sash.a3x BootSector.bin
 
 BootSector.bin: BootSector.s
-	$(AS) -flat BootSector.s BootSector.bin
+	$(AS) format=flat BootSector.s BootSector.bin
 
 sash.a3x: $(OBJ)
 	$(LD) sash.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o

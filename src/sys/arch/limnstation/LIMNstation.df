@@ -14,16 +14,16 @@ asm "
 
 SaveEV:
 	la t0, SavedEV
-	s.l t0, zero, ev
+	mov long [t0], ev
 	la t0, SavedTLBV
-	s.l t0, zero, tlbv
+	mov long [t0], tlbv
 	ret
 
 RestoreEV:
 	la t0, SavedEV
-	l.l ev, t0, zero
+	mov ev, long [t0]
 	la t0, SavedTLBV
-	l.l tlbv, t0, zero
+	mov tlbv, long [t0]
 	ret
 
 "
