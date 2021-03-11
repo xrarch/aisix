@@ -32,7 +32,7 @@ const BOXCOLS 8
 
 buffer RowBuf (BOXROWS 2 *)
 
-fn FastInvert { buf -- }
+fn FastInvert { buf -- } // actually slow
 	auto i
 	0 i!
 

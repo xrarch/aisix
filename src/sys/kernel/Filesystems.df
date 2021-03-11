@@ -237,6 +237,7 @@ end
 fn VFSPathX { path -- sook dirvnode vnode name }
 	0 name!
 	0 dirvnode!
+	0 sook!
 
 	if (path@ gb 0 ==)
 		-ENOENT vnode!
