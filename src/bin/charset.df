@@ -1,0 +1,14 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+fn Main { ... -- ret }
+	auto c
+	0 c!
+
+	while (c@ 256 <)
+		c@ Putc
+		1 c +=
+	end
+
+	'\n' Putc
+end

@@ -101,7 +101,7 @@ fn Main { ... -- ret }
 		[2]argv@ NVRAMDeleteVar
 
 		nvfd@ NVRAMWrite
-	end	elseif (cmd@ SET ==)
+	end elseif (cmd@ SET ==)
 		[3]argv@ [2]argv@ NVRAMSetVar
 
 		nvfd@ NVRAMWrite
