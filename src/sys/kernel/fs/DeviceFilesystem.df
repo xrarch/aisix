@@ -414,6 +414,8 @@ fn (FSGetNode) DevFSGetNode { vnode -- ok }
 
 	if (dev@ 0 ==)
 		ERR ok!
+
+		return
 	end
 
 	dev@ vnode@ VNode_FSData + !

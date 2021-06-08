@@ -1,0 +1,22 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rtaisix/aisix.h"
+
+// naive fibonacci
+fn Fibonacci { n -- v }
+  if (n@ 1 <=)
+    n@ v!
+    return
+  end
+
+  n@ 1 - Fibonacci n@ 2 - Fibonacci + v!
+end
+
+fn Main { ... -- ret }
+	0 ret!
+
+	if (argc@ 2 ~=)
+		"usage: fib n\n" Abort
+	end
+
+	[1]argv@ atoi Fibonacci "%d\n" Printf
+end
