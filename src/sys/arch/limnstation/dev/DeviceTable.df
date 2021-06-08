@@ -36,38 +36,38 @@ table DeviceTable
 	"dma"    "dma-controller"         "AISA,ebus-dma"     1
 	pointerof DrvDMAFoundNode
 
-    "lsic"   "interrupt-controller"   "AISA,lsic"         1
-    pointerof DrvLSICFoundNode
+	"lsic"   "interrupt-controller"   "AISA,lsic"         1
+	pointerof DrvLSICFoundNode
 
-    "serial" "serial"                 "AISA,serial-port"  1
-    pointerof DrvSerialFoundNode
+	"serial" "serial"                 "AISA,serial-port"  1
+	pointerof DrvSerialFoundNode
 
-    "clock"  "rtc"                    "AISA,clock"        1
-    pointerof DrvClockFoundNode
+	"clock"  "rtc"                    "AISA,clock"        1
+	pointerof DrvClockFoundNode
 
-    "dks"    "disk"                   "AISA,satsuma-disk" 1
-    pointerof DrvDKSFoundNode
+	"dks"    "disk"                   "AISA,satsuma-disk" 1
+	pointerof DrvDKSFoundNode
 
-    "dks"    "disk-logical"           "AISA,satsuma-disk" 1
-    pointerof DrvDKSLogicalFoundNode
+	"dks"    "disk-logical"           "AISA,satsuma-disk" 1
+	pointerof DrvDKSLogicalFoundNode
 
-    "lgfx"   "display"                "AISA,limngfx"      1
-    pointerof DrvLGFXFoundNode
+	"lgfx"   "display"                "AISA,limngfx"      1
+	pointerof DrvLGFXFoundNode
 
-    "amtsu"  "bus"                    "AISA,amanatsu"     1
-    pointerof DrvAmtsuFoundNode
+	"amtsu"  "bus"                    "AISA,amanatsu"     1
+	pointerof DrvAmtsuFoundNode
 
-    "keybd"  "keyboard"               "AISA,keyboard"     2
-    pointerof DrvKeybdFoundNode
+	"keybd"  "keyboard"               "AISA,keyboard"     2
+	pointerof DrvKeybdFoundNode
 
-    "mouse"  "mouse"                  "AISA,mouse"        1
-    pointerof DrvMouseFoundNode
+	"mouse"  "mouse"                  "AISA,mouse"        1
+	pointerof DrvMouseFoundNode
 
-    "nvram"  "nvram"                  "AISA,nvram"        1
-    pointerof DrvNVRAMFoundNode
+	"nvram"  "nvram"                  "AISA,nvram"        1
+	pointerof DrvNVRAMFoundNode
 
-    "dksbus" "disk-bus"               "AISA,satsuma"      1
-    pointerof DrvDKSFoundBus
+	"dksbus" "disk-bus"               "AISA,satsuma"      1
+	pointerof DrvDKSFoundBus
 endtable
 public DeviceTable
 
