@@ -79,7 +79,7 @@ fn Main { ksz args -- ret }
 	auto tram
 
 	"/memory" a3xDeviceSelect
-		"totalRAM" a3xDGetProperty tram!
+		"sash,realTotalRAM" a3xDGetProperty tram!
 	a3xDeviceExit
 
 	pointerof _bss_end MachineRAMBase!
