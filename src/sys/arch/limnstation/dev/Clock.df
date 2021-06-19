@@ -58,10 +58,14 @@ fn ClockSet { -- }
 	rs@ InterruptRestore
 end
 
+externptr Reschedule
+
 fn ClockIntr { intn -- }
 	ClockSet
 
 	intn@ InterruptAck@ InterruptAcker
 
 	CLOCKINTERVAL TimerTick
+
+	1 Reschedule!
 end

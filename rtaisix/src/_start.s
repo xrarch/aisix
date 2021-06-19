@@ -4,12 +4,12 @@
 
 _start:
 .global _start
-	la sp, StackTop
+	la   sp, StackTop
 
-	jal _Launch
+	jal  _Launch
 
 .idle:
-	b .idle
+	b    .idle
 
 .entry _start
 
@@ -21,38 +21,37 @@ _start:
 ;a1: argv
 _MainTrampoline:
 .global _MainTrampoline
-	li t0, 0
-	li t3, 0
-	mov t2, sp
+	li   t0, 0
+	li   t3, 0
+	mov  t2, sp
 
-	beq a0, zero, .done
+	beq  a0, zero, .done
 
-	sub a0, a0, 1
-	add a1, a1, 8
+	subi a0, a0, 1
+	addi a1, a1, 8
 
-	lsh t1, a0, 3
-	sub sp, sp, t1
+	lshi t1, a0, 3
+	sub  sp, sp, t1
 
 .loop:
-	beq t0, a0, .done
+	beq  t0, a0, .done
 
-	mov t1, long [a1]
-	mov long [sp + t3], t1
+	mov  t1, long [a1]
+	mov  long [sp + t3], t1
 
-	add a1, a1, 8
-	add t0, t0, 1
-	add t3, t3, 4
-	b .loop
+	addi a1, a1, 8
+	addi t0, t0, 1
+	addi t3, t3, 4
+	b    .loop
 
 .done:
-	push lr
-	push t2
+	subi sp, sp, 8
+	mov  long [sp + 4], lr
+	mov  long [sp], t2
 
-	jal Main
+	jal  Main
 
-	mov a0, v0
-
-	jal Exit
+	jal  Exit
 
 .section bss
 

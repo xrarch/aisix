@@ -96,7 +96,7 @@ end
 asm "
 
 GetCaller:
-	mov v0, long [sp + 4]
+	mov a0, long [sp + 4]
 	ret
 
 "

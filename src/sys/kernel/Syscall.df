@@ -93,7 +93,7 @@ fn (Syscall) SysOpen { tf -- ok }
 	tf@ Context_a3 + @ mode!
 
 	auto pbits
-	tf@ Context_v0 + @ pbits!
+	tf@ Context_t0 + @ pbits!
 
 	path@ pathlen@ GetString path!
 
@@ -151,16 +151,16 @@ fn (Syscall) SysNewProcess { tf -- ok }
 	tf@ Context_a3 + @ mode!
 
 	auto fd2
-	tf@ Context_v0 + @ fd2!
+	tf@ Context_t0 + @ fd2!
 
 	auto fd1
-	tf@ Context_v1 + @ fd1!
+	tf@ Context_t1 + @ fd1!
 
 	auto fd0
-	tf@ Context_t0 + @ fd0!
+	tf@ Context_t2 + @ fd0!
 
 	auto path
-	tf@ Context_t1 + @ path!
+	tf@ Context_t3 + @ path!
 
 	if (mode@ NP_SPECIFY >)
 		-EINVAL ok!
@@ -177,7 +177,7 @@ fn (Syscall) SysNewProcess { tf -- ok }
 		return
 	end
 
-	path@ tf@ Context_t2 + @ GetString path!
+	path@ tf@ Context_t4 + @ GetString path!
 
 	if (path@ iserr)
 		path@ ok!
@@ -317,9 +317,9 @@ fn (Syscall) SysSetTTYIgnore { tf -- ok }
 	ttyign@ CurrentThread@ Thread_Process + @ Process_IgnoreTTY + !
 end
 
-(* ret ends up in v1, pid ends up in v0 *)
+(* ret ends up in a1, pid ends up in a0 *)
 fn (Syscall) SysWait { tf -- ok }
-	Wait tf@ Context_v1 + ! ok!
+	Wait tf@ Context_a1 + ! ok!
 end
 
 fn (Syscall) SysSetUID { tf -- ok }
@@ -589,7 +589,7 @@ fn (Syscall) SysMount { tf -- ok }
 	tf@ Context_a3 + @ dir!
 
 	auto dirlen
-	tf@ Context_v0 + @ dirlen!
+	tf@ Context_t0 + @ dirlen!
 
 	dir@ dirlen@ GetString dir!
 
@@ -600,10 +600,10 @@ fn (Syscall) SysMount { tf -- ok }
 	end
 
 	auto pdev
-	tf@ Context_v1 + @ pdev!
+	tf@ Context_t1 + @ pdev!
 
 	auto pdevlen
-	tf@ Context_t0 + @ pdevlen!
+	tf@ Context_t2 + @ pdevlen!
 
 	if (pdev@)
 		pdev@ pdevlen@ GetString pdev!
@@ -617,7 +617,7 @@ fn (Syscall) SysMount { tf -- ok }
 	end
 
 	auto flags
-	tf@ Context_t1 + @ flags!
+	tf@ Context_t3 + @ flags!
 
 	type@ dir@ pdev@ flags@ SMount ok!
 
@@ -741,9 +741,9 @@ externptr KHeapUsed
 
 fn (Syscall) SysMemInfo { tf -- ok }
 	Pages@ 12 << ok!
-	Alloced@ 12 << tf@ Context_v1 + !
-	KHeapSize@ tf@ Context_t0 + !
-	KHeapUsed@ tf@ Context_t1 + !
+	Alloced@ 12 << tf@ Context_a1 + !
+	KHeapSize@ tf@ Context_a2 + !
+	KHeapUsed@ tf@ Context_a3 + !
 end
 
 fn (Syscall) SysAllocSegment { tf -- ok }
@@ -778,7 +778,7 @@ fn (Syscall) SysMapSegment { tf -- ok }
 	tf@ Context_a2 + @ pva!
 	tf@ Context_a3 + @ sd!
 
-	CurrentThread@ Thread_Process + @ sd@ pva@ must@ MapSegment tf@ Context_v1 + ! ok!
+	CurrentThread@ Thread_Process + @ sd@ pva@ must@ MapSegment tf@ Context_a1 + ! ok!
 end
 
 fn (Syscall) SysCloseSegment { tf -- ok }
@@ -806,7 +806,7 @@ fn (Syscall) SysAISIXGetMode { tf -- ok }
 end
 
 fn (Syscall) SysTime { tf -- ok }
-	ClockEpoch tf@ Context_v1 + ! ok!
+	ClockEpoch tf@ Context_a1 + ! ok!
 end
 
 fn (Syscall) SysFChown { tf -- ok }
@@ -1007,10 +1007,10 @@ fn (Syscall) SysIOCtl { tf -- ok }
 	tf@ Context_a3 + @ op3!
 
 	auto op2
-	tf@ Context_v0 + @ op2!
+	tf@ Context_t0 + @ op2!
 
 	auto op1
-	tf@ Context_v1 + @ op1!
+	tf@ Context_t1 + @ op1!
 
 	op1@ op2@ op3@ op4@ fd@ IOCtl ok!
 end
@@ -1033,7 +1033,7 @@ fn (Syscall) SysRename { tf -- ok }
 	tf@ Context_a3 + @ srcname!
 
 	auto srclen
-	tf@ Context_v0 + @ srclen!
+	tf@ Context_t0 + @ srclen!
 
 	srcname@ srclen@ GetString srcname!
 

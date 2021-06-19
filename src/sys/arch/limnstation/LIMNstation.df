@@ -7,27 +7,6 @@ extern AISIX { ksz args -- ret }
 
 const CompatibleFirmware 30506
 
-var SavedEV 0
-var SavedTLBV 0
-
-asm "
-
-SaveEV:
-	la t0, SavedEV
-	mov long [t0], ev
-	la t0, SavedTLBV
-	mov long [t0], tlbv
-	ret
-
-RestoreEV:
-	la t0, SavedEV
-	mov ev, long [t0]
-	la t0, SavedTLBV
-	mov tlbv, long [t0]
-	ret
-
-"
-
 extern SaveEV { -- }
 extern RestoreEV { -- }
 
@@ -93,20 +72,10 @@ fn Main { ksz args -- ret }
 	ksz@ args@ AISIX ret!
 end
 
-externptr LIMN2KTimeslice
-
 extern DeviceTree { -- }
 extern ExceptionInit { -- }
 fn PlatformInit { -- }
 	ExceptionInit
-
-	auto ts
-	"ts" ArgsValue ts!
-
-	if (ts@)
-		ts@ atoi LIMN2KTimeslice!
-		ts@ Free
-	end
 
 	DeviceTree
 
@@ -151,19 +120,6 @@ end
 fn PlatformUnalertUser { -- }
 	(* nothing i guess *)
 end
-
-asm "
-
-SwitchK3:
-	mov k3, a0
-	mov asid, a1
-	ret
-
-FlushTLB:
-	ftlb a0, a1
-	ret
-
-"
 
 extern FlushTLB { vpn asid -- }
 
