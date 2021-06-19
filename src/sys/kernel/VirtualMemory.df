@@ -544,7 +544,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 		end
 
 		if (i@ 1023 & 0 ==)
-			pd@@ 5 >> pt!
+			pd@@ 5 >> 12 << pt!
 
 			4 pd +=
 		end
