@@ -6,7 +6,7 @@ Attempt to build an OS for the LIMNstation fantasy computer.
 
 A long-term goal is a tiled GUI, short(er) term goal is to get a half-usable kernel.
 
-![Running](https://i.imgur.com/mBnuuTX.png)
+![Running](https://i.imgur.com/RGFRGHh.png)
 
 ## Building
 
