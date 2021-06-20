@@ -32,7 +32,7 @@ struct LOFFSymbol
 endstruct
 
 const LOFFMagic 0x4C4F4635
-const LOFFArch 2
+const LOFFArch 4
 
 const LOFFGLOBAL 1
 

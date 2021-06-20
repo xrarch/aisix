@@ -258,6 +258,18 @@ externptr TTYKill
 var DebugNextSched 0
 public DebugNextSched
 
+var InScheduler 0
+public InScheduler
+
+asm "
+
+CPUHlt:
+	.dl 0x10000029
+
+"
+
+extern CPUHlt { -- }
+
 fn Scheduler { -- }
 	auto thread
 
@@ -268,7 +280,7 @@ fn Scheduler { -- }
 
 	auto found
 
-	InterruptEnableNoPreempt
+	RS_KTHREAD rs!
 
 	while (1)
 		if (DebugNextSched@)
@@ -331,6 +343,13 @@ fn Scheduler { -- }
 		end
 
 		fc@ found!
+
+		1 InScheduler!
+
+		rs@ InterruptRestore
+		InterruptDisable rs!
+
+		0 InScheduler!
 	end
 end
 

@@ -371,7 +371,7 @@ fn VMPagemapFree { pm -- }
 	while (i@ 1024 <)
 		if (pdi@@)
 			auto pt
-			pdi@@ pt!
+			pdi@@ 5 >> 12 << pt!
 
 			if (pt@)
 				pt@ PMMFasterSinglePageFree
@@ -395,7 +395,7 @@ fn VMMap { pm virt phys flags -- ok }
 	virt@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
 
 	auto pt
-	pdi@@ pt!
+	pdi@@ 5 >> 12 << pt!
 
 	if (pt@ 0 ==)
 		PMMFasterSinglePageCalloc pt!
@@ -406,7 +406,7 @@ fn VMMap { pm virt phys flags -- ok }
 			return
 		end
 
-		pt@ pdi@!
+		pt@ 12 >> 5 << pdi@!
 	end
 
 	virt@ 12 >> 1023 & 2 << pt@ + pdi!
@@ -415,7 +415,7 @@ fn VMMap { pm virt phys flags -- ok }
 		virt@ 12 >> "VMMap: vpn %x is already mapped!\n" Panic
 	end
 
-	phys@ 12 >> 4 << flags@ | pdi@!
+	phys@ 12 >> 5 << flags@ | pdi@!
 
 	0 ok!
 
@@ -430,7 +430,7 @@ fn VMUnmap { pm virt free -- }
 	virt@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
 
 	auto pt
-	pdi@@ pt!
+	pdi@@ 5 >> 12 << pt!
 
 	if (pt@ 0 ==)
 		virt@ 12 >> 1023 & "VMUnmap: vpn %x wasn't mapped(0)\n" Panic
@@ -444,7 +444,7 @@ fn VMUnmap { pm virt free -- }
 	end
 
 	if (free@)
-		pti@@ 4 >> 12 << PMMFasterSinglePageFree
+		pti@@ 5 >> 12 << PMMFasterSinglePageFree
 	end
 
 	0 pti@!
@@ -489,7 +489,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 	pm@ Pagemap_Data + @ start@ 22 >> 2 << + pd!
 
 	auto pt
-	pd@@ pt!
+	pd@@ 5 >> 12 << pt!
 
 	auto max
 	PAGEMAX max!
@@ -544,7 +544,7 @@ fn VMFindEmptyRow { pm length start must -- ok ava }
 		end
 
 		if (i@ 1023 & 0 ==)
-			pd@@ pt!
+			pd@@ 5 >> 12 << pt!
 
 			4 pd +=
 		end
@@ -750,7 +750,7 @@ fn VMWalk { pm va write -- ok pa }
 	va@ 22 >> 2 << pm@ Pagemap_Data + @ + pdi!
 
 	auto pt
-	pdi@@ pt!
+	pdi@@ 5 >> 12 << pt!
 
 	if (pt@ 0 ==)
 		ERR ok!
@@ -775,7 +775,7 @@ fn VMWalk { pm va write -- ok pa }
 		return
 	end
 
-	pte@ 4 >> 12 << va@ 4095 & | pa!
+	pte@ 5 >> 12 << va@ 4095 & | pa!
 
 	0 ok!
 

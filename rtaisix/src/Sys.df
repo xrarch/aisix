@@ -49,324 +49,322 @@ const SYSRENAME  44
 asm "
 
 _open:
-	mov v0, a3
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSOPEN
-	sys
+	mov  t0, a3
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSOPEN
+	sys  0
 	ret
 
 _write:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSWRITE
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSWRITE
+	sys  0
 	ret
 
 _close:
-	mov a1, a0
-	li a0, SYSCLOSE
-	sys
+	mov  a1, a0
+	li   a0, SYSCLOSE
+	sys  0
 	ret
 
 _read:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSREAD
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSREAD
+	sys  0
 	ret
 
 _newprocess:
-	mov t2, long [sp + 20]
-	mov t1, long [sp + 16]
-	mov t0, long [sp + 12]
-	mov v1, long [sp + 8]
-	mov v0, a3
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSNEWPROC
-	sys
+	mov  t4, long [sp + 20]
+	mov  t3, long [sp + 16]
+	mov  t2, long [sp + 12]
+	mov  t1, long [sp + 8]
+	mov  t0, a3
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSNEWPROC
+	sys  0
 	ret
 
 _exit:
-	mov a1, a0
-	li a0, SYSEXIT
-	sys
+	mov  a1, a0
+	li   a0, SYSEXIT
+	sys  0
 	ret
 
 _dup:
-	mov a1, a0
-	li a0, SYSDUP
-	sys
+	mov  a1, a0
+	li   a0, SYSDUP
+	sys  0
 	ret
 
 _ttyign:
-	mov a1, a0
-	li a0, SYSIGN
-	sys
+	mov  a1, a0
+	li   a0, SYSIGN
+	sys  0
 	ret
 
 _wait:
-	li a0, SYSWAIT
-	sys
+	li   a0, SYSWAIT
+	sys  0
 	ret
 
 _setuid:
-	mov a1, a0
-	li a0, SYSSETUID
-	sys
+	mov  a1, a0
+	li   a0, SYSSETUID
+	sys  0
 	ret
 
 _getpid:
-	li a0, SYSGETPID
-	sys
+	li   a0, SYSGETPID
+	sys  0
 	ret
 
 _getuid:
-	li a0, SYSGETUID
-	sys
+	li   a0, SYSGETUID
+	sys  0
 	ret
 
 _geteuid:
-	li a0, SYSGETEUID
-	sys
+	li   a0, SYSGETEUID
+	sys  0
 	ret
 
 _readdir:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSREADDIR
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSREADDIR
+	sys  0
 	ret
 
 _pstat:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSPSTAT
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSPSTAT
+	sys  0
 	ret
 
 _fstat:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSFSTAT
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSFSTAT
+	sys  0
 	ret
 
 _chdir:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSCHDIR
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSCHDIR
+	sys  0
 	ret
 
 _uname:
-	mov a1, a0
-	li a0, SYSUNAME
-	sys
+	mov  a1, a0
+	li   a0, SYSUNAME
+	sys  0
 	ret
 
 _unlink:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSUNLINK
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSUNLINK
+	sys  0
 	ret
 
 _mkdir:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSMKDIR
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSMKDIR
+	sys  0
 	ret
 
 _umask:
-	mov a1, a0
-	li a0, SYSUMASK
-	sys
+	mov  a1, a0
+	li   a0, SYSUMASK
+	sys  0
 	ret
 
 _mount:
-	mov t1, long [sp + 16]
-	mov t0, long [sp + 12]
-	mov v1, long [sp + 8]
-	mov v0, a3
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSMOUNT
-	sys
+	mov  t3, long [sp + 16]
+	mov  t2, long [sp + 12]
+	mov  t1, long [sp + 8]
+	mov  t0, a3
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSMOUNT
+	sys  0
 	ret
 
 _umount:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSUMOUNT
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSUMOUNT
+	sys  0
 	ret
 
 _chown:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSCHOWN
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSCHOWN
+	sys  0
 	ret
 
 _chmod:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSCHMOD
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSCHMOD
+	sys  0
 	ret
 
 _sync:
-	li a0, SYSSYNC
-	sys
+	li   a0, SYSSYNC
+	sys  0
 	ret
 
 _seek:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSSEEK
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSSEEK
+	sys  0
 	ret
 
 _getcwd:
-	mov a1, a0
-	li a0, SYSGETCWD
-	sys
+	mov  a1, a0
+	li   a0, SYSGETCWD
+	sys  0
 	ret
 
 _halt:
-	mov a1, a0
-	li a0, SYSHALT
-	sys
+	mov  a1, a0
+	li   a0, SYSHALT
+	sys  0
 	ret
 
 _meminfo:
-	li a0, SYSMEMINFO
-	sys
-	mov long [sp + 8], t0
-	mov long [sp + 12], t1
+	li   a0, SYSMEMINFO
+	sys  0
 	ret
 
 _allocsegment:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSALLOCSEGMENT
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSALLOCSEGMENT
+	sys  0
 	ret
 
 _mapsegment:
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSMAPSEGMENT
-	sys
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSMAPSEGMENT
+	sys  0
 	ret
 
 _closesegment:
-	mov a1, a0
-	li a0, SYSCLOSESEGMENT
-	sys
+	mov  a1, a0
+	li   a0, SYSCLOSESEGMENT
+	sys  0
 	ret
 
 _unmapsegment:
-	mov a1, a0
-	li a0, SYSUNMAPSEGMENT
-	sys
+	mov  a1, a0
+	li   a0, SYSUNMAPSEGMENT
+	sys  0
 	ret
 
 _getmode:
-	li a0, SYSAISIXGETMODE
-	sys
+	li   a0, SYSAISIXGETMODE
+	sys  0
 	ret
 
 _time:
-	li a0, SYSTIME
-	sys
+	li   a0, SYSTIME
+	sys  0
 	ret
 
 _fchown:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSFCHOWN
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSFCHOWN
+	sys  0
 	ret
 
 _fchmod:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSFCHMOD
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSFCHMOD
+	sys  0
 	ret
 
 _procinfo:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSPROCINFO
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSPROCINFO
+	sys  0
 	ret
 
 _nextprocinfo:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSNEXTPROCINFO
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSNEXTPROCINFO
+	sys  0
 	ret
 
 _getdevname:
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSGETDEVNAME
-	sys
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSGETDEVNAME
+	sys  0
 	ret
 
 _kill:
-	mov a1, a0
-	li a0, SYSKILL
-	sys
+	mov  a1, a0
+	li   a0, SYSKILL
+	sys  0
 	ret
 
 _ioctl:
-	mov v1, long [sp + 8]
-	mov v0, a3
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSIOCTL
-	sys
+	mov  t1, long [sp + 8]
+	mov  t0, a3
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSIOCTL
+	sys  0
 	ret
 
 _rename:
-	mov v0, a3
-	mov a3, a2
-	mov a2, a1
-	mov a1, a0
-	li a0, SYSRENAME
-	sys
+	mov  t0, a3
+	mov  a3, a2
+	mov  a2, a1
+	mov  a1, a0
+	li   a0, SYSRENAME
+	sys  0
 	ret
 
 ; fd c --
 _rFPutc:
 .global _rFPutc
-	sub sp, 4
-	mov long [sp], a0
-	mov a3, sp
-	li a2, 1
+	subi sp, sp, 4
+	mov  long [sp], a0
+	mov  a3, sp
+	li   a2, 1
 	;mov a1, a1 ;already in a1 due to ABI
-	li a0, SYSWRITE
-	sys
-	add sp, 4
+	li   a0, SYSWRITE
+	sys  0
+	addi sp, sp, 4
 	ret
 
 "
