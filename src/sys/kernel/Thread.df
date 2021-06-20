@@ -261,15 +261,6 @@ public DebugNextSched
 var InScheduler 0
 public InScheduler
 
-asm "
-
-CPUHlt:
-	.dl 0x10000029
-
-"
-
-extern CPUHlt { -- }
-
 fn Scheduler { -- }
 	auto thread
 
