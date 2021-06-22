@@ -8,7 +8,7 @@ var ClockFound 0
 var ClockCmdPort 0
 var ClockDataPort 0
 
-const CLOCKINTERVAL 100
+const CLOCKINTERVAL 200
 
 fn DrvClockFoundNode { node -- }
 	if (ClockFound@)

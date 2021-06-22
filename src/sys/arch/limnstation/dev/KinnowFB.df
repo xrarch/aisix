@@ -58,26 +58,21 @@ fn (GFXInvert) LGFXInvert { x y w h gfx -- }
 	auto fb
 	gfx@ GFX_FBAddr + @ fb!
 
-	auto rowsz
-	w@ 2 * rowsz!
-
 	auto dest
 	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
 
 	auto mod
-	gw@ 2 * rowsz@ - mod!
+	gw@ 2 * mod!
 
-	auto cw
+	if (w@ 8 ~=)
+		"LGFXInvert\n" Panic
+	end
 
 	while (h@)
-		w@ cw!
-
-		while (cw@)
-			dest@ gi ~ 0x7FFF & dest@ si
-
-			2 dest +=
-			1 cw -=
-		end
+		dest@ @ ~ dest@ !
+		dest@ 4 + @ ~ dest@ 4 + !
+		dest@ 8 + @ ~ dest@ 8 + !
+		dest@ 12 + @ ~ dest@ 12 + !
 
 		mod@ dest +=
 		1 h -=
