@@ -5,7 +5,7 @@
 
 extern AISIX { ksz args -- ret }
 
-const CompatibleFirmware 30506
+const CompatibleFirmware 30507
 
 extern SaveEV { -- }
 extern RestoreEV { -- }

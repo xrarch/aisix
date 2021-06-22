@@ -2,7 +2,6 @@
 #include "<ll>/rta3x/a3x.h"
 #include "<inc>/kernel.h"
 #include "<inc>/dev/citron.h"
-#include "<inc>/dev/dma.h"
 
 (* TODO pull DKS port information from device tree *)
 
@@ -227,7 +226,7 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 
 		rs@ InterruptRestore
 
-		DKSBuffer buf@ 4 4 1024 2 1 0 0 DMATransfer
+		buf@ DKSBuffer 4096 memcpy
 
 		UnlockDKS
 
@@ -266,7 +265,7 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 			return
 		end
 
-		buf@ DKSBuffer 4 4 1024 2 1 0 0 DMATransfer
+		DKSBuffer buf@ 4096 memcpy
 
 		(* it's possible for the transfer completion interrupt to occur before we even wait [COUGH emulation COUGH COUGH]
 		so disable interrupts here just in case *)

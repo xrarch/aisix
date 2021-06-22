@@ -306,16 +306,6 @@ fn GConsoleInvert { x y w h -- }
 	x@ GConsoleX@ + y@ GConsoleY@ + w@ h@ GCGFX@ GCInvertP@ GFXInvert
 end
 
-asm "
-
-hlt:
-	.dl 0xFE
-	ret
-
-"
-
-extern hlt { a3 a2 a1 a0 -- }
-
 fn GConsoleScroll { rows -- }
 	auto i
 	0 i!

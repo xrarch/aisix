@@ -3,7 +3,6 @@
 #include "<inc>/kernel.h"
 
 extern DrvCitronFoundNode { node -- }
-extern DrvDMAFoundNode { node -- }
 extern DrvLSICFoundNode { node -- }
 extern DrvSerialFoundNode { node -- }
 extern DrvClockFoundNode { node -- }
@@ -18,13 +17,11 @@ extern DrvDKSFoundBus { node -- }
 
 fnptr FoundNode { node -- }
 
-externptr DMAFound
-
 externptr LSICFound
 
 externptr AmtsuFound
 
-const Devices 13
+const Devices 12
 
 const ElemPerDevice 5
 
@@ -32,9 +29,6 @@ const ElemPerDevice 5
 table DeviceTable
 	"citron" "bus"                    "AISA,citron"       1
 	pointerof DrvCitronFoundNode
-
-	"dma"    "dma-controller"         "AISA,ebus-dma"     1
-	pointerof DrvDMAFoundNode
 
 	"lsic"   "interrupt-controller"   "AISA,lsic"         1
 	pointerof DrvLSICFoundNode
@@ -51,7 +45,7 @@ table DeviceTable
 	"dks"    "disk-logical"           "AISA,satsuma-disk" 1
 	pointerof DrvDKSLogicalFoundNode
 
-	"lgfx"   "display"                "AISA,limngfx"      1
+	"kinwfb" "display"                "AISA,kinnowfb"     1
 	pointerof DrvLGFXFoundNode
 
 	"amtsu"  "bus"                    "AISA,amanatsu"     1
@@ -153,10 +147,6 @@ fn DeviceTree { -- }
 
 	if (LSICFound@ ~~)
 		"couldn't find LSIC node!\n" Panic
-	end
-
-	if (DMAFound@ ~~)
-		"couldn't find DMA node!\n" Panic
 	end
 
 	if (AmtsuFound@ ~~)

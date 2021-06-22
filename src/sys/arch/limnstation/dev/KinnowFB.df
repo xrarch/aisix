@@ -1,0 +1,331 @@
+#include "<df>/dragonfruit.h"
+#include "<ll>/rta3x/a3x.h"
+#include "<inc>/kernel.h"
+
+const LGRegScreen 0x3000
+const LGRegVRAM   0x3004
+const LGRegRead   0x3008
+const LGRegWrite  0x300C
+const LGRegCursor 0x3010
+const LGRegStatus 0x3014
+const LGRegMode   0x3018
+const LGRegCause  0x301C
+const LGRegCurPos 0x3020
+
+fn DrvLGFXFoundNode { node -- }
+	auto gfx
+	AllocGFX gfx!
+
+	if (gfx@ iserr)
+		return
+	end
+
+	"framebuffer" a3xDGetProperty gfx@ GFX_FBAddr + !
+
+	auto w
+	"width" a3xDGetProperty w!
+	w@ gfx@ GFX_Width + !
+
+	auto h
+	"height" a3xDGetProperty h!
+	h@ gfx@ GFX_Height + !
+
+	gfx@ GFX_FBAddr + @ h@ w@ "%dx%d @ 0x%x" BootPrintf
+
+	w@ h@ * 2 * gfx@ GFX_FBSize + !
+
+	"depth" a3xDGetProperty gfx@ GFX_Depth + !
+	"vram" a3xDGetProperty gfx@ GFX_VRAM + !
+	"vramSize" a3xDGetProperty gfx@ GFX_VRAMSize + !
+
+	auto sbe
+	"address" a3xDGetProperty sbe!
+	sbe@ gfx@ GFX_UData + !
+
+	pointerof LGFXRectangle gfx@ GFX_Rect + !
+	pointerof LGFXBlitBits gfx@ GFX_BlitBits + !
+	pointerof LGFXBlit gfx@ GFX_Blit + !
+	pointerof LGFXScroll gfx@ GFX_Scroll + !
+	pointerof LGFXInvert gfx@ GFX_Invert + !
+
+	gfx@ GFXRegister
+end
+
+fn (GFXInvert) LGFXInvert { x y w h gfx -- }
+	auto gw
+	gfx@ GFX_Width + @ gw!
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	auto rowsz
+	w@ 2 * rowsz!
+
+	auto dest
+	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
+
+	auto mod
+	gw@ 2 * rowsz@ - mod!
+
+	auto cw
+
+	while (h@)
+		w@ cw!
+
+		while (cw@)
+			dest@ gi ~ 0x7FFF & dest@ si
+
+			2 dest +=
+			1 cw -=
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn (GFXRect) LGFXRectangle { x y w h color gfx -- }
+	auto row
+	0 row!
+
+	auto v
+	color@ 16 << color@ | v!
+
+	auto gw
+	gfx@ GFX_Width + @ gw!
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	auto ptr
+	y@ gw@ * 2 * x@ 2 * + fb@ + ptr!
+
+	auto mod
+	gw@ 2 * mod!
+
+	auto rowsz
+	w@ 2 * rowsz!
+
+	while (row@ h@ <)
+		ptr@ rowsz@ v@ memset
+
+		1 row +=
+		mod@ ptr +=
+	end
+end
+
+fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
+	// this function is so big because its overly optimized.
+
+	// emulates the function of the old "DMA board" that was removed
+	// from the LIMNstation architecture for being too complex
+
+	auto i
+	auto j
+	auto byte
+
+	auto jcmp
+	256 jcmp!
+
+	auto m1cmp
+	-1 m1cmp!
+
+	if (bitd@ ~~) // least significant is leftmost
+		if (bg@ m1cmp@ ==)
+			if (fg@ m1cmp@ ==)
+				return
+			end
+
+			while (h@)
+				bpr@ i!
+
+				while (i@)
+					ptr@ gb byte!
+
+					1 j!
+
+					while (j@ jcmp@ <)
+						if (byte@ j@ &)
+							fg@ dest@ si
+						end
+
+						2 dest +=
+						1 j <<=
+					end
+
+					1 i -=
+					1 ptr +=
+				end
+
+				mod@ dest +=
+				1 h -=
+			end
+		end else
+			while (h@)
+				bpr@ i!
+
+				while (i@)
+					ptr@ gb byte!
+
+					1 j!
+
+					while (j@ jcmp@ <)
+						if (byte@ j@ &)
+							if (fg@ m1cmp@ ~=)
+								fg@ dest@ si
+							end
+						end else
+							bg@ dest@ si
+						end
+
+						2 dest +=
+						1 j <<=
+					end
+
+					1 i -=
+					1 ptr +=
+				end
+
+				mod@ dest +=
+				1 h -=
+			end
+		end
+	end else // most significant is leftmost
+		if (bg@ m1cmp@ ==)
+			if (fg@ m1cmp@ ==)
+				return
+			end
+
+			while (h@)
+				bpr@ i!
+
+				while (i@)
+					ptr@ gb byte!
+
+					128 j!
+
+					while (j@)
+						if (byte@ j@ &)
+							fg@ dest@ si
+						end
+
+						2 dest +=
+						1 j >>=
+					end
+
+					1 i -=
+					1 ptr +=
+				end
+
+				mod@ dest +=
+				1 h -=
+			end
+		end else
+			while (h@)
+				bpr@ i!
+
+				while (i@)
+					ptr@ gb byte!
+
+					128 j!
+
+					while (j@)
+						if (byte@ j@ &)
+							if (fg@ m1cmp@ ~=)
+								fg@ dest@ si
+							end
+						end else
+							bg@ dest@ si
+						end
+
+						2 dest +=
+						1 j >>=
+					end
+
+					1 i -=
+					1 ptr +=
+				end
+
+				mod@ dest +=
+				1 h -=
+			end
+		end
+	end
+end
+
+fn (GFXBlitBits) LGFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
+	auto gw
+	gfx@ GFX_Width + @ gw!
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	auto dest
+	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
+
+	auto mod
+	gw@ 2 * w@ 2 * - mod!
+
+	bpr@ fg@ bg@ bitd@ ptr@ dest@ mod@ w@ h@
+	LGFXBlitBitsFast
+end
+
+fn (GFXBlit) LGFXBlit { x y w h ptr gfx -- }
+	auto dest
+	y@ gfx@ GFX_Width + @ * 2 * x@ 2 * + gfx@ GFX_FBAddr + @ + dest!
+
+	auto mod
+	gfx@ GFX_Width + @ 2 * mod!
+
+	auto pmod
+	w@ 2 * pmod!
+
+	while (h@)
+		dest@ ptr@ pmod@ memcpy
+
+		pmod@ ptr +=
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn (GFXScroll) LGFXScroll { x y w h color rows gfx -- }
+	auto row
+	0 row!
+
+	auto gw
+	gfx@ GFX_Width + @ gw!
+
+	auto gh
+	gfx@ GFX_Height + @ gh!
+
+	auto fb
+	gfx@ GFX_FBAddr + @ fb!
+
+	auto dest
+	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
+
+	auto src
+	y@ rows@ + gw@ * 2 * x@ 2 * + fb@ + src!
+
+	auto mod
+	gw@ 2 * mod!
+
+	auto rowsz
+	w@ 2 * rowsz!
+
+	auto rh
+	h@ rows@ - rh!
+
+	while (row@ rh@ <)
+		dest@ src@ rowsz@ memcpy
+
+		1 row +=
+		mod@ src +=
+		mod@ dest +=
+	end
+
+	if (color@ -1 ~=)
+		x@ y@ h@ + rows@ - w@ rows@ color@ gfx@ LGFXRectangle
+	end
+end
