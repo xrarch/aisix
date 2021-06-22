@@ -608,6 +608,10 @@ fn GConsolePutCharF { char -- }
 		return
 	end
 
+	if (GCCurX@ GCWidth@ >=)
+		GConsoleNewline
+	end
+
 	GCCurX@ FontWidth * GConsoleX@ +
 	GCCurY@ FontHeight * GConsoleY@ +
 	char@
@@ -616,10 +620,6 @@ fn GConsolePutCharF { char -- }
 	FontDrawChar
 
 	GCCurX@ 1 + GCCurX!
-
-	if (GCCurX@ GCWidth@ >=)
-		GConsoleNewline
-	end
 end
 
 asm "
