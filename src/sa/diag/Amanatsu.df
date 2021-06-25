@@ -7,7 +7,7 @@ const AmaPortMID 0x31
 const AmaPortCMD 0x32
 const AmaPortA 0x33
 const AmaPortB 0x34
-const AmaDevs 256
+const AmaDevs 16
 
 const AmaIDN 3
 table AmaIDs
