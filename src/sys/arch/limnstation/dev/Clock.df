@@ -61,8 +61,6 @@ end
 externptr Reschedule
 
 fn ClockIntr { intn -- }
-	ClockSet
-
 	intn@ InterruptAck@ InterruptAcker
 
 	CLOCKINTERVAL TimerTick
