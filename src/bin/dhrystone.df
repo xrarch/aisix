@@ -121,9 +121,9 @@ fn Proc0 { -- }
 	benchtime@ LOOPS "Dhrystone(df/aisix) time for %d passes = %dms\n" Printf
 
 	auto score
-	LOOPS benchtime@ 1000 / / score!
+	LOOPS 10000 * benchtime@ / score!
 
-	score@ 1757 / score@ "This machine benchmarks at %d dhrystones/second (~%d VAX MIPS)\n" Printf
+	score@ 17570 / score@ 10 / "This machine benchmarks at %d dhrystones/second (score/1757 = ~%d VAX MIPS)\n" Printf
 end
 
 fn Proc1 { ptrparin -- }
