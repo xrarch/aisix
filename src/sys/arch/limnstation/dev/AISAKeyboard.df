@@ -172,11 +172,8 @@ fn AKeyboardRead { -- mod scan c }
 		0 Ctrl!
 	end elseif (scan@ 32850 ==)
 		0 Shift!
-	end elseif (scan@ 52 ==)
-		1 Capslock!
-		return
 	end elseif (scan@ 32820 ==)
-		0 Capslock!
+		Capslock@ ~~ Capslock!
 	end
 
 	if (scan@ 80 >=)
