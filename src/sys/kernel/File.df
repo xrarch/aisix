@@ -164,6 +164,20 @@ fn VOpen { path rwx mode pbits -- vnode }
 
 	if (vnode@ iserr)
 		if (vnode@ -ENOENT == mode@ O_CREATE & && sook@ &&)
+			if (mount@ Mount_Flags + @ FS_READONLY &)
+				if (name@)
+					name@ Free
+				end
+
+				if (dirvnode@)
+					dirvnode@ VNodePut
+				end
+
+				-EROFS vnode!
+
+				return
+			end
+
 			CurrentThread@ Thread_Process + @ Process_UMask + @ ~ pbits &=
 
 			auto mount
