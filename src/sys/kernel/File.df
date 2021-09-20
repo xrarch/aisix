@@ -164,6 +164,9 @@ fn VOpen { path rwx mode pbits -- vnode }
 
 	if (vnode@ iserr)
 		if (vnode@ -ENOENT == mode@ O_CREATE & && sook@ &&)
+			auto mount
+			dirvnode@ VNode_Mount + @ mount!
+		
 			if (mount@ Mount_Flags + @ FS_READONLY &)
 				if (name@)
 					name@ Free
@@ -179,9 +182,6 @@ fn VOpen { path rwx mode pbits -- vnode }
 			end
 
 			CurrentThread@ Thread_Process + @ Process_UMask + @ ~ pbits &=
-
-			auto mount
-			dirvnode@ VNode_Mount + @ mount!
 
 			dirvnode@
 			name@
