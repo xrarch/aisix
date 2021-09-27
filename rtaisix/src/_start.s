@@ -25,7 +25,7 @@ _MainTrampoline:
 	li   t3, 0
 	mov  t2, sp
 
-	beq  a0, zero, .done
+	beq  a0, .done
 
 	subi a0, a0, 1
 	addi a1, a1, 8
@@ -34,7 +34,8 @@ _MainTrampoline:
 	sub  sp, sp, t1
 
 .loop:
-	beq  t0, a0, .done
+	sub  t1, t0, a0
+	beq  t1, .done
 
 	mov  t1, long [a1]
 	mov  long [sp + t3], t1

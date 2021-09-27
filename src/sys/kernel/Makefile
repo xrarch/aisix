@@ -1,5 +1,5 @@
 PLATFORM := limnstation
-CPU      := limn2500
+CPU      := limn2600
 
 PLATFORM_DIR := ../arch/$(PLATFORM)
 CPU_DIR      := ../arch/$(CPU)

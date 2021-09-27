@@ -12,7 +12,7 @@ var SavedEV 0
 
 asm "
 
-limn2500_exception:
+limn2600_exception:
 	mtcr k0, t0 ; save t0 to free it as scratch
 	mtcr k1, t1 ; ditto with t1
 	mtcr k2, sp ; save stack pointer
@@ -21,7 +21,7 @@ limn2500_exception:
 	mfcr t0, ers
 
 	andi t1, t0, RS_USER
-	beq  t1, zero, .waskernel
+	beq  t1, .waskernel
 
 	la   t1, CurrentThread
 	mov  t1, long [t1]
@@ -214,7 +214,7 @@ CPUIdle:
 
 ExceptionInit:
 .global ExceptionInit
-	la   t0, limn2500_exception
+	la   t0, limn2600_exception
 	mtcr evec, t0
 	ret
 

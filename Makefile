@@ -5,7 +5,7 @@ DISTIMGSZ  := 2048
 FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
-CPU        := limn2500
+CPU        := limn2600
 
 ifeq ($(FLATIMAGE),no)
 	DISKLABEL  := ./dist/preset.disklabel
