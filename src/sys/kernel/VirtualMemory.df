@@ -406,7 +406,7 @@ fn VMMap { pm virt phys flags -- ok }
 			return
 		end
 
-		pt@ 12 >> 5 << pdi@!
+		pt@ 12 >> 5 << 1 | pdi@!
 	end
 
 	virt@ 12 >> 1023 & 2 << pt@ + pdi!
@@ -790,18 +790,18 @@ fn VMDumpWalk { pm -- }
 	0 i!
 
 	while (i@ 1024 <)
-		if (pdi@@)
+		if (pdi@@ 1 &)
 			auto j
 			0 j!
 
 			i@ "[%d]\n" Printf
 
 			auto pt
-			pdi@@ pt!
+			pdi@@ 5 >> 12 << pt!
 
 			while (j@ 1024 <)
 				if (pt@@)
-					pt@@ j@ "  [%d]-> %x\n" Printf
+					pt@@ 5 >> 12 << j@ "  [%d]-> %x\n" Printf
 				end
 
 				4 pt +=
