@@ -64,10 +64,6 @@ fn (GFXInvert) LGFXInvert { x y w h gfx -- }
 	auto mod
 	gw@ 2 * mod!
 
-	if (w@ 8 ~=)
-		"LGFXInvert\n" Panic
-	end
-
 	while (h@)
 		dest@ @ ~ dest@ !
 		dest@ 4 + @ ~ dest@ 4 + !
@@ -125,6 +121,8 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 	auto m1cmp
 	-1 m1cmp!
 
+	auto k
+
 	if (bitd@ ~~) // least significant is leftmost
 		if (bg@ m1cmp@ ==)
 			if (fg@ m1cmp@ ==)
@@ -134,16 +132,23 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 			while (h@)
 				bpr@ i!
 
+				w@ k!
+
 				while (i@)
 					ptr@ gb byte!
 
 					1 j!
 
 					while (j@ jcmp@ <)
+						if (k@ ~~)
+							break
+						end
+
 						if (byte@ j@ &)
 							fg@ dest@ si
 						end
 
+						1 k -=
 						2 dest +=
 						1 j <<=
 					end
@@ -159,12 +164,18 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 			while (h@)
 				bpr@ i!
 
+				w@ k!
+
 				while (i@)
 					ptr@ gb byte!
 
 					1 j!
 
 					while (j@ jcmp@ <)
+						if (k@ ~~)
+							break
+						end
+
 						if (byte@ j@ &)
 							if (fg@ m1cmp@ ~=)
 								fg@ dest@ si
@@ -173,6 +184,7 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 							bg@ dest@ si
 						end
 
+						1 k -=
 						2 dest +=
 						1 j <<=
 					end
@@ -194,16 +206,23 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 			while (h@)
 				bpr@ i!
 
+				w@ k!
+
 				while (i@)
 					ptr@ gb byte!
 
 					128 j!
 
 					while (j@)
+						if (k@ ~~)
+							break
+						end
+
 						if (byte@ j@ &)
 							fg@ dest@ si
 						end
 
+						1 k -=
 						2 dest +=
 						1 j >>=
 					end
@@ -219,12 +238,18 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 			while (h@)
 				bpr@ i!
 
+				w@ k!
+
 				while (i@)
 					ptr@ gb byte!
 
 					128 j!
 
 					while (j@)
+						if (k@ ~~)
+							break
+						end
+
 						if (byte@ j@ &)
 							if (fg@ m1cmp@ ~=)
 								fg@ dest@ si
@@ -233,6 +258,7 @@ fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
 							bg@ dest@ si
 						end
 
+						1 k -=
 						2 dest +=
 						1 j >>=
 					end
