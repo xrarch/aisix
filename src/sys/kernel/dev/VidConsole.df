@@ -627,7 +627,7 @@ asm "
 .section data
 
 Font:
-	.static font-terminus.raw
+	.static font-terminus8x16.raw
 
 .section text
 
