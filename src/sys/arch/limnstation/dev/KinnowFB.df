@@ -285,7 +285,7 @@ fn (GFXBlitBits) LGFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
 	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
 
 	auto mod
-	gw@ 2 * w@ 2 * - mod!
+	gw@ w@ - 2 * mod!
 
 	bpr@ fg@ bg@ bitd@ ptr@ dest@ mod@ w@ h@
 	LGFXBlitBitsFast
