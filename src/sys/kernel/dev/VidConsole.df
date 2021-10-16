@@ -19,10 +19,7 @@ var GCHeight 0
 const GConsoleBG 0x394C
 const GConsoleFG 0x7FFF
 
-const FontWidth 8
-const FontWidthA (FontWidth 1 -)
-
-const FontBytesPerRow 1
+const FontWidth  8
 const FontHeight 16
 
 const FontBitD 1
@@ -639,10 +636,6 @@ fn FontInit { gfx -- }
 	gfx@ GFX_BlitBits + @ FontBBP!
 end
 
-fn private FontBlitBits { bpr fg bg bitd bmp x y w h -- }
-	bpr@ fg@ bg@ bitd@ bmp@ x@ y@ w@ h@ GCGFX@ FontBBP@ GFXBlitBits
-end
-
 fn FontDrawChar { x y char bg color -- }
 	(* draw spaces as rectangles *)
 	if (char@ ' ' ==)
@@ -651,9 +644,9 @@ fn FontDrawChar { x y char bg color -- }
 	end
 
 	auto bmp
-	char@ FontBytesPerRow FontHeight * * pointerof Font + bmp!
+	FontWidth 7 + 3 >> FontHeight * char@ * pointerof Font + bmp!
 
-	FontBytesPerRow color@ bg@ FontBitD bmp@ x@ y@ FontWidth FontHeight FontBlitBits
+	color@ bg@ FontBitD bmp@ x@ y@ FontWidth FontHeight GCGFX@ FontBBP@ GFXBlitBits
 end
 
 fn FontDrawString { x y str bg color -- }

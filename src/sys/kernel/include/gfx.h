@@ -20,7 +20,7 @@ endstruct
 
 fnptr GFXRect { x y w h color gfx -- }
 
-fnptr GFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
+fnptr GFXBlitBits { fg bg bitd ptr x y w h gfx -- }
 
 fnptr GFXBlit { x y w h ptr gfx -- }
 

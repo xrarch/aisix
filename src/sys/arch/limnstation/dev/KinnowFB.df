@@ -105,176 +105,313 @@ fn (GFXRect) LGFXRectangle { x y w h color gfx -- }
 	end
 end
 
-fn LGFXBlitBitsFast { bpr fg bg bitd ptr dest mod w h -- }
-	// this function is so big because its overly optimized.
+// mountains of redundant functions for various bit blit ops
 
-	// emulates the function of the old "DMA board" that was removed
-	// from the LIMNstation architecture for being too complex
-
-	auto i
+fn LGFXBlitBitsFastFG { fg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto jcmp
-	256 jcmp!
+	auto extrabits
+	auto wholebytes
 
-	auto m1cmp
-	-1 m1cmp!
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
 
-	auto k
+			1 j!
 
-	if (bitd@ ~~) // least significant is leftmost
-		if (bg@ m1cmp@ ==)
-			if (fg@ m1cmp@ ==)
-				return
-			end
-
-			while (h@)
-				bpr@ i!
-
-				w@ k!
-
-				while (i@)
-					ptr@ gb byte!
-
-					1 j!
-
-					while (j@ jcmp@ <)
-						if (k@ ~~)
-							break
-						end
-
-						if (byte@ j@ &)
-							fg@ dest@ si
-						end
-
-						1 k -=
-						2 dest +=
-						1 j <<=
-					end
-
-					1 i -=
-					1 ptr +=
+			while (j@ 256 <)
+				if (byte@ j@ &)
+					fg@ dest@ si
 				end
 
-				mod@ dest +=
-				1 h -=
+				2 dest +=
+				1 j <<=
 			end
-		end else
-			while (h@)
-				bpr@ i!
 
-				w@ k!
+			1 wholebytes -=
+			1 ptr +=
+		end
 
-				while (i@)
-					ptr@ gb byte!
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			1 j!
 
-					1 j!
-
-					while (j@ jcmp@ <)
-						if (k@ ~~)
-							break
-						end
-
-						if (byte@ j@ &)
-							if (fg@ m1cmp@ ~=)
-								fg@ dest@ si
-							end
-						end else
-							bg@ dest@ si
-						end
-
-						1 k -=
-						2 dest +=
-						1 j <<=
-					end
-
-					1 i -=
-					1 ptr +=
+			while (extrabits@)
+				if (byte@ j@ &)
+					fg@ dest@ si
 				end
 
-				mod@ dest +=
-				1 h -=
+				2 dest +=
+				1 j <<=
+				1 extrabits -=
 			end
 		end
-	end else // most significant is leftmost
-		if (bg@ m1cmp@ ==)
-			if (fg@ m1cmp@ ==)
-				return
-			end
 
-			while (h@)
-				bpr@ i!
-
-				w@ k!
-
-				while (i@)
-					ptr@ gb byte!
-
-					128 j!
-
-					while (j@)
-						if (k@ ~~)
-							break
-						end
-
-						if (byte@ j@ &)
-							fg@ dest@ si
-						end
-
-						1 k -=
-						2 dest +=
-						1 j >>=
-					end
-
-					1 i -=
-					1 ptr +=
-				end
-
-				mod@ dest +=
-				1 h -=
-			end
-		end else
-			while (h@)
-				bpr@ i!
-
-				w@ k!
-
-				while (i@)
-					ptr@ gb byte!
-
-					128 j!
-
-					while (j@)
-						if (k@ ~~)
-							break
-						end
-
-						if (byte@ j@ &)
-							if (fg@ m1cmp@ ~=)
-								fg@ dest@ si
-							end
-						end else
-							bg@ dest@ si
-						end
-
-						1 k -=
-						2 dest +=
-						1 j >>=
-					end
-
-					1 i -=
-					1 ptr +=
-				end
-
-				mod@ dest +=
-				1 h -=
-			end
-		end
+		mod@ dest +=
+		1 h -=
 	end
 end
 
-fn (GFXBlitBits) LGFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
+fn LGFXBlitBitsFastBG { bg ptr dest mod w h -- }
+	auto j
+	auto byte
+
+	auto extrabits
+	auto wholebytes
+
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
+
+			1 j!
+
+			while (j@ 256 <)
+				if (byte@ j@ & ~~)
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j <<=
+			end
+
+			1 wholebytes -=
+			1 ptr +=
+		end
+
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			1 j!
+
+			while (extrabits@)
+				if (byte@ j@ & ~~)
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j <<=
+				1 extrabits -=
+			end
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn LGFXBlitBitsFastFGBG { fg bg ptr dest mod w h -- }
+	auto j
+	auto byte
+
+	auto extrabits
+	auto wholebytes
+
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
+
+			1 j!
+
+			while (j@ 256 <)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end else
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j <<=
+			end
+
+			1 wholebytes -=
+			1 ptr +=
+		end
+
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			1 j!
+
+			while (extrabits@)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end else
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j <<=
+				1 extrabits -=
+			end
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+// reversed ones
+
+fn LGFXBlitBitsFastBackwardsFG { fg ptr dest mod w h -- }
+	auto j
+	auto byte
+
+	auto extrabits
+	auto wholebytes
+
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
+
+			128 j!
+
+			while (j@)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+			end
+
+			1 wholebytes -=
+			1 ptr +=
+		end
+
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			1 extrabits@ << j!
+
+			while (extrabits@)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+				1 extrabits -=
+			end
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn LGFXBlitBitsFastBackwardsBG { bg ptr dest mod w h -- }
+	auto j
+	auto byte
+
+	auto extrabits
+	auto wholebytes
+
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
+
+			128 j!
+
+			while (j@)
+				if (byte@ j@ & ~~)
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+			end
+
+			1 wholebytes -=
+			1 ptr +=
+		end
+
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			128 j!
+
+			while (extrabits@)
+				if (byte@ j@ & ~~)
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+				1 extrabits -=
+			end
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn LGFXBlitBitsFastBackwardsFGBG { fg bg ptr dest mod w h -- }
+	auto j
+	auto byte
+
+	auto extrabits
+	auto wholebytes
+
+	while (h@)
+		w@ 3 >> wholebytes!
+		while (wholebytes@)
+			ptr@ gb byte!
+
+			128 j!
+
+			while (j@)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end else
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+			end
+
+			1 wholebytes -=
+			1 ptr +=
+		end
+
+		w@ 7 & extrabits!
+		if (extrabits@)
+			ptr@ gb byte!
+			1 ptr +=
+			128 j!
+
+			while (extrabits@)
+				if (byte@ j@ &)
+					fg@ dest@ si
+				end else
+					bg@ dest@ si
+				end
+
+				2 dest +=
+				1 j >>=
+				1 extrabits -=
+			end
+		end
+
+		mod@ dest +=
+		1 h -=
+	end
+end
+
+fn (GFXBlitBits) LGFXBlitBits { fg bg bitd ptr x y w h gfx -- }
 	auto gw
 	gfx@ GFX_Width + @ gw!
 
@@ -282,13 +419,34 @@ fn (GFXBlitBits) LGFXBlitBits { bpr fg bg bitd ptr x y w h gfx -- }
 	gfx@ GFX_FBAddr + @ fb!
 
 	auto dest
-	y@ gw@ * 2 * x@ 2 * + fb@ + dest!
+	y@ gw@ * 1 << x@ 1 << + fb@ + dest!
 
 	auto mod
-	gw@ w@ - 2 * mod!
+	gw@ w@ - 1 << mod!
 
-	bpr@ fg@ bg@ bitd@ ptr@ dest@ mod@ w@ h@
-	LGFXBlitBitsFast
+	if (fg@ -1 ==)
+		if (bg@ -1 ==)
+			return
+		end
+
+		if (bitd@)
+			bg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastBackwardsBG
+		end else
+			bg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastBG
+		end
+	end elseif (bg@ -1 ==)
+		if (bitd@)
+			fg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastBackwardsFG
+		end else
+			fg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastFG
+		end
+	end else
+		if (bitd@)
+			fg@ bg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastBackwardsFGBG
+		end else
+			fg@ bg@ ptr@ dest@ mod@ w@ h@ LGFXBlitBitsFastFGBG
+		end
+	end
 end
 
 fn (GFXBlit) LGFXBlit { x y w h ptr gfx -- }
