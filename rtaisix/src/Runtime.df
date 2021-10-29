@@ -61,6 +61,10 @@ fn Putc { c -- }
 	STDOUT c@ FPutc
 end
 
+fn VPrintf { argvt argcn fmt -- }
+	argvt@ argcn@ fmt@ STDOUT VFPrintf
+end
+
 fn Readline { s max -- eof }
 	auto bytes
 	0 bytes!

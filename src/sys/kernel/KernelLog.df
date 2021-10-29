@@ -86,6 +86,10 @@ fn Getc { -- c }
 	end
 end
 
+fn VPrintf { argvt argcn fmt -- }
+	argvt@ argcn@ fmt@ 1 VFPrintf
+end
+
 fn PolledGets { s max -- }
 	auto len
 	0 len!
