@@ -46,9 +46,8 @@ _MainTrampoline:
 	b    .loop
 
 .done:
-	subi sp, sp, 8
-	mov  long [sp + 4], lr
-	mov  long [sp], t2
+	subi sp, sp, 4
+	mov  long [sp], lr
 
 	jal  Main
 

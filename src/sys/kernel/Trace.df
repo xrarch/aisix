@@ -47,7 +47,7 @@ fn Trace { pc link -- }
 	auto links
 	0 links!
 
-	while (link@)
+	while (pc@)
 		if (links@ 32 >=)
 			" maxtrace!\n" Printf
 			return
@@ -69,8 +69,21 @@ fn Trace { pc link -- }
 
 		pc@ symbase@ - symname@ link@ " (sp=0x%x) <%s+0x%x>\n" Printf
 
-		link@ 4 + @ pc!
-		link@@ link!
+		auto offset
+		0 offset!
+
+		while (pc@ symbase@ >=)
+			if (pc@@ 0xFFFF & 0xF7B4 ==)
+				pc@@ 16 >> offset!
+				break
+			end
+
+			4 pc -=
+		end
+
+		link@@ pc!
+
+		link@ offset@ + link!
 
 		1 links +=
 	end

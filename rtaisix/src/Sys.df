@@ -80,10 +80,10 @@ _read:
 	ret
 
 _newprocess:
-	mov  t4, long [sp + 20]
-	mov  t3, long [sp + 16]
-	mov  t2, long [sp + 12]
-	mov  t1, long [sp + 8]
+	mov  t4, long [sp + 16]
+	mov  t3, long [sp + 12]
+	mov  t2, long [sp + 8]
+	mov  t1, long [sp + 4]
 	mov  t0, a3
 	mov  a3, a2
 	mov  a2, a1
@@ -193,9 +193,9 @@ _umask:
 	ret
 
 _mount:
-	mov  t3, long [sp + 16]
-	mov  t2, long [sp + 12]
-	mov  t1, long [sp + 8]
+	mov  t3, long [sp + 12]
+	mov  t2, long [sp + 8]
+	mov  t1, long [sp + 4]
 	mov  t0, a3
 	mov  a3, a2
 	mov  a2, a1
@@ -336,7 +336,7 @@ _kill:
 	ret
 
 _ioctl:
-	mov  t1, long [sp + 8]
+	mov  t1, long [sp + 4]
 	mov  t0, a3
 	mov  a3, a2
 	mov  a2, a1
