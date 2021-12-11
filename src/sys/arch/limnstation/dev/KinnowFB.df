@@ -111,43 +111,66 @@ fn LGFXBlitBitsFastFG { fg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			1 j!
-
-			while (j@ 256 <)
-				if (byte@ j@ &)
-					fg@ dest@ si
+			if (byte@)
+				if (byte@ 128 &)
+					fg@ dest@ 14 + si
 				end
 
-				2 dest +=
-				1 j <<=
+				if (byte@ 64 &)
+					fg@ dest@ 12 + si
+				end
+
+				if (byte@ 32 &)
+					fg@ dest@ 10 + si
+				end
+
+				if (byte@ 16 &)
+					fg@ dest@ 8 + si
+				end
+
+				if (byte@ 8 &)
+					fg@ dest@ 6 + si
+				end
+
+				if (byte@ 4 &)
+					fg@ dest@ 4 + si
+				end
+
+				if (byte@ 2 &)
+					fg@ dest@ 2 + si
+				end
+
+				if (byte@ 1 &)
+					fg@ dest@ si
+				end
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
 			1 j!
 
-			while (extrabits@)
+			while (left@)
 				if (byte@ j@ &)
 					fg@ dest@ si
 				end
 
 				2 dest +=
 				1 j <<=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
@@ -160,43 +183,75 @@ fn LGFXBlitBitsFastBG { bg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			1 j!
-
-			while (j@ 256 <)
-				if (byte@ j@ & ~~)
-					bg@ dest@ si
+			if (byte@ ~~)
+				bg@ dest@ si
+				bg@ dest@ 2 + si
+				bg@ dest@ 4 + si
+				bg@ dest@ 6 + si
+				bg@ dest@ 8 + si
+				bg@ dest@ 10 + si
+				bg@ dest@ 12 + si
+				bg@ dest@ 14 + si
+			end else
+				if (byte@ 128 & ~~)
+					bg@ dest@ 14 + si
 				end
 
-				2 dest +=
-				1 j <<=
+				if (byte@ 64 & ~~)
+					bg@ dest@ 12 + si
+				end
+
+				if (byte@ 32 & ~~)
+					bg@ dest@ 10 + si
+				end
+
+				if (byte@ 16 & ~~)
+					bg@ dest@ 8 + si
+				end
+
+				if (byte@ 8 & ~~)
+					bg@ dest@ 6 + si
+				end
+
+				if (byte@ 4 & ~~)
+					bg@ dest@ 4 + si
+				end
+
+				if (byte@ 2 & ~~)
+					bg@ dest@ 2 + si
+				end
+
+				if (byte@ 1 & ~~)
+					bg@ dest@ si
+				end
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
 			1 j!
 
-			while (extrabits@)
+			while (left@)
 				if (byte@ j@ & ~~)
 					bg@ dest@ si
 				end
 
 				2 dest +=
 				1 j <<=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
@@ -209,38 +264,84 @@ fn LGFXBlitBitsFastFGBG { fg bg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			1 j!
+			if (byte@ ~~)
+				bg@ dest@ si
+				bg@ dest@ 2 + si
+				bg@ dest@ 4 + si
+				bg@ dest@ 6 + si
+				bg@ dest@ 8 + si
+				bg@ dest@ 10 + si
+				bg@ dest@ 12 + si
+				bg@ dest@ 14 + si
+			end else
+				if (byte@ 128 &)
+					fg@ dest@ 14 + si
+				end else
+					bg@ dest@ 14 + si
+				end
 
-			while (j@ 256 <)
-				if (byte@ j@ &)
+				if (byte@ 64 &)
+					fg@ dest@ 12 + si
+				end else
+					bg@ dest@ 12 + si
+				end
+
+				if (byte@ 32 &)
+					fg@ dest@ 10 + si
+				end else
+					bg@ dest@ 10 + si
+				end
+
+				if (byte@ 16 &)
+					fg@ dest@ 8 + si
+				end else
+					bg@ dest@ 8 + si
+				end
+
+				if (byte@ 8 &)
+					fg@ dest@ 6 + si
+				end else
+					bg@ dest@ 6 + si
+				end
+
+				if (byte@ 4 &)
+					fg@ dest@ 4 + si
+				end else
+					bg@ dest@ 4 + si
+				end
+
+				if (byte@ 2 &)
+					fg@ dest@ 2 + si
+				end else
+					bg@ dest@ 2 + si
+				end
+
+				if (byte@ 1 &)
 					fg@ dest@ si
 				end else
 					bg@ dest@ si
 				end
-
-				2 dest +=
-				1 j <<=
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
 			1 j!
 
-			while (extrabits@)
+			while (left@)
 				if (byte@ j@ &)
 					fg@ dest@ si
 				end else
@@ -249,7 +350,7 @@ fn LGFXBlitBitsFastFGBG { fg bg ptr dest mod w h -- }
 
 				2 dest +=
 				1 j <<=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
@@ -264,43 +365,71 @@ fn LGFXBlitBitsFastBackwardsFG { fg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			128 j!
-
-			while (j@)
-				if (byte@ j@ &)
+			if (byte@)
+				if (byte@ 128 &)
 					fg@ dest@ si
 				end
 
-				2 dest +=
-				1 j >>=
+				if (byte@ 64 &)
+					fg@ dest@ 2 + si
+				end
+
+				if (byte@ 32 &)
+					fg@ dest@ 4 + si
+				end
+
+				if (byte@ 16 &)
+					fg@ dest@ 6 + si
+				end
+
+				if (byte@ 8 &)
+					fg@ dest@ 8 + si
+				end
+
+				if (byte@ 4 &)
+					fg@ dest@ 10 + si
+				end
+
+				if (byte@ 2 &)
+					fg@ dest@ 12 + si
+				end
+
+				if (byte@ 1 &)
+					fg@ dest@ 14 + si
+				end
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
-			1 extrabits@ << j!
 
-			while (extrabits@)
+			if (w@ 3 >>)
+				128 j!
+			end else
+				1 left@ << j!
+			end
+
+			while (left@)
 				if (byte@ j@ &)
 					fg@ dest@ si
 				end
 
 				2 dest +=
 				1 j >>=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
@@ -313,43 +442,80 @@ fn LGFXBlitBitsFastBackwardsBG { bg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			128 j!
-
-			while (j@)
-				if (byte@ j@ & ~~)
+			if (byte@ ~~)
+				bg@ dest@ si
+				bg@ dest@ 2 + si
+				bg@ dest@ 4 + si
+				bg@ dest@ 6 + si
+				bg@ dest@ 8 + si
+				bg@ dest@ 10 + si
+				bg@ dest@ 12 + si
+				bg@ dest@ 14 + si
+			end else
+				if (byte@ 128 & ~~)
 					bg@ dest@ si
 				end
 
-				2 dest +=
-				1 j >>=
+				if (byte@ 64 & ~~)
+					bg@ dest@ 2 + si
+				end
+
+				if (byte@ 32 & ~~)
+					bg@ dest@ 4 + si
+				end
+
+				if (byte@ 16 & ~~)
+					bg@ dest@ 6 + si
+				end
+
+				if (byte@ 8 & ~~)
+					bg@ dest@ 8 + si
+				end
+
+				if (byte@ 4 & ~~)
+					bg@ dest@ 10 + si
+				end
+
+				if (byte@ 2 & ~~)
+					bg@ dest@ 12 + si
+				end
+
+				if (byte@ 1 & ~~)
+					bg@ dest@ 14 + si
+				end
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
-			128 j!
 
-			while (extrabits@)
+			if (w@ 3 >>)
+				128 j!
+			end else
+				1 left@ << j!
+			end
+
+			while (left@)
 				if (byte@ j@ & ~~)
 					bg@ dest@ si
 				end
 
 				2 dest +=
 				1 j >>=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
@@ -362,38 +528,89 @@ fn LGFXBlitBitsFastBackwardsFGBG { fg bg ptr dest mod w h -- }
 	auto j
 	auto byte
 
-	auto extrabits
-	auto wholebytes
+	auto left
 
 	while (h@)
-		w@ 3 >> wholebytes!
-		while (wholebytes@)
+		w@ 3 >> left!
+		while (left@)
 			ptr@ gb byte!
 
-			128 j!
-
-			while (j@)
-				if (byte@ j@ &)
+			if (byte@ ~~)
+				bg@ dest@ si
+				bg@ dest@ 2 + si
+				bg@ dest@ 4 + si
+				bg@ dest@ 6 + si
+				bg@ dest@ 8 + si
+				bg@ dest@ 10 + si
+				bg@ dest@ 12 + si
+				bg@ dest@ 14 + si
+			end else
+				if (byte@ 128 &)
 					fg@ dest@ si
 				end else
 					bg@ dest@ si
 				end
 
-				2 dest +=
-				1 j >>=
+				if (byte@ 64 &)
+					fg@ dest@ 2 + si
+				end else
+					bg@ dest@ 2 + si
+				end
+
+				if (byte@ 32 &)
+					fg@ dest@ 4 + si
+				end else
+					bg@ dest@ 4 + si
+				end
+
+				if (byte@ 16 &)
+					fg@ dest@ 6 + si
+				end else
+					bg@ dest@ 6 + si
+				end
+
+				if (byte@ 8 &)
+					fg@ dest@ 8 + si
+				end else
+					bg@ dest@ 8 + si
+				end
+
+				if (byte@ 4 &)
+					fg@ dest@ 10 + si
+				end else
+					bg@ dest@ 10 + si
+				end
+
+				if (byte@ 2 &)
+					fg@ dest@ 12 + si
+				end else
+					bg@ dest@ 12 + si
+				end
+
+				if (byte@ 1 &)
+					fg@ dest@ 14 + si
+				end else
+					bg@ dest@ 14 + si
+				end
 			end
 
-			1 wholebytes -=
+			16 dest +=
+			1 left -=
 			1 ptr +=
 		end
 
-		w@ 7 & extrabits!
-		if (extrabits@)
+		w@ 7 & left!
+		if (left@)
 			ptr@ gb byte!
 			1 ptr +=
-			128 j!
 
-			while (extrabits@)
+			if (w@ 3 >>)
+				128 j!
+			end else
+				1 left@ << j!
+			end
+
+			while (left@)
 				if (byte@ j@ &)
 					fg@ dest@ si
 				end else
@@ -402,7 +619,7 @@ fn LGFXBlitBitsFastBackwardsFGBG { fg bg ptr dest mod w h -- }
 
 				2 dest +=
 				1 j >>=
-				1 extrabits -=
+				1 left -=
 			end
 		end
 
