@@ -114,7 +114,7 @@ fn DrvDKSFoundNode { node -- }
 
 	OWNER_W OWNER_R | GROUP_W | GROUP_R | 0 0 name@ DKSDriver DKSLastUnit@ DeviceRegister devn!
 
-	dks@ DKS_Blocks + @ 4096 * devn@ Device_Size + !
+	dks@ DKS_Blocks + @ 512 * devn@ Device_Size + !
 
 	devn@ "aisix,dev" a3xDSetProperty
 
@@ -226,7 +226,7 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 
 		rs@ InterruptRestore
 
-		buf@ DKSBuffer 4096 memcpy
+		buf@ DKSBuffer 512 memcpy
 
 		UnlockDKS
 
@@ -265,7 +265,7 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 			return
 		end
 
-		DKSBuffer buf@ 4096 memcpy
+		DKSBuffer buf@ 512 memcpy
 
 		(* it's possible for the transfer completion interrupt to occur before we even wait [COUGH emulation COUGH COUGH]
 		so disable interrupts here just in case *)

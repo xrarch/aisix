@@ -1,5 +1,5 @@
 #include "<df>/dragonfruit.h"
-#include "<ll>/rtaisix/aisix.h"
+#include "<inc>/aisix.h"
 
 (* ported from ancient AISIX *)
 

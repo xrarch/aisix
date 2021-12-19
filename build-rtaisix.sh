@@ -1,5 +1,5 @@
 path=$(dirname $0)
 
-make --directory=${path}/rtaisix
+make -C ${path}/rtaisix
 
 ../sdk/install.sh ${path}/rtaisix

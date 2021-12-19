@@ -1,7 +1,7 @@
 FLATIMAGE  := no
 
 DISTIMAGE  := ./dist/dist.img
-DISTIMGSZ  := 2048
+DISTIMGSZ  := 16384
 FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
@@ -9,7 +9,7 @@ CPU        := limn2600
 
 ifeq ($(FLATIMAGE),no)
 	DISKLABEL  := ./dist/preset.disklabel
-	OFFSET     := 2
+	OFFSET     := 4
 else
 	OFFSET     := 0
 endif
@@ -67,8 +67,8 @@ limnvol:
 
 bootable:
 	make --directory=$(SASH_DIR)
-	dd if=$(SASH_DIR)/BootSector.bin of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
-	dd if=$(SASH_DIR)/sash.a3x of=$(DISTIMAGE) bs=4096 conv=notrunc seek=$$((2 + $(OFFSET))) 2>/dev/null
+	dd if=$(SASH_DIR)/BootSector.bin of=$(DISTIMAGE) bs=512 conv=notrunc seek=$$((1 + $(OFFSET))) 2>/dev/null
+	dd if=$(SASH_DIR)/sash.a3x of=$(DISTIMAGE) bs=512 conv=notrunc seek=$$((4 + $(OFFSET))) 2>/dev/null
 
 sysfiles:
 	$(FSTOOL) u /sys/motd.txt ./src/sys/motd.txt
@@ -84,11 +84,11 @@ rtaisixt:
 	./build-rtaisix.sh
 
 $(DISTIMAGE):
-	dd if=/dev/zero of=$(DISTIMAGE) bs=4096 count=$(DISTIMGSZ) 2>/dev/null
+	dd if=/dev/zero of=$(DISTIMAGE) bs=512 count=$(DISTIMGSZ) 2>/dev/null
 
 ifeq ($(FLATIMAGE),no)
 ifneq ($(DISKLABEL),none)
-		dd if=$(DISKLABEL) of=$(DISTIMAGE) bs=4096 count=1 seek=0 conv=notrunc
+		dd if=$(DISKLABEL) of=$(DISTIMAGE) bs=512 count=1 seek=0 conv=notrunc
 endif
 endif
 

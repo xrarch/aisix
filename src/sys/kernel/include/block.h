@@ -1,6 +1,6 @@
-const NBUF 72
+const NBUF 320
 
-const BLOCKSZ 4096
+const BLOCKSZ 512
 
 struct Buffer
 	4 Valid

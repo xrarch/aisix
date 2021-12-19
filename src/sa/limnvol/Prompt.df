@@ -108,8 +108,8 @@ fn Prompt { -- }
 		[DeviceType@]DiskTypes@ "\[[33mtype:\[[0m \[[94m%s\[[0m\n" Printf
 
 		DiskNode@ a3xDeviceSelectNode
-			"blocks" a3xDGetProperty 4096 * 1024 / "\[[33msize:\[[0m \[[94m%dkb\[[0m\n" Printf
-			"offset" a3xDGetProperty 4096 * "\[[33mlogical offset:\[[0m \[[94m%d bytes\[[0m\n" Printf
+			"blocks" a3xDGetProperty 512 * 1024 / "\[[33msize:\[[0m \[[94m%dkb\[[0m\n" Printf
+			"offset" a3xDGetProperty 512 * "\[[33mlogical offset:\[[0m \[[94m%d bytes\[[0m\n" Printf
 
 			auto osl
 			"osLabel" a3xDGetProperty osl!

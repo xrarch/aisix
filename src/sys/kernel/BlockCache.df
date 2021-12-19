@@ -34,19 +34,10 @@ fn BlockInit { -- }
 	auto b
 	BufferHeads b!
 
-	auto max
-	BufferHeads BufHeadSize + max!
+	auto bufpages
+	NBUF 7 + 8 / bufpages! (* we can fit eight 512-byte blocks in a 4KB buffer page *)
 
-	while (b@ max@ <)
-		BufferHead Buffer_Next + @ b@ Buffer_Next + !
-		BufferHead b@ Buffer_Prev + !
-
-		"block buffer" b@ Buffer_Mutex + InitMutex
-
-		b@ BufferHead Buffer_Next + @ Buffer_Prev + !
-
-		b@ BufferHead Buffer_Next + !
-
+	while (bufpages@)
 		auto bd
 		PMMFasterSinglePageAlloc bd!
 
@@ -55,9 +46,26 @@ fn BlockInit { -- }
 			[bd@]ErrorNames@ "couldn't allocate block buffer: %s\n" Panic
 		end
 
-		bd@ b@ Buffer_Data + !
+		auto i
+		0 i!
+		while (i@ 8 <)
+			BufferHead Buffer_Next + @ b@ Buffer_Next + !
+			BufferHead b@ Buffer_Prev + !
 
-		Buffer_SIZEOF b +=
+			"block buffer" b@ Buffer_Mutex + InitMutex
+
+			b@ BufferHead Buffer_Next + @ Buffer_Prev + !
+
+			b@ BufferHead Buffer_Next + !
+
+			bd@ b@ Buffer_Data + !
+
+			Buffer_SIZEOF b +=
+			512 bd +=
+			1 i +=
+		end
+
+		1 bufpages -=
 	end
 end
 

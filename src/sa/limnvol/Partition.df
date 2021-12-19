@@ -34,7 +34,7 @@ endstruct
 
 fn WriteBoot { -- }
 	auto blockbuf
-	4096 Malloc blockbuf!
+	512 Malloc blockbuf!
 
 	a3xMyDevice@ a3xDeviceSelectNode
 		blockbuf@ 1 "readBlock" a3xDCallMethod drop drop drop drop
@@ -104,7 +104,7 @@ fn LoadVDBSafe { -- ok }
 end
 
 fn LoadVDB { -- }
-	4096 Malloc VDB!
+	512 Malloc VDB!
 
 	0 VDB@ IReadBlock
 end
@@ -114,7 +114,7 @@ fn FreeVDB { -- }
 end
 
 fn VDBValid { -- valid }
-	VDB@ VDBs_Magic + @ 0x4E4D494C == valid!
+	VDB@ VDBs_Magic + @ 0x4E4D494D == valid!
 end
 
 fn VDBLabel { -- label }
@@ -123,7 +123,7 @@ end
 
 fn VDBWrite { new -- }
 	if (new@)
-		4096 Malloc VDB!
+		512 Malloc VDB!
 	end
 
 	auto nbuf
@@ -134,9 +134,9 @@ fn VDBWrite { new -- }
 	nbuf@ 15 Gets
 
 	auto buf
-	4096 Calloc buf!
+	512 Calloc buf!
 
-	0x4E4D494C buf@ VDBs_Magic + !
+	0x4E4D494D buf@ VDBs_Magic + !
 
 	buf@ VDBs_Label + nbuf@ strcpy
 
@@ -226,7 +226,7 @@ fn PTInfo { -- }
 		if (status@ 0 ~=)
 			label@ i@ "part%d: %s\n" Printf
 			[status@]PTStatus@ "\tstatus: %s\n" Printf
-			blocks@ dup 4096 * "\tsize: %d bytes (%d blocks)\n" Printf
+			blocks@ dup 512 * "\tsize: %d bytes (%d blocks)\n" Printf
 		end
 
 		1 i +=
@@ -250,7 +250,7 @@ fn PartitionDisk { -- }
 	auto blocksleft
 
 	DiskNode@ a3xDeviceSelectNode
-		"blocks" a3xDGetProperty 2 - blocksleft!
+		"blocks" a3xDGetProperty 4 - blocksleft!
 	a3xDeviceExit
 
 	auto ptr
@@ -279,17 +279,13 @@ fn PartitionDisk { -- }
 
 		partnum@ 1 - i@ "partition %d of %d\n" Printf
 
-		blocksleft@ 4096 * "  [%d bytes left] size: " Printf
+		blocksleft@ 512 * "  [%d bytes left] size: " Printf
 		buf@ 255 Gets
 
 		auto sz
 		buf@ atoi sz!
 
-		if (sz@ 0xFFF & 0 ~=)
-			sz@ 0xFFFFF000 & 0x1000 + 4096 / sz!
-		end else
-			4096 sz /=
-		end
+		sz@ 511 + 512 / sz!
 
 		if (sz@ blocksleft@ >)
 			"not enough space!\n" Printf

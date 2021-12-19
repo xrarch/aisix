@@ -31,8 +31,8 @@ struct INode
 	4 bytesize
 endstruct
 
-const BLOCKSZ 4096
-const RESERVEDBLOCKS 15
+const BLOCKSZ 512
+const RESERVEDBLOCKS 127
 const AFSMAGIC 0xAFBBAFBB
 const AFSVER 0x6
 
@@ -176,7 +176,7 @@ fn GetParams { path -- fd }
 	RESERVEDBLOCKS 1 + FATStart!
 
 	FATStart@ FATSize@ + IStart!
-	FSBlocks@ 4 / ICount!
+	FSBlocks@ 32 / ICount!
 	ICount@ INode_SIZEOF * BLOCKSZ / ISize!
 
 	if (ICount@ INode_SIZEOF * BLOCKSZ %)
@@ -228,9 +228,9 @@ fn InitializeFAT { fd -- }
 	1 RESERVEDBLOCKS + FATSize@ + ISize@ + cantalloc!
 
 	auto blocks
-	cantalloc@ 1024 / blocks!
+	cantalloc@ 128 / blocks!
 
-	if (cantalloc@ 4096 %)
+	if (cantalloc@ 512 %)
 		1 blocks +=
 	end
 
@@ -247,7 +247,7 @@ fn InitializeFAT { fd -- }
 		buf@ BLOCKSZ 0 memset
 
 		auto m
-		cantalloc@ 1024 min m!
+		cantalloc@ 128 min m!
 
 		m@ cantalloc -=
 

@@ -176,11 +176,11 @@ fn BAlloc { link mount prefatbuf -- buf }
 
 	auto fatb
 
-	lfb@ 1024 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
+	lfb@ 128 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
 
 	0 buf!
 
-	if (lfb@ 1024 %)
+	if (lfb@ 128 %)
 		if (fatb@ prefatbn@ ~=)
 			fatb@ mount@ Mount_Device + @ bread buf!
 
@@ -211,14 +211,14 @@ fn BAlloc { link mount prefatbuf -- buf }
 			end
 		end
 
-		if (i@ 1024 % 0 ==)
+		if (i@ 128 % 0 ==)
 			if (buf@)
 				if (buf@ prefatbuf@ ~=)
 					buf@ brelse
 				end
 			end
 
-			i@ 1024 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
+			i@ 128 / mount@ Mount_FSData + @ AFSData_FATStart + @ + fatb!
 
 			if (fatb@ prefatbn@ ~=)
 				fatb@ mount@ Mount_Device + @ bread buf!
@@ -231,7 +231,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 			end
 		end
 
-		buf@ Buffer_Data + @ i@ 2 << 4096 % + @ bn!
+		buf@ Buffer_Data + @ i@ 2 << 512 % + @ bn!
 
 		auto rq
 
@@ -248,7 +248,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 			end
 
 			(* allocate *)
-			link@ buf@ Buffer_Data + @ i@ 2 << 4096 % + !
+			link@ buf@ Buffer_Data + @ i@ 2 << 512 % + !
 
 			buf@ bwrite
 
@@ -258,7 +258,7 @@ fn BAlloc { link mount prefatbuf -- buf }
 
 			rq@ buf!
 
-			buf@ Buffer_Data + @ 4096 0 memset
+			buf@ Buffer_Data + @ 512 0 memset
 
 			1 buf@ Buffer_Valid + !
 
@@ -307,7 +307,7 @@ fn UpdateNode { vnode -- ok }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 4096 / + block!
+	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 512 / + block!
 
 	auto buf
 	block@ mount@ Mount_Device + @ bread buf!
@@ -317,7 +317,7 @@ fn UpdateNode { vnode -- ok }
 		return
 	end
 
-	buf@ Buffer_Data + @ off@ 4096 % + inode!
+	buf@ Buffer_Data + @ off@ 512 % + inode!
 
 	vnode@ VNode_Size + @ inode@ INode_bytesize + !
 	vd@ AVData_Entry + @ inode@ INode_startblock + !
@@ -385,7 +385,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 	ent@ b!
 
 	auto fatb
-	b@ 1024 / fatb!
+	b@ 128 / fatb!
 
 	auto fatbuf
 	fatb@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
@@ -399,10 +399,10 @@ fn WalkFAT { ent count reading vnode cache -- b }
 	0 i!
 
 	while (i@ count@ <)
-		if (b@ 1024 / fatb@ ~=)
+		if (b@ 128 / fatb@ ~=)
 			fatbuf@ brelse
 
-			b@ 1024 / fatb!
+			b@ 128 / fatb!
 
 			fatb@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
 
@@ -412,7 +412,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 			end
 		end
 
-		fatbuf@ Buffer_Data + @ b@ 2 << 4096 % + @ ent!
+		fatbuf@ Buffer_Data + @ b@ 2 << 512 % + @ ent!
 
 		if (ent@ 0xFFFFFFFF ==)
 			if (reading@)
@@ -435,7 +435,7 @@ fn WalkFAT { ent count reading vnode cache -- b }
 
 			buf@ brelse
 
-			ent@ fatbuf@ Buffer_Data + @ b@ 2 << 4096 % + !
+			ent@ fatbuf@ Buffer_Data + @ b@ 2 << 512 % + !
 
 			fatbuf@ bwrite
 		end
@@ -603,12 +603,12 @@ fn TruncNode { vnode -- ok }
 	while (ent@ 0xFFFFFFFF ~=)
 		ent@ le!
 
-		if (ent@ 1024 / fatbn@ ~=)
+		if (ent@ 128 / fatbn@ ~=)
 			if (fatbuf@)
 				fatbuf@ brelse
 			end
 
-			ent@ 1024 / fatbn!
+			ent@ 128 / fatbn!
 
 			fatbn@ mount@ Mount_FSData + @ AFSData_FATStart + @ + mount@ Mount_Device + @ bread fatbuf!
 
@@ -622,9 +622,9 @@ fn TruncNode { vnode -- ok }
 			end
 		end
 
-		fatbuf@ Buffer_Data + @ ent@ 2 << 4096 % + @ ent!
+		fatbuf@ Buffer_Data + @ ent@ 2 << 512 % + @ ent!
 
-		0 fatbuf@ Buffer_Data + @ le@ 2 << 4096 % + !
+		0 fatbuf@ Buffer_Data + @ le@ 2 << 512 % + !
 
 		fatbuf@ bwrite
 	end
@@ -677,7 +677,7 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 
 	while (tot@ len@ <)
 		auto bbuf
-		seek@ 4096 / 1 vnode@ BMap bbuf!
+		seek@ 512 / 1 vnode@ BMap bbuf!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -686,12 +686,12 @@ fn (FSRead) AISIXFSRead { pm buf len seek vnode -- bytes }
 
 		auto m
 		len@ tot@ -
-		4096 seek@ 4096 % -
+		512 seek@ 512 % -
 		min m!
 
 		pm@
 		buf@
-		bbuf@ Buffer_Data + @ seek@ 4096 % +
+		bbuf@ Buffer_Data + @ seek@ 512 % +
 		m@ VMCopyout r!
 
 		bbuf@ brelse
@@ -733,7 +733,7 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 		seek@ ot!
 
 		auto bbuf
-		seek@ 4096 / 0 vnode@ BMap bbuf!
+		seek@ 512 / 0 vnode@ BMap bbuf!
 
 		if (bbuf@ iserr)
 			if (lastgood@ vnode@ VNode_Size + @ >)
@@ -746,11 +746,11 @@ fn (FSWrite) AISIXFSWrite { pm buf len seek vnode -- bytes }
 
 		auto m
 		len@ tot@ -
-		4096 seek@ 4096 % -
+		512 seek@ 512 % -
 		min m!
 
 		pm@
-		bbuf@ Buffer_Data + @ seek@ 4096 % +
+		bbuf@ Buffer_Data + @ seek@ 512 % +
 		buf@
 		m@ VMCopyin r!
 
@@ -804,12 +804,12 @@ fn IAlloc { mount -- inum ino buf }
 	0 inum!
 
 	while (inum@ icount@ <)
-		if (p@ 4096 % ~~)
+		if (p@ 512 % ~~)
 			if (buf@)
 				buf@ brelse
 			end
 
-			p@ 4096 / istart@ + dev@ bread buf!
+			p@ 512 / istart@ + dev@ bread buf!
 
 			if (buf@ iserr)
 				return
@@ -823,7 +823,7 @@ fn IAlloc { mount -- inum ino buf }
 			continue
 		end
 
-		buf@ Buffer_Data + @ p@ 4096 % + ino!
+		buf@ Buffer_Data + @ p@ 512 % + ino!
 
 		if (ino@ INode_type + @ 0 ==)
 			(* unused inode *)
@@ -851,12 +851,12 @@ fn DirentAlloc { vnode -- dirent buf }
 	0 buf!
 
 	while (1)
-		if (p@ 4096 % ~~)
+		if (p@ 512 % ~~)
 			if (buf@)
 				buf@ brelse
 			end
 
-			p@ 4096 / 0 vnode@ BMap buf!
+			p@ 512 / 0 vnode@ BMap buf!
 
 			if (buf@ iserr)
 				return
@@ -869,7 +869,7 @@ fn DirentAlloc { vnode -- dirent buf }
 			1 vnode@ VNode_Dirty + !
 		end
 
-		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+		buf@ Buffer_Data + @ p@ 512 % + dirent!
 
 		if (dirent@ DirEnt_INum + @ ~~)
 			(* unused directory entry *)
@@ -1064,12 +1064,12 @@ fn private HasEntries { vnode -- has }
 	auto dirent
 
 	while (p@ sz@ <)
-		if (p@ 4096 % ~~)
+		if (p@ 512 % ~~)
 			if (buf@)
 				buf@ brelse
 			end
 
-			p@ 4096 / 1 vnode@ BMap buf!
+			p@ 512 / 1 vnode@ BMap buf!
 
 			if (buf@ iserr)
 				buf@ has!
@@ -1077,7 +1077,7 @@ fn private HasEntries { vnode -- has }
 			end
 		end
 
-		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+		buf@ Buffer_Data + @ p@ 512 % + dirent!
 
 		if (dirent@ DirEnt_INum + @)
 			buf@ brelse
@@ -1111,12 +1111,12 @@ fn private AFSUnlink { dirvnode vnode name -- ok }
 	0 found!
 
 	while (p@ sz@ <)
-		if (p@ 4096 % ~~)
+		if (p@ 512 % ~~)
 			if (buf@)
 				buf@ brelse
 			end
 
-			p@ 4096 / 1 dirvnode@ BMap buf!
+			p@ 512 / 1 dirvnode@ BMap buf!
 
 			if (buf@ iserr)
 				buf@ ok!
@@ -1124,7 +1124,7 @@ fn private AFSUnlink { dirvnode vnode name -- ok }
 			end
 		end
 
-		buf@ Buffer_Data + @ p@ 4096 % + dirent!
+		buf@ Buffer_Data + @ p@ 512 % + dirent!
 
 		if (dirent@ DirEnt_INum + @)
 			if (dirent@ DirEnt_name + name@ strcmp)
@@ -1199,7 +1199,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 	auto mount
 	vnode@ VNode_Mount + @ mount!
 
-	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 4096 / + block!
+	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 512 / + block!
 
 	auto buf
 	block@ mount@ Mount_Device + @ bread buf!
@@ -1211,7 +1211,7 @@ fn (FSDelete) AISIXFSDelete { vnode -- ok }
 		return
 	end
 
-	buf@ Buffer_Data + @ off@ 4096 % + inode!
+	buf@ Buffer_Data + @ off@ 512 % + inode!
 
 	0 inode@ INode_type + !
 
@@ -1332,7 +1332,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 
 	vnid@ INode_SIZEOF * off!
 
-	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 4096 / + block!
+	mount@ Mount_FSData + @ AFSData_IStart + @ off@ 512 / + block!
 
 	auto buf
 	block@ mount@ Mount_Device + @ bread buf!
@@ -1343,7 +1343,7 @@ fn (FSGetNode) AISIXFSGetNode { vnode -- ok }
 		return
 	end
 
-	buf@ Buffer_Data + @ off@ 4096 % + inode!
+	buf@ Buffer_Data + @ off@ 512 % + inode!
 
 	if (inode@ INode_type + @ 1 ==)
 		VNODE_FILE vnode@ VNode_Type + !
@@ -1417,8 +1417,8 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 	auto buf
 	0 buf!
 
-	if (index@ 4096 %)
-		index@ 4096 / 1 dirvn@ BMap buf!
+	if (index@ 512 %)
+		index@ 512 / 1 dirvn@ BMap buf!
 
 		if (buf@ iserr)
 			buf@ ok!
@@ -1427,12 +1427,12 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 	end
 
 	while (index@ sz@ <)
-		if (index@ 4096 % ~~)
+		if (index@ 512 % ~~)
 			if (buf@)
 				buf@ brelse
 			end
 
-			index@ 4096 / 1 dirvn@ BMap buf!
+			index@ 512 / 1 dirvn@ BMap buf!
 
 			if (buf@ iserr)
 				buf@ ok!
@@ -1441,7 +1441,7 @@ fn (FSReadDir) AISIXFSReadDir { dirent -- ok }
 		end
 
 		auto ent
-		buf@ Buffer_Data + @ index@ 4096 % + ent!
+		buf@ Buffer_Data + @ index@ 512 % + ent!
 
 		if (ent@ DirEnt_INum + @)
 			index@ DirEnt_SIZEOF + dirent@ VDirent_Index + !

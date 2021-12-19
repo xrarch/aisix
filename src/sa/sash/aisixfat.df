@@ -75,7 +75,7 @@ end
 var AFSICached -1
 fn AFSIGet { inum -- ino }
 	auto iblk
-	inum@ AFSINode_SIZEOF * 4096 / iblk!
+	inum@ AFSINode_SIZEOF * 512 / iblk!
 
 	if (AFSICached@ iblk@ ~=)
 		iblk@ AFSSuperblockCache AFSSuperblock_IStart + @ +
@@ -84,7 +84,7 @@ fn AFSIGet { inum -- ino }
 		iblk@ AFSICached!
 	end
 
-	AFSInoCache inum@ AFSINode_SIZEOF * 4096 % + ino!
+	AFSInoCache inum@ AFSINode_SIZEOF * 512 % + ino!
 end
 
 fn AFSLoadFile { count name destptr -- size ok }
@@ -98,27 +98,19 @@ fn AFSLoadFile { count name destptr -- size ok }
 	auto cblock
 
 	ino@ AFSINode_startblock + @ cblock!
-	ino@ AFSINode_bytesize + @ 4096 / size!
-
-	if (ino@ AFSINode_bytesize + @ 0xFFF &)
-		1 size +=
-	end
+	ino@ AFSINode_bytesize + @ 511 + 512 / size!
 
 	if (count@ -1 ==)
 		size@ count!
 	end else
-		if (count@ 0xFFF & 0 ~=)
-			count@ 0xFFFFF000 & 0x1000 + count!
-		end
-
-		4096 count /=
+		count@ 511 + 512 / count!
 	end
 
 	auto nmem
-	destptr@ size@ 4096 * + nmem!
+	destptr@ size@ 512 * + nmem!
 
 	if (nmem@ TotalRAM@ >=)
-		size@ 4096 * size! 2 ok! return (* not enough memory *)
+		size@ 512 * size! 2 ok! return (* not enough memory *)
 	end
 
 	auto i
@@ -128,11 +120,11 @@ fn AFSLoadFile { count name destptr -- size ok }
 
 		cblock@ AFSBlockStatus cblock!
 
-		destptr@ 4096 + destptr!
+		destptr@ 512 + destptr!
 		1 i +=
 	end
 
-	count@ 4096 * size! 1 ok!
+	count@ 512 * size! 1 ok!
 end
 
 fn AFSDirentByName { name dirsz dirblock -- dirent }
@@ -144,13 +136,13 @@ fn AFSDirentByName { name dirsz dirblock -- dirent }
 	auto off
 	0 off!
 	while (off@ dirsz@ <)
-		if (off@ 4096 % 0 ==)
+		if (off@ 512 % 0 ==)
 			dirblock@ AFSDirCache IReadBlock
 			dirblock@ AFSBlockStatus dirblock!
 		end
 
 		auto ptr
-		off@ 4096 % AFSDirCache + ptr!
+		off@ 512 % AFSDirCache + ptr!
 
 		if (ptr@ AFSDirEnt_INum + @ 0 ~=)
 			if (ptr@ AFSDirEnt_name + name@ strcmp)
@@ -256,13 +248,13 @@ fn AFSPrintList { path -- }
 	auto off
 	0 off!
 	while (off@ dirsz@ <)
-		if (off@ 4096 % 0 ==)
+		if (off@ 512 % 0 ==)
 			dirblock@ AFSDirCache IReadBlock
 			dirblock@ AFSBlockStatus dirblock!
 		end
 
 		auto ptr
-		off@ 4096 % AFSDirCache + ptr!
+		off@ 512 % AFSDirCache + ptr!
 
 		auto inum
 		ptr@ AFSDirEnt_INum + @ inum!
@@ -322,8 +314,8 @@ fn AFSBlockStatus { bnum -- status }
 	auto fatblock
 	auto fatoff
 
-	bnum@ 4096 / fatblock!
-	bnum@ 4096 % fatoff!
+	bnum@ 128 / fatblock!
+	bnum@ 128 % fatoff!
 
 	fatblock@ AFSReadFATBlock
 	fatoff@ 4 * AFSFATCache + @ status!

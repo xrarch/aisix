@@ -209,7 +209,7 @@ fn (FSRead) DevFSRead { pm buf len seek vnode -- bytes }
 	auto ok
 
 	while (tot@ len@ <)
-		seek@ 4096 / dev@ bread bbuf!
+		seek@ 512 / dev@ bread bbuf!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -219,10 +219,10 @@ fn (FSRead) DevFSRead { pm buf len seek vnode -- bytes }
 		auto m
 
 		auto off
-		seek@ 0xFFF & off!
+		seek@ 511 & off!
 
 		len@ tot@ -
-		4096 off@ -
+		512 off@ -
 		min m!
 
 		pm@
@@ -301,7 +301,7 @@ fn (FSWrite) DevFSWrite { pm buf len seek vnode -- bytes }
 	auto r
 
 	while (tot@ len@ <)
-		seek@ 4096 / dev@ bread bbuf!
+		seek@ 512 / dev@ bread bbuf!
 
 		if (bbuf@ iserr)
 			bbuf@ bytes!
@@ -311,10 +311,10 @@ fn (FSWrite) DevFSWrite { pm buf len seek vnode -- bytes }
 		auto m
 
 		auto off
-		seek@ 0xFFF & off!
+		seek@ 511 & off!
 
 		len@ tot@ -
-		4096 off@ -
+		512 off@ -
 		min m!
 
 		pm@
