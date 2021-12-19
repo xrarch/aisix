@@ -35,7 +35,7 @@ fn BlockInit { -- }
 	BufferHeads b!
 
 	auto bufpages
-	NBUF 7 + 8 / bufpages! (* we can fit eight 512-byte blocks in a 4KB buffer page *)
+	NBUF 8 / bufpages! (* we can fit eight 512-byte blocks in a 4KB buffer page *)
 
 	while (bufpages@)
 		auto bd
