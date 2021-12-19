@@ -32,7 +32,7 @@ struct INode
 endstruct
 
 const BLOCKSZ 512
-const RESERVEDBLOCKS 127
+const RESERVEDBLOCKS 63
 const AFSMAGIC 0xAFBBAFBB
 const AFSVER 0x6
 
