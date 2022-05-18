@@ -1,3 +1,5 @@
+## Defunct as of December 2020; work has shifted to [MINTIA](http://github.com/limnarch/mintia) except for occasional bugfixes.
+
 # aisix
 
 Major work-in-progress.
