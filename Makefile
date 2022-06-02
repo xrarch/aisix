@@ -1,14 +1,19 @@
-FLATIMAGE  := no
+ifdef SMALLDIST
+	DISTIMAGE  := ./dist/dist-small.img
+	DISTIMGSZ  := 8192
+	DISKLABEL  := ./dist/small.disklabel
+else
+	DISTIMAGE  := ./dist/dist.img
+	DISTIMGSZ  := 16384
+	DISKLABEL  := ./dist/preset.disklabel
+endif
 
-DISTIMAGE  := ./dist/dist.img
-DISTIMGSZ  := 16384
 FST        := ../sdk/fstool.sh
 
 PLATFORM   := limnstation
 CPU        := limn2600
 
-ifeq ($(FLATIMAGE),no)
-	DISKLABEL  := ./dist/preset.disklabel
+ifndef FLATIMAGE
 	OFFSET     := 4
 else
 	OFFSET     := 0
@@ -86,10 +91,8 @@ rtaisixt:
 $(DISTIMAGE):
 	dd if=/dev/zero of=$(DISTIMAGE) bs=512 count=$(DISTIMGSZ) 2>/dev/null
 
-ifeq ($(FLATIMAGE),no)
-ifneq ($(DISKLABEL),none)
-		dd if=$(DISKLABEL) of=$(DISTIMAGE) bs=512 count=1 seek=0 conv=notrunc
-endif
+ifndef FLATIMAGE
+	dd if=$(DISKLABEL) of=$(DISTIMAGE) bs=512 count=1 seek=0 conv=notrunc
 endif
 
 	$(FSTOOL) f
@@ -97,7 +100,7 @@ endif
 	$(FSTOOL) d /dev/ph.txt
 
 cleanup:
-	rm -f $(DISTIMAGE)
+	rm -f dist/*.img
 	make -C rtaisix cleanup
 	make -C src/sa cleanup
 	make -C $(KERNEL_DIR) cleanup
