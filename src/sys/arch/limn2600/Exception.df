@@ -237,6 +237,8 @@ RestoreEV:
 SwitchK3:
 .global SwitchK3
 	mtcr pgtb, a0
+	lshi a1, a1, 20
+	mtcr tbhi, a1
 	ret
 
 FlushTLB:
@@ -414,8 +416,6 @@ fn CPUContextPrepare { a0 a1 entry stack kern process -- ctx }
 		entry@ ctx@ Context_epc + !
 
 		RS_USER RS_INT | RS_MMU | RS_LEGAC | 8 << ctx@ Context_ers + !
-
-		process@ Process_PID + @ 4095 & 16 << ctx@ Context_ers + |=
 
 		a0@ ctx@ Context_a0 + !
 		a1@ ctx@ Context_a1 + !
