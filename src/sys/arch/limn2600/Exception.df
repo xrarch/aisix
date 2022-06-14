@@ -13,14 +13,15 @@ var SavedEV 0
 asm "
 
 limn2600_exception:
+.global limn2600_exception
 	mtcr k0, t0 ; save t0 to free it as scratch
 	mtcr k1, t1 ; ditto with t1
 	mtcr k2, sp ; save stack pointer
 	mtcr k3, sp ; save trace link
 
-	mfcr t0, ers
+	mfcr t0, rs
 
-	andi t1, t0, RS_USER
+	andi t1, t0, ERS_USER
 	beq  t1, .waskernel
 
 	la   t1, CurrentThread
@@ -37,8 +38,8 @@ limn2600_exception:
 	mov  long [sp + Context_sp],  t1
 	mov  long [sp + Context_ers], t0 ; ers was still in t0
 
-	mfcr t0, epc
-	mov  long [sp + Context_epc], t0
+	mfcr t1, epc
+	mov  long [sp + Context_epc], t1
 
 	mfcr t1, k0
 	mov  long [sp + Context_t0],  t1
@@ -75,7 +76,8 @@ limn2600_exception:
 	mov  long [sp + Context_s18], s18
 	mov  long [sp + Context_lr],  lr
 
-	mfcr a1, ecause
+	rshi a1, t0, 28
+	andi a1, a1, 15
 	mfcr a2, ebadaddr
 	mov  a0, sp
 
@@ -94,9 +96,10 @@ limn2600_exception:
 	addi sp, sp, 8
 
 forkret:
+.global forkret
 
 	mov  t0, long [sp + Context_ers]
-	mtcr ers, t0
+	mtcr rs, t0
 
 	mov  t0, long [sp + Context_epc]
 	mtcr epc, t0
@@ -203,15 +206,6 @@ CPUHlt:
 	hlt
 	ret
 
-CPUIdle:
-.global CPUIdle 
-	mfcr t0, rs
-	ori  t1, t0, RS_INT
-	mtcr rs, t1
-	hlt
-	mtcr rs, t0
-	ret
-
 ExceptionInit:
 .global ExceptionInit
 	la   t0, limn2600_exception
@@ -243,7 +237,6 @@ RestoreEV:
 SwitchK3:
 .global SwitchK3
 	mtcr pgtb, a0
-	mtcr asid, a1
 	ret
 
 FlushTLB:
@@ -261,7 +254,8 @@ InterruptEnable:
 InterruptDisable:
 .global InterruptDisable
 	mfcr a0, rs
-	andi t0, a0, RS_INTOFFMASK
+	subi t1, zero, 3
+	and  t0, a0, t1
 	mtcr rs, t0
 	ret
 
@@ -326,7 +320,7 @@ fn Exception { badaddr ecause tf -- }
 	end
 
 	auto mode
-	tf@ Context_ers + @ RS_USER & mode!
+	tf@ Context_ers + @ ERS_USER & mode!
 
 	if (ecause@ EXCINTERRUPT ==)
 		if (InterruptGet@ 0 ==)
@@ -408,7 +402,7 @@ end
 
 extern CPUKThreadEntry { -- }
 
-fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
+fn CPUContextPrepare { a0 a1 entry stack kern process -- ctx }
 	stack@ Context_SIZEOF - ctx!
 
 	ctx@ Context_SIZEOF 0 memset
@@ -419,7 +413,9 @@ fn CPUContextPrepare { a0 a1 entry stack kern -- ctx }
 	end else
 		entry@ ctx@ Context_epc + !
 
-		RS_USER RS_INT | RS_MMU | RS_LEGAC | ctx@ Context_ers + !
+		RS_USER RS_INT | RS_MMU | RS_LEGAC | 8 << ctx@ Context_ers + !
+
+		process@ Process_PID + @ 4095 & 16 << ctx@ Context_ers + |=
 
 		a0@ ctx@ Context_a0 + !
 		a1@ ctx@ Context_a1 + !

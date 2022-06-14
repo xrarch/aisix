@@ -30,8 +30,10 @@ const RS_INT   2
 const RS_MMU   4
 const RS_LEGAC 128
 
+const ERS_USER 256
+
 const RS_KTHREAD (RS_INT RS_LEGAC |)
 
-const RS_INTOFFMASK 0xFFFD
+const RS_INTOFFMASK 0xFFFFFFFD
 
-extern CPUContextPrepare { a0 a1 entry stack kern -- ctx }
+extern CPUContextPrepare { a0 a1 entry stack kern process -- ctx }

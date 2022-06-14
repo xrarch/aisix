@@ -234,7 +234,7 @@ fn ThreadNew { process entry name kern pass0 pass1 -- thread }
 
 	4096 stack@ + dup thread@ Thread_KernelStackTop + ! uc!
 
-	pass0@ pass1@ entry@ uc@ kern@ CPUContextPrepare thread@ Thread_Context + !
+	pass0@ pass1@ entry@ uc@ kern@ process@ CPUContextPrepare thread@ Thread_Context + !
 
 	thread@ Thread_Name + name@ THREADNAMELEN 1 - strncpy
 
