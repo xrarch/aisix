@@ -122,14 +122,8 @@ fn PlatformUnalertUser { -- }
 end
 
 extern FlushTLB { vpn asid -- }
-
-fn FlushASID { asid -- }
-	-1 asid@ FlushTLB
-end
-
-fn FlushTLBAll { -- }
-	-1 -1 FlushTLB
-end
+extern FlushASID { asid -- }
+extern FlushTLBAll { -- }
 
 fn PlatformInvalidatePage { vpn proc -- }
 	auto asid

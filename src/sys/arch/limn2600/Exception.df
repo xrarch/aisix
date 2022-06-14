@@ -210,6 +210,8 @@ ExceptionInit:
 .global ExceptionInit
 	la   t0, limn2600_exception
 	mtcr evec, t0
+	la   t0, TLBMiss
+	mtcr tbvec, t0
 	ret
 
 SaveEV:
@@ -239,11 +241,6 @@ SwitchK3:
 	mtcr pgtb, a0
 	lshi a1, a1, 20
 	mtcr tbhi, a1
-	ret
-
-FlushTLB:
-.global FlushTLB
-	ftlb a0, a1
 	ret
 
 InterruptEnable:
@@ -427,6 +424,112 @@ fn CPUContextPrepare { a0 a1 entry stack kern process -- ctx }
 		pointerof forkret ctx@ Context_lr + !
 	end
 end
+
+asm "
+
+.align 16
+
+TLBMiss:
+.global TLBMiss
+	mtcr tbscratch, t0
+
+	mfcr t0, pgtb
+	mov  t0, long [t0]
+	mtcr tblo, t0
+
+	tbld ;conditionally load PTE
+
+	tbwr ;write TLB entry
+
+	mfcr t0, tbscratch
+	rfe
+
+FlushASID:
+.global FlushASID
+	mfcr t0, rs
+	subi t1, zero, 3
+	and  t1, t1, t0
+	mtcr rs, t1
+
+	mfcr t1, tbhi
+
+	mtcr tblo, zero
+
+	li   t2, 64
+
+.loop:
+	subi t2, t2, 1	
+
+	mtcr tbindex, t2
+	tbrd
+	mfcr t3, tbhi
+
+	rshi t3, t3, 20
+	sub  t3, t3, a0
+	bne  t3, .noflush
+
+	mtcr tbhi, zero
+	tbwr
+
+.noflush:
+	bne  t2, .loop
+
+	mtcr tbhi, t1
+	mtcr rs, t0
+	ret
+
+FlushTLBAll:
+.global FlushTLBAll
+	mfcr t0, rs
+	subi t1, zero, 3
+	and  t1, t1, t0
+	mtcr rs, t1
+
+	mfcr t1, tbhi
+
+	mtcr tblo, zero
+	mtcr tbhi, zero
+
+	li   t2, 64
+
+.loop:
+	subi t2, t2, 1	
+
+	mtcr tbindex, t2
+	tbwr
+
+	bne  t2, .loop
+
+	mtcr tbhi, t1
+	mtcr rs, t0
+	ret
+
+FlushTLB:
+.global FlushTLB
+	mfcr t0, rs
+	subi t1, zero, 3
+	and  t1, t1, t0
+	mtcr rs, t1
+
+	mfcr t2, tbhi
+
+	lshi t1, a1, 20
+	or   t1, t1, a0
+	mtcr tbhi, t1
+
+	tbfn
+
+	mfcr t1, tbindex
+	blt  t1, .none
+
+	mtcr tblo, zero
+	tbwr
+
+.none:
+	mtcr tbhi, t2
+	mtcr rs, t0
+	ret
+"
 
 table ContextNames
 	"t0"    "t1"
