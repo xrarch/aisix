@@ -255,6 +255,17 @@ fnptr StandaloneEntry { size api bootdev arg -- ret }
 
 var RetValue 0
 
+asm "
+
+CPUSynchronizeIcache:
+.global CPUSynchronizeIcache
+	cachei 3 ;invalidate icache, writeback dcache
+	ret
+
+"
+
+extern CPUSynchronizeIcache { -- }
+
 fn DoFile { arg buf -- ret }
 	0 ret!
 
@@ -275,6 +286,8 @@ fn DoFile { arg buf -- ret }
 	end else
 		(* this bootloader uses the same protocol as a3x but just with file size added *)
 		(* also the base is 0x80000 instead of 0x40000 *)
+
+		CPUSynchronizeIcache
 
 		sz@ a3xCIPtr@ IDiskBD@ arg@ LoadBase 4 + @ StandaloneEntry ret!
 

@@ -3,6 +3,8 @@
 #include "<inc>/loff.h"
 #include "<inc>/limnmmu.h"
 
+extern CPUSynchronizeIcache { -- }
+
 fn (WeakObjectCallback) FreeWeakText { obj bytespreferred rs -- bytesactual destroyed }
 	auto seg
 	obj@ WeakObject_Private0 + @ seg!
@@ -651,6 +653,8 @@ fn VNewProcess { vnode name filp0 filp1 filp2 mode udvec udcnt -- process }
 	end
 
 	p@ Process_UMask + @ process@ Process_UMask + !
+
+	CPUSynchronizeIcache
 
 	process@ Process_MainThread + @ ThreadReady
 end

@@ -263,6 +263,10 @@ InterruptRestore:
 	mtcr rs, a0
 	ret
 
+CPUSynchronizeIcache:
+.global CPUSynchronizeIcache
+	cachei 3 ;invalidate icache, writeback dcache
+	ret
 
 CPUKThreadEntry:
 .global CPUKThreadEntry
