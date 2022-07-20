@@ -526,13 +526,11 @@ FlushTLB:
 	lshi t1, a1, 20
 	or   t1, t1, a0
 	mtcr tbhi, t1
-
+	mtcr tblo, zero
 	tbfn
 
 	mfcr t1, tbindex
 	blt  t1, .none
-
-	mtcr tblo, zero
 	tbwr
 
 .none:
