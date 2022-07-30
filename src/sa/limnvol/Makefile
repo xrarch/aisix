@@ -9,7 +9,8 @@ all: limnvol.a3x
 
 limnvol.a3x: $(OBJ)
 	$(LD) limnvol.a3x L/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
-	$(OBJTOOL) binary limnvol.a3x 0x80000
+	$(OBJTOOL) move limnvol.a3x text=0x80000,data=text+text_size,bss=data+data_size
+	$(OBJTOOL) binary limnvol.a3x
 
 %.o: %.df
 	$(DC) $< $@

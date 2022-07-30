@@ -1,6 +1,6 @@
 #include "<df>/dragonfruit.h"
 #include "<inc>/kernel.h"
-#include "<inc>/loff.h"
+#include "<inc>/xloff.h"
 #include "<inc>/limnmmu.h"
 
 extern CPUSynchronizeIcache { -- }
@@ -41,61 +41,6 @@ fn (WeakObjectCallback) FreeWeakText { obj bytespreferred rs -- bytesactual dest
 	end
 end
 
-fn GetEntry { header vnode loff -- ok }
-	auto entrysym
-	header@ LOFFHeader_EntrySymbol + @ entrysym!
-
-	if (entrysym@ 0xFFFFFFFF ==)
-		-ENOEXEC ok!
-		return
-	end
-
-	auto symoff
-	header@ LOFFHeader_SymbolTableOffset + @ symoff!
-
-	auto sym
-	LOFFSymbol_SIZEOF Malloc sym!
-
-	if (sym@ iserr)
-		-ENOMEM ok!
-		return
-	end
-
-	entrysym@ LOFFSymbol_SIZEOF * symoff +=
-
-	auto bytes
-
-	0 sym@ LOFFSymbol_SIZEOF symoff@ vnode@ VRead bytes!
-
-	if (bytes@ LOFFSymbol_SIZEOF s<)
-		if (bytes@ iserr)
-			bytes@ ok!
-		end else
-			-ENOEXEC ok!
-		end
-		sym@ Free
-		return
-	end
-
-	if (sym@ LOFFSymbol_Type + @ LOFFGLOBAL ~=)
-		-ENOEXEC ok!
-		sym@ Free
-		return
-	end
-
-	if (sym@ LOFFSymbol_Section + @ LOFFTEXT ~=)
-		-ENOEXEC ok!
-		sym@ Free
-		return
-	end
-
-	sym@ LOFFSymbol_Value + @ loff@ LOFFSummary_Entry + !
-
-	sym@ Free
-
-	0 ok!
-end
-
 struct LOFFSummary
 	4 TextVAddr
 	4 TextOffset
@@ -112,15 +57,70 @@ struct LOFFSummary
 	4 UData
 endstruct
 
-fn ParseLOFF { pm vnode loff -- ok }
-	auto header
-	LOFFHeader_SIZEOF alloc header!
+fn GetEntry { header vnode loff -- ok }
+	auto entrysym
+	header@ XLOFFHeader_EntrySymbol + @ entrysym!
+
+	if (entrysym@ 0xFFFFFFFF ==)
+		-ENOEXEC ok!
+		return
+	end
+
+	auto symoff
+	header@ XLOFFHeader_SymbolTableOffset + @ symoff!
+
+	auto sym
+	XLOFFSymbol_SIZEOF Malloc sym!
+
+	if (sym@ iserr)
+		-ENOMEM ok!
+		return
+	end
+
+	entrysym@ XLOFFSymbol_SIZEOF * symoff +=
 
 	auto bytes
 
-	0 header@ LOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+	0 sym@ XLOFFSymbol_SIZEOF symoff@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFHeader_SIZEOF s<)
+	if (bytes@ XLOFFSymbol_SIZEOF s<)
+		if (bytes@ iserr)
+			bytes@ ok!
+		end else
+			-ENOEXEC ok!
+		end
+		sym@ Free
+		return
+	end
+
+	if (sym@ XLOFFSymbol_TypeB + gb XLOFFGLOBAL ~=)
+		-ENOEXEC ok!
+		sym@ Free
+		return
+	end
+
+	if (sym@ XLOFFSymbol_SectionIndexI + gi XLOFFTEXT ~=)
+		-ENOEXEC ok!
+		sym@ Free
+		return
+	end
+
+	sym@ XLOFFSymbol_Value + @ loff@ LOFFSummary_Entry + !
+
+	sym@ Free
+
+	0 ok!
+end
+
+fn ParseLOFF { pm vnode loff -- ok }
+	auto header
+	XLOFFHeader_SIZEOF alloc header!
+
+	auto bytes
+
+	0 header@ XLOFFHeader_SIZEOF 0 vnode@ VRead bytes!
+
+	if (bytes@ XLOFFHeader_SIZEOF s<)
 		if (bytes@ iserr)
 			bytes@ ok!
 		end else
@@ -129,12 +129,12 @@ fn ParseLOFF { pm vnode loff -- ok }
 		return
 	end
 
-	if (header@ LOFFHeader_Magic + @ LOFFMagic ~=)
+	if (header@ XLOFFHeader_Magic + @ XLOFFMagic ~=)
 		-ENOEXEC ok!
 		return
 	end
 
-	if (header@ LOFFHeader_TargetArchitecture + @ LOFFArch ~=)
+	if (header@ XLOFFHeader_TargetArchitecture + @ XLOFFArch ~=)
 		-ENOEXEC ok!
 		return
 	end
@@ -145,19 +145,19 @@ fn ParseLOFF { pm vnode loff -- ok }
 	end
 
 	auto th
-	header@ LOFFHeader_TextHeader + @ th!
+	header@ XLOFFHeader_SectionTableOffset + @ th!
 
 	auto dh
-	header@ LOFFHeader_DataHeader + @ dh!
+	th@ XLOFFSectionHeader_SIZEOF + dh!
 
 	auto bh
-	header@ LOFFHeader_BSSHeader + @ bh!
+	dh@ XLOFFSectionHeader_SIZEOF + bh!
 
 	// XXX there's an assumption here that LOFFSectionHeader_SIZEOF < LOFFHeader_SIZEOF
 
-	0 header@ LOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
+	0 header@ XLOFFSectionHeader_SIZEOF th@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+	if (bytes@ XLOFFSectionHeader_SIZEOF s<)
 		if (bytes@ iserr)
 			bytes@ ok!
 		end else
@@ -169,7 +169,7 @@ fn ParseLOFF { pm vnode loff -- ok }
 	auto vaddr
 	auto offset
 
-	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	header@ XLOFFSectionHeader_VirtualAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_TextVAddr + !
 	if (vaddr@ 4095 &)
 		-ENOEXEC ok!
@@ -178,18 +178,18 @@ fn ParseLOFF { pm vnode loff -- ok }
 
 	vaddr@ loff@ LOFFSummary_Entry + +=
 
-	header@ LOFFSectionHeader_SectionOffset + @ offset!
+	header@ XLOFFSectionHeader_DataOffset + @ offset!
 	offset@ loff@ LOFFSummary_TextOffset + !
 	if (offset@ 0x3 &)
 		-ENOEXEC ok!
 		return
 	end
 	
-	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_TextSize + !
+	header@ XLOFFSectionHeader_DataSize + @ loff@ LOFFSummary_TextSize + !
 
-	0 header@ LOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
+	0 header@ XLOFFSectionHeader_SIZEOF dh@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+	if (bytes@ XLOFFSectionHeader_SIZEOF s<)
 		if (bytes@ iserr)
 			bytes@ ok!
 		end else
@@ -198,25 +198,25 @@ fn ParseLOFF { pm vnode loff -- ok }
 		return
 	end
 
-	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	header@ XLOFFSectionHeader_VirtualAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_DataVAddr + !
 	if (vaddr@ 4095 &)
 		-ENOEXEC ok!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionOffset + @ offset!
+	header@ XLOFFSectionHeader_DataOffset + @ offset!
 	offset@ loff@ LOFFSummary_DataOffset + !
 	if (offset@ 0x3 &)
 		-ENOEXEC ok!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_DataSize + !
+	header@ XLOFFSectionHeader_DataSize + @ loff@ LOFFSummary_DataSize + !
 
-	0 header@ LOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
+	0 header@ XLOFFSectionHeader_SIZEOF bh@ vnode@ VRead bytes!
 
-	if (bytes@ LOFFSectionHeader_SIZEOF s<)
+	if (bytes@ XLOFFSectionHeader_SIZEOF s<)
 		if (bytes@ iserr)
 			bytes@ ok!
 		end else
@@ -225,14 +225,14 @@ fn ParseLOFF { pm vnode loff -- ok }
 		return
 	end
 
-	header@ LOFFSectionHeader_LinkedAddress + @ vaddr!
+	header@ XLOFFSectionHeader_VirtualAddress + @ vaddr!
 	vaddr@ loff@ LOFFSummary_BSSVAddr + !
 	if (vaddr@ 4095 &)
 		-ENOEXEC ok!
 		return
 	end
 
-	header@ LOFFSectionHeader_SectionSize + @ loff@ LOFFSummary_BSSSize + !
+	header@ XLOFFSectionHeader_DataSize + @ loff@ LOFFSummary_BSSSize + !
 end
 
 (* look through udvec and calculate how much memory needs to be appended to the end of
