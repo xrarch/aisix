@@ -16,8 +16,8 @@ var GCCurY 0
 var GCWidth 0
 var GCHeight 0
 
-const GConsoleBG 0x394C
-const GConsoleFG 0x7FFF
+const GConsoleBG 75
+const GConsoleFG 255
 
 const FontWidth  8
 const FontHeight 16
@@ -64,24 +64,24 @@ public VConsUpdate
 
 table ColorIndex
 	0
-	0x1C5B
-	0x1C0
-	0x3FF
-	0x5000
-	0x7C1F
-	0x7FE0
-	0x5AD6
+	26
+	96
+	249
+	4
+	31
+	231
+	181
 endtable
 
 table ColorIndex2
-	0x1CE7
-	0x3A1E
-	0x5FEF
-	0x5BFF
-	0x7F56
-	0x7DFF
-	0x7FF6
-	0x7FFF
+	74
+	155
+	246
+	253
+	215
+	159
+	247
+	255
 endtable
 
 fn GConsoleDefault { -- }
@@ -408,21 +408,21 @@ fn GConsoleBack { -- }
 end
 
 fn GConsoleUIBox { title x y w h -- }
-	x@ 10 - y@ 6 - w@ 21 + h@ 12 + 0x0000 GConsoleBox
-	x@ 9 - y@ 5 - w@ 19 + h@ 10 + 0x6318 GConsoleBox
+	x@ 10 - y@ 6 - w@ 21 + h@ 12 + 0 GConsoleBox
+	x@ 9 - y@ 5 - w@ 19 + h@ 10 + 222 GConsoleBox
 	x@ 8 - y@ 4 - w@ 18 + h@ 9 + GConsoleBG GConsoleRRect
 
 	auto ttbw
 	title@ strlen FontWidth * 13 + ttbw!
 
-	x@ 10 - y@ FontHeight - 10 - ttbw@ FontHeight 5 + 0x0000 GConsoleBox
-	x@ 9 - y@ FontHeight - 9 - ttbw@ 2 - FontHeight 4 + 0x3907 GConsoleRRect
+	x@ 10 - y@ FontHeight - 10 - ttbw@ FontHeight 5 + 0 GConsoleBox
+	x@ 9 - y@ FontHeight - 9 - ttbw@ 2 - FontHeight 4 + 76 GConsoleRRect
 
 	x@
 	y@ FontHeight - 7 -
 	title@
 	-1
-	0x6318 FontDrawString
+	222 FontDrawString
 end
 
 fn GConsoleBox { x y w h color -- }

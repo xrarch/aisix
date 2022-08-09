@@ -36,7 +36,7 @@ fn FastInvert { buf -- } // actually slow
 	auto i
 	0 i!
 
-	while (i@ BOXCOLS 2 * <)
+	while (i@ BOXCOLS <)
 		buf@@ ~ buf@!
 
 		4 buf +=
@@ -49,10 +49,10 @@ fn InvertBox { x y -- }
 	0 i!
 
 	auto base
-	y@ XRes@ * 2 * x@ 2 * + base!
+	y@ XRes@ * x@ + base!
 
 	auto mod
-	XRes@ 2 * mod!
+	XRes@ mod!
 
 	auto rbase
 
@@ -66,13 +66,13 @@ fn InvertBox { x y -- }
 	while (i@ BOXROWS <)
 		FBFD@ rbase@ SEEK_SET Seek drop
 
-		bl@ BOXCOLS 2 * FBFD@ Read drop
+		bl@ BOXCOLS FBFD@ Read drop
 
 		bl@ FastInvert
 
 		FBFD@ rbase@ SEEK_SET Seek drop
 
-		bl@ BOXCOLS 2 * FBFD@ Write drop
+		bl@ BOXCOLS FBFD@ Write drop
 
 		mod@ rbase +=
 		1 i +=

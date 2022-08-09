@@ -45,7 +45,7 @@ table DeviceTable
 	"dks"    "disk-logical"           "AISA,satsuma-disk" 1
 	pointerof DrvDKSLogicalFoundNode
 
-	"kinwfb" "display"                "AISA,kinnowfb"     1
+	"kinwfb" "display"                "AISA,kinnowfb8"    1
 	pointerof DrvLGFXFoundNode
 
 	"amtsu"  "bus"                    "AISA,amanatsu"     1
