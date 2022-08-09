@@ -122,7 +122,8 @@ fn (IOCharInput) TTYInput { c buf -- }
 			if (c@ 0x20 <)
 				if (noecho@ ~~)
 					if (c@ '\n' ==)
-						c@ ob@ 0 IOBufPutc drop
+						'\r' ob@ 0 IOBufPutc drop
+						'\n' ob@ 0 IOBufPutc drop
 						return
 					end
 
@@ -242,6 +243,15 @@ fn TTYWrite { pm buf len tty -- bytes }
 	while (bytes@ len@ <)
 		if (buf@ 4095 & 0 ==)
 			pm@ buf@ 0 VMWalk pa! r!
+
+			if (r@ iserr)
+				r@ bytes!
+				return
+			end
+		end
+
+		if (pa@ gb '\n' ==)
+			'\r' ob@ 1 IOBufPutc r!
 
 			if (r@ iserr)
 				r@ bytes!
