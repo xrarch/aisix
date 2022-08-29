@@ -5,11 +5,11 @@ DC  =  ../../sdk/dragonc.sh
 AS  =  ../../sdk/asm.sh
 LD  =  ../../sdk/link.sh link
 
-all: obj/rtaisix.o
+all: obj/limn2600/rtaisix.o
 
-obj/rtaisix.o: $(OBJ) ./src/_start.o
-	mkdir -p obj
-	$(LD) -f obj/rtaisix.o L/dfrt/dfrt.f.o $(OBJ) ./src/_start.o
+obj/limn2600/rtaisix.o: $(OBJ) ./src/_start.o
+	mkdir -p obj/limn2600
+	$(LD) -f obj/limn2600/rtaisix.o $(OBJ) ./src/_start.o L/dfrt/dfrt.f.o
 
 %.o: %.df
 	$(DC) $< $@ incdir=./headers/
@@ -21,4 +21,4 @@ obj/rtaisix.o: $(OBJ) ./src/_start.o
 	$(AS) ./src/_start.s ./src/_start.o
 
 cleanup:
-	rm -f $(OBJ) ./src/_start.o obj/rtaisix.o
+	rm -f $(OBJ) ./src/_start.o obj/limn2600/rtaisix.o
