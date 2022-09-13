@@ -114,14 +114,22 @@ fn (IOCharInput) TTYInput { c buf -- }
 	end elseif (c@ 21 ==) (* ^U *)
 		while (buf@ ob@ noecho@ ~~ TTYRubout) end
 	end else
-		if (c@ buf@ 0 IOBufPutc 1 ==)
+		auto ok
+
+		if (c@ '\r' ==)
+			'\n' buf@ 0 IOBufPutc ok!
+		end else
+			c@ buf@ 0 IOBufPutc ok!
+		end
+
+		if (ok@ 1 ==)
 			if (c@ MAXPRINT >)
 				return
 			end
 
 			if (c@ 0x20 <)
 				if (noecho@ ~~)
-					if (c@ '\n' ==)
+					if (c@ '\r' ==)
 						'\r' ob@ 0 IOBufPutc drop
 						'\n' ob@ 0 IOBufPutc drop
 						return
