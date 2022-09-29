@@ -13,7 +13,7 @@ BootSector.bin: BootSector.s
 
 sash.a3x: $(OBJ)
 	$(LD) sash.a3x LX/limn2600/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
-	$(OBJTOOL) move sash.a3x text=0x40000,data=text+text_size,bss=data+data_size
+	$(OBJTOOL) move sash.a3x text=0x20000,data=text+text_size,bss=data+data_size
 	cp sash.a3x sash.LOFF
 	$(OBJTOOL) binary sash.a3x
 
