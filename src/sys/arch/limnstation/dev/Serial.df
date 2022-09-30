@@ -130,7 +130,7 @@ fn DrvSerialFoundNode { node -- }
 	tty@ sdev@ Device_TTY + !
 
 	80 tty@ TTY_Width + !
-	25 tty@ TTY_Height + !
+	24 tty@ TTY_Height + !
 
 	1 SerialFound +=
 end
