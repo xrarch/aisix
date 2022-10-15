@@ -383,7 +383,9 @@ fn GConsoleDrawCur { -- }
 end
 
 fn GConsoleNewline { -- }
-	GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + !
+	if (GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + @ >)
+		GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + !
+	end
 
 	0 GCCurX!
 	GCCurY@ 1 + GCCurY!
@@ -601,6 +603,9 @@ fn GConsolePutCharF { char -- }
 		GConsoleTab
 		return
 	end elseif (char@ '\r' ==)
+		if (GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + @ >)
+			GCCurX@ GCCurY@ 4 * GCLineLenBuf@ + !
+		end
 		0 GCCurX!
 		return
 	end
