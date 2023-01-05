@@ -13,7 +13,7 @@ AS      = ../../../../sdk/asm.sh
 OBJTOOL = ../../../../sdk/link.sh
 LD      =  $(OBJTOOL) link
 
-DCFLAGS = incdir=./include/:$(PLATFORM_DIR)/include/:$(CPU_DIR)/include/ target=$(CPU)
+DCFLAGS = incdir=./include/:$(PLATFORM_DIR)/include/:$(CPU_DIR)/include/
 
 all: aisix.a3x
 
