@@ -14,5 +14,5 @@
 [106m      [40m [0m     [106m      [40m [0m [106m      [40m [0m [106m              [40m [0m [106m      [40m [0m [106m      [40m [0m     [106m    [46m  [40m [0m
 [40m  [106m    [40m [0m     [40m  [106m    [40m [0m [40m  [106m    [40m [0m [40m  [106m          [40m   [0m [40m  [106m    [40m [0m [40m  [106m    [40m [0m     [106m    [40m   [0m
 [0m  [40m     [0m       [40m    [40m [0m   [40m     [0m   [40m           [0m     [40m     [0m   [40m     [0m     [40m     [0m
-written by Will <http://github.com/seanbox> for the LIMNstation project
+written by Will <http://github.com/hyenasky> for the LIMNstation project
 
