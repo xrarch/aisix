@@ -19,10 +19,10 @@ all: aisix.a3x
 
 aisix.a3x: $(OBJ)
 	$(LD) -f aisix.f.LOFF LX/limn2600/rta3x/_boot.o $(OBJ) L/rta3x/cia3x.o L/dfrt/dfrt.f.o
-	$(OBJTOOL) symtab aisix.f.LOFF SYM.s_ 0x80000
+	$(OBJTOOL) symtab aisix.f.LOFF SYM.s_ 0x30000
 	$(AS) SYM.s_ SYM.o
 	$(LD) aisix.LOFF aisix.f.LOFF SYM.o
-	$(OBJTOOL) move aisix.LOFF text=0x80000,data=text+text_size,bss=data+data_size
+	$(OBJTOOL) move aisix.LOFF text=0x30000,data=text+text_size,bss=data+data_size
 	cp aisix.LOFF aisix.a3x
 	$(OBJTOOL) binary -nobss aisix.a3x
 

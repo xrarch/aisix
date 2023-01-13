@@ -7,10 +7,10 @@ extern Panic { ... fmt -- }
 (* extremely simple, read-only implementation of aisixfat *)
 
 const AFSSuperblockNumber 0x0
-const AFSSuperblockCache 0x47F00
-const AFSFATCache 0x48F00
-const AFSDirCache 0x49F00
-const AFSInoCache 0x4AF00
+const AFSSuperblockCache 0x27000
+const AFSFATCache 0x27200
+const AFSDirCache 0x27400
+const AFSInoCache 0x27600
 const AFSSuperblockMagic 0xAFBBAFBB
 const AFSSuperblockVersion 0x6
 

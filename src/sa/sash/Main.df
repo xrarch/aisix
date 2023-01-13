@@ -23,7 +23,7 @@ var BootFile 0
 
 var BootPath 0
 
-const LoadBase 0x80000
+const LoadBase 0x30000
 
 var BFAlloc1 0
 

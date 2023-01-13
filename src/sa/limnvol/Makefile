@@ -8,8 +8,8 @@ LD      =  $(OBJTOOL) link
 all: limnvol.a3x
 
 limnvol.a3x: $(OBJ)
-	$(LD) limnvol.a3x LX/limn2600/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
-	$(OBJTOOL) move limnvol.a3x text=0x80000,data=text+text_size,bss=data+data_size
+	$(LD) limnvol.a3x LX/xr17032/rta3x/_boot.o $(OBJ) L/rta3x/rta3x.o
+	$(OBJTOOL) move limnvol.a3x text=0x30000,data=text+text_size,bss=data+data_size
 	$(OBJTOOL) binary limnvol.a3x
 
 %.o: %.df
