@@ -2,9 +2,11 @@
 #include "<ll>/rta3x/a3x.h"
 
 struct VDBs
-	16 Label
+	15 BootCode
+	1 FFIfVariant
 	128 PartitionTable
 	4 Magic
+	16 Label
 endstruct
 
 struct PTE
@@ -107,6 +109,18 @@ fn LoadVDB { -- }
 	512 Malloc VDB!
 
 	0 VDB@ IReadBlock
+
+	if (VDB@ VDBs_FFIfVariant + gb 0xFF ~=)
+		"VDB has old variant. internally converting.\n" Printf
+
+		// move label to correct spot
+
+		VDB@ VDBs_Label + // dest
+		VDB@ // src
+		strcpy
+
+		0xFF VDB@ VDBs_FFIfVariant + sb
+	end
 end
 
 fn FreeVDB { -- }
@@ -137,6 +151,8 @@ fn VDBWrite { new -- }
 	512 Calloc buf!
 
 	0x4E4D494D buf@ VDBs_Magic + !
+
+	0xFF buf@ VDBs_FFIfVariant + sb
 
 	buf@ VDBs_Label + nbuf@ strcpy
 
