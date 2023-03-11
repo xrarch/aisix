@@ -18,7 +18,7 @@ DCFLAGS = incdir=./include/:$(PLATFORM_DIR)/include/:$(CPU_DIR)/include/
 all: aisix.a3x
 
 aisix.a3x: $(OBJ)
-	$(LD) -f aisix.f.LOFF LX/limn2600/rta3x/_boot.o $(OBJ) L/rta3x/cia3x.o L/dfrt/dfrt.f.o
+	$(LD) -f aisix.f.LOFF LX/xr17032/rta3x/_boot.o $(OBJ) L/rta3x/cia3x.o L/dfrt/dfrt.f.o
 	$(OBJTOOL) symtab aisix.f.LOFF SYM.s_ 0x30000
 	$(AS) SYM.s_ SYM.o
 	$(LD) aisix.LOFF aisix.f.LOFF SYM.o
