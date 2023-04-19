@@ -557,6 +557,7 @@ fn GConsoleParseEscape { c -- }
 	elseif (c@ 'm' ==) GConsoleSetColor end
 	elseif (c@ 'c' ==) GConsoleReset end
 	elseif (c@ 'K' ==) GConsoleClearLine end
+	elseif (c@ 'J' ==) GConsoleReset end
 
 	0 GCEscape!
 end
