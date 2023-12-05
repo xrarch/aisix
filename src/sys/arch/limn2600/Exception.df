@@ -206,17 +206,15 @@ CPUHlt:
 	hlt
 	ret
 
-ExceptionInit:
-.global ExceptionInit
-	la   t0, limn2600_exception
-	mtcr evec, t0
-	la   t0, TLBMiss
-	mtcr tbvec, t0
+Xr17032Init:
+.global Xr17032Init
+	li   t0, 0x00001000
+	mtcr eb, t0
 	ret
 
 SaveEV:
 .global SaveEV
-	mfcr t0, evec
+	mfcr t0, eb
 	la   t1, SavedEV
 	mov  long [t1], t0
 
@@ -230,7 +228,7 @@ RestoreEV:
 .global RestoreEV
 	la   t1, SavedEV
 	mov  t1, long [t1]
-	mtcr evec, t1
+	mtcr eb, t1
 
 	mtcr rs, zero
 
@@ -289,6 +287,39 @@ pstring:
 .align 4
 
 "
+
+extern Xr17032Init { -- }
+
+extern limn2600_exception { -- }
+extern TLBMiss { -- }
+extern TLBMissEnd { -- }
+
+fn ExceptionInit { -- }
+	auto ptr
+	0x1000 ptr!
+
+	auto jmpinstruction
+	6 jmpinstruction!
+
+	pointerof limn2600_exception 2 >> 3 << jmpinstruction |=
+
+	auto i
+	0 i!
+
+	while (i@ 15 <)
+		jmpinstruction@ ptr@!
+
+		1 i +=
+		256 ptr +=
+	end
+
+	0x1F00 // dest
+	pointerof TLBMiss // src
+	pointerof TLBMissEnd pointerof TLBMiss - // sz
+	memcpy
+
+	Xr17032Init
+end
 
 extern PlatformSetTimer { -- } (* it's actually in this file but this makes the df compiler happy *)
 
@@ -453,6 +484,7 @@ TLBMiss:
 ;restore t0 and return
 	mfcr t0, scratch4
 	rfe
+TLBMissEnd:
 
 FlushASID:
 .global FlushASID
