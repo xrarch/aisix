@@ -14,10 +14,10 @@ asm "
 
 limn2600_exception:
 .global limn2600_exception
-	mtcr k0, t0 ; save t0 to free it as scratch
-	mtcr k1, t1 ; ditto with t1
-	mtcr k2, sp ; save stack pointer
-	mtcr k3, sp ; save trace link
+	mtcr scratch0, t0 ; save t0 to free it as scratch
+	mtcr scratch1, t1 ; ditto with t1
+	mtcr scratch2, sp ; save stack pointer
+	mtcr scratch3, sp ; save trace link
 
 	mfcr t0, rs
 
@@ -29,22 +29,22 @@ limn2600_exception:
 
 	mov  sp, long [t1 + Thread_KernelStackTop] ; load new sp from the current thread's structure
 
-	mtcr k3, zero ; this was a usermode sp, zero out the trace link
+	mtcr scratch3, zero ; this was a usermode sp, zero out the trace link
 
 .waskernel:
 	subi sp, sp, Context_SIZEOF
 
-	mfcr t1, k2
+	mfcr t1, scratch2
 	mov  long [sp + Context_sp],  t1
 	mov  long [sp + Context_ers], t0 ; ers was still in t0
 
 	mfcr t1, epc
 	mov  long [sp + Context_epc], t1
 
-	mfcr t1, k0
+	mfcr t1, scratch0
 	mov  long [sp + Context_t0],  t1
 
-	mfcr t1, k1
+	mfcr t1, scratch1
 	mov  long [sp + Context_t1],  t1
 
 	mov  long [sp + Context_t2],  t2
@@ -83,7 +83,7 @@ limn2600_exception:
 
 	; make a fake stackframe for this exception so that the
 	; debugger can trace thru it as if it were a function call
-	mfcr t1, k3            ; get trace link saved earlier
+	mfcr t1, scratch3      ; get trace link saved earlier
 	subi sp, sp, 8
 	mov  long [sp], t1
 	mov  long [sp + 4], t0 ; t0 still has epc
@@ -238,7 +238,7 @@ RestoreEV:
 
 SwitchK3:
 .global SwitchK3
-	mtcr pgtb, a0
+	mtcr tbpde, a0
 	lshi a1, a1, 20
 	mtcr tbhi, a1
 	ret
@@ -435,10 +435,10 @@ asm "
 
 TLBMiss:
 .global TLBMiss
-	mtcr tbscratch, t0
+	mtcr scratch4, t0
 
 ;load the helper address
-	mfcr t0, pgtb
+	mfcr t0, tbpde
 
 ;load the PDE
 	mov  t0, long [t0]
@@ -451,7 +451,7 @@ TLBMiss:
 	tbwr
 
 ;restore t0 and return
-	mfcr t0, tbscratch
+	mfcr t0, scratch4
 	rfe
 
 FlushASID:
