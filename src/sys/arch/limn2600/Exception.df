@@ -210,7 +210,12 @@ Xr17032Init:
 .global Xr17032Init
 	li   t0, 0x00001000
 	mtcr eb, t0
-	ret
+
+	li   t0, 4
+	mtcr itbindex, t0
+	mtcr dtbindex, t0
+	
+	j    FlushTLBAll
 
 SaveEV:
 .global SaveEV
@@ -236,9 +241,16 @@ RestoreEV:
 
 SwitchK3:
 .global SwitchK3
-	mtcr tbpde, a0
+	; set the asid
+
 	lshi a1, a1, 20
-	mtcr tbhi, a1
+	mtcr itbtag, a1
+	mtcr dtbtag, a1
+
+	; set page table base
+
+	mtcr scratch4, a0
+
 	ret
 
 InterruptEnable:
@@ -263,7 +275,9 @@ InterruptRestore:
 
 CPUSynchronizeIcache:
 .global CPUSynchronizeIcache
-	cachei 3 ;invalidate icache, writeback dcache
+	wmb
+	li   t0, 3
+	mtcr icachectrl, t0
 	ret
 
 CPUKThreadEntry:
@@ -306,16 +320,21 @@ fn ExceptionInit { -- }
 	auto i
 	0 i!
 
-	while (i@ 15 <)
+	while (i@ 14 <)
 		jmpinstruction@ ptr@!
 
 		1 i +=
 		256 ptr +=
 	end
 
+	0x1E00 // dest
+	pointerof ITLBMiss // src
+	pointerof ITLBMissEnd pointerof ITLBMiss - // sz
+	memcpy
+
 	0x1F00 // dest
-	pointerof TLBMiss // src
-	pointerof TLBMissEnd pointerof TLBMiss - // sz
+	pointerof DTLBMiss // src
+	pointerof DTLBMissEnd pointerof DTLBMiss - // sz
 	memcpy
 
 	Xr17032Init
@@ -464,110 +483,177 @@ asm "
 
 .align 16
 
-TLBMiss:
-.global TLBMiss
-	mtcr scratch4, t0
+T0Save:
+	.dl 0
+	.dl 0
+	.dl 0
 
-;load the helper address
-	mfcr t0, tbpde
+DTLBMiss:
+.global DTLBMiss
+	; clear zero reg so we can use it in following pseudoinstructions
+	; (it is currently banked and could be ANYTHING)
 
-;load the PDE
+	sub  zero, zero, zero
+	la   zero, T0Save
+	mov  long [zero], t0
+	mov  long [zero + 4], t1
+	mov  long [zero + 8], t2
+
+	sub  zero, zero, zero
+
+	; calculate PDE offset
+
+	mfcr t0, tbmissaddr
+	rshi t1, t0, 22
+	lshi t1, t1, 2
+
+	; add to page directory base
+
+	mfcr t2, scratch4
+	add  t1, t1, t2
+
+	; load PDE
+
+	mov  t1, long [t1]
+
+	; check valid bit
+
+	andi t2, t1, 1
+	beq  t2, .invalid
+
+	; calculate page table base
+
+	rshi t1, t1, 5
+	lshi t1, t1, 12
+
+	; calculate PTE offset
+
+	rshi t0, t0, 12
+	andi t0, t0, 0x3FF
+	lshi t0, t0, 2
+
+	; add to page table base
+
+	add  t0, t0, t1
+
+	; load PTE
+
 	mov  t0, long [t0]
 
-;conditionally load the PTE
-	tbld t0, t0
-	mtcr tblo, t0
+	; store in TLB
 
-;write TLB entry
-	tbwr
+	mtcr dtbpte, t0
 
-;restore t0 and return
-	mfcr t0, scratch4
+	sub  zero, zero, zero
+	beq  zero, .out
+
+.invalid:
+	sub  zero, zero, zero
+	mtcr dtbpte, zero
+
+.out:
+	sub  zero, zero, zero
+	la   zero, T0Save
+	mov  t0, long [zero]
+	mov  t1, long [zero + 4]
+	mov  t2, long [zero + 8]
 	rfe
-TLBMissEnd:
+DTLBMissEnd:
+
+ITLBMiss:
+.global ITLBMiss
+	; clear zero reg so we can use it in following pseudoinstructions
+	; (it is currently banked and could be ANYTHING)
+
+	sub  zero, zero, zero
+	la   zero, T0Save
+	mov  long [zero], t0
+	mov  long [zero + 4], t1
+	mov  long [zero + 8], t2
+
+	sub  zero, zero, zero
+
+	; calculate PDE offset
+
+	mfcr t0, tbmissaddr
+	rshi t1, t0, 22
+	lshi t1, t1, 2
+
+	; add to page directory base
+
+	mfcr t2, scratch4
+	add  t1, t1, t2
+
+	; load PDE
+
+	mov  t1, long [t1]
+
+	; check valid bit
+
+	andi t2, t1, 1
+	beq  t2, .invalid
+
+	; calculate page table base
+
+	rshi t1, t1, 5
+	lshi t1, t1, 12
+
+	; calculate PTE offset
+
+	rshi t0, t0, 12
+	andi t0, t0, 0x3FF
+	lshi t0, t0, 2
+
+	; add to page table base
+
+	add  t0, t0, t1
+
+	; load PTE
+
+	mov  t0, long [t0]
+
+	; store in TLB
+
+	mtcr itbpte, t0
+
+	sub  zero, zero, zero
+	beq  zero, .out
+
+.invalid:
+	sub  zero, zero, zero
+	mtcr itbpte, zero
+
+.out:
+	sub  zero, zero, zero
+	la   zero, T0Save
+	mov  t0, long [zero]
+	mov  t1, long [zero + 4]
+	mov  t2, long [zero + 8]
+	rfe
+ITLBMissEnd:
 
 FlushASID:
 .global FlushASID
-	mfcr t0, rs
-	subi t1, zero, 3
-	and  t1, t1, t0
-	mtcr rs, t1
+	li   t0, 3
+	mtcr itbctrl, t0
+	mtcr dtbctrl, t0
 
-	mfcr t1, tbhi
-
-	mtcr tblo, zero
-
-	li   t2, 64
-
-.loop:
-	subi t2, t2, 1	
-
-	mtcr tbindex, t2
-	tbrd
-	mfcr t3, tbhi
-
-	rshi t3, t3, 20
-	sub  t3, t3, a0
-	bne  t3, .noflush
-
-	mtcr tbhi, zero
-	tbwr
-
-.noflush:
-	bne  t2, .loop
-
-	mtcr tbhi, t1
-	mtcr rs, t0
 	ret
 
 FlushTLBAll:
 .global FlushTLBAll
-	mfcr t0, rs
-	subi t1, zero, 3
-	and  t1, t1, t0
-	mtcr rs, t1
+	li   t0, 3
+	mtcr itbctrl, t0
+	mtcr dtbctrl, t0
 
-	mfcr t1, tbhi
-
-	mtcr tblo, zero
-	mtcr tbhi, zero
-
-	li   t2, 64
-
-.loop:
-	subi t2, t2, 1	
-
-	mtcr tbindex, t2
-	tbwr
-
-	bne  t2, .loop
-
-	mtcr tbhi, t1
-	mtcr rs, t0
 	ret
 
 FlushTLB:
 .global FlushTLB
-	mfcr t0, rs
-	subi t1, zero, 3
-	and  t1, t1, t0
-	mtcr rs, t1
+	lshi t0, a1, 12
+	mtcr itbctrl, t0
+	mtcr dtbctrl, t0
 
-	mfcr t2, tbhi
-
-	lshi t1, a1, 20
-	or   t1, t1, a0
-	mtcr tbhi, t1
-	mtcr tblo, zero
-	tbfn
-
-	mfcr t1, tbindex
-	blt  t1, .none
-	tbwr
-
-.none:
-	mtcr tbhi, t2
-	mtcr rs, t0
 	ret
 "
 
