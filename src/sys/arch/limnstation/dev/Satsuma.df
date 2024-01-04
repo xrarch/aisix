@@ -16,8 +16,11 @@ const DKSCmdInfo 0x4
 const DKSCmdPoll 0x5
 const DKSCmdIntr 0x6
 const DKSCmdIntrOff 0x7
+const DKSCmdSetTransferCount 0x8
+const DKSCmdSetTransferAddress 0x9
 
-const DKSBuffer 0xF8020000
+extern CPUFlushDcache { -- }
+extern CPUFlushWriteBuffer { -- }
 
 table DKSDriver
 	"dks"
@@ -219,14 +222,18 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 		dks@ DKS_Unit + @ DKSPortA DCitronOutl
 		DKSCmdSelect DKSCmdPort DCitronCommand
 
+		buf@ DKSPortA DCitronOutl
+		DKSCmdSetTransferAddress DKSCmdPort DCitronCommand
+
+		1 DKSPortA DCitronOutl
+		DKSCmdSetTransferCount DKSCmdPort DCitronCommand
+
 		seek@ DKSPortA DCitronOutl
 		DKSCmdRead DKSCmdPort DCitronCommandASync
 
 		DKSQueue WaitQueueUninterruptible
 
 		rs@ InterruptRestore
-
-		buf@ DKSBuffer dks@ DKS_Unit + @ 512 * + 512 memcpy
 
 		UnlockDKS
 
@@ -265,8 +272,6 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 			return
 		end
 
-		DKSBuffer dks@ DKS_Unit + @ 512 * + buf@ 512 memcpy
-
 		(* it's possible for the transfer completion interrupt to occur before we even wait [COUGH emulation COUGH COUGH]
 		so disable interrupts here just in case *)
 
@@ -275,6 +280,12 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 
 		dks@ DKS_Unit + @ DKSPortA DCitronOutl
 		DKSCmdSelect DKSCmdPort DCitronCommand
+
+		buf@ DKSPortA DCitronOutl
+		DKSCmdSetTransferAddress DKSCmdPort DCitronCommand
+
+		1 DKSPortA DCitronOutl
+		DKSCmdSetTransferCount DKSCmdPort DCitronCommand
 
 		seek@ DKSPortA DCitronOutl
 		DKSCmdWrite DKSCmdPort DCitronCommandASync

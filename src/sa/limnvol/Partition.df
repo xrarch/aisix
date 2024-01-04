@@ -25,6 +25,9 @@ var Fixed 0
 
 const MaxParts 8
 
+buffer WriteBuffer 1024
+buffer RealVDB 1024
+
 externptr DiskNode
 
 struct BootRecord
@@ -35,8 +38,11 @@ struct BootRecord
 endstruct
 
 fn WriteBoot { -- }
+	auto realbuf
+	1024 Malloc realbuf!
+
 	auto blockbuf
-	512 Malloc blockbuf!
+	realbuf@ 511 + 511 ~ & blockbuf!
 
 	a3xMyDevice@ a3xDeviceSelectNode
 		blockbuf@ 1 "readBlock" a3xDCallMethod drop drop drop drop
@@ -50,7 +56,7 @@ fn WriteBoot { -- }
 	blockbuf@ BootRecord_OSLabel + bblock@ bbc@ + bblock@ "copying: blocks %d-%d (os: %s)\n" Printf
 
 	if ("is this what you want?" PromptYN ~~)
-		blockbuf@ Free
+		realbuf@ Free
 		return
 	end
 
@@ -70,7 +76,7 @@ fn WriteBoot { -- }
 
 		if (ok@ ERR ==)
 			"I/O error on read\n" Printf
-			blockbuf@ Free
+			realbuf@ Free
 			return
 		end
 
@@ -80,7 +86,7 @@ fn WriteBoot { -- }
 
 		if (ok@ ERR ==)
 			"I/O error on write\n" Printf
-			blockbuf@ Free
+			realbuf@ Free
 			return
 		end
 
@@ -90,7 +96,7 @@ fn WriteBoot { -- }
 		1 bblock +=
 	end
 
-	blockbuf@ Free
+	realbuf@ Free
 
 	"successfully wrote boot blocks!\n" Printf
 end
@@ -106,7 +112,7 @@ fn LoadVDBSafe { -- ok }
 end
 
 fn LoadVDB { -- }
-	512 Malloc VDB!
+	RealVDB 511 + 511 ~ & VDB!
 
 	0 VDB@ IReadBlock
 
@@ -124,7 +130,6 @@ fn LoadVDB { -- }
 end
 
 fn FreeVDB { -- }
-	VDB@ Free
 end
 
 fn VDBValid { -- valid }
@@ -136,19 +141,20 @@ fn VDBLabel { -- label }
 end
 
 fn VDBWrite { new -- }
-	if (new@)
-		512 Malloc VDB!
-	end
+	auto buf
+	WriteBuffer 511 + 511 ~ & buf!
+
+	buf@ // ptr
+	512 // sz
+	0 // word
+	memset
 
 	auto nbuf
-	16 Calloc nbuf!
+	16 alloc nbuf!
 
 	"disk label: " Printf
 
 	nbuf@ 15 Gets
-
-	auto buf
-	512 Calloc buf!
 
 	0x4E4D494D buf@ VDBs_Magic + !
 
@@ -159,9 +165,6 @@ fn VDBWrite { new -- }
 	"writing new disklabel...\n" Printf
 
 	0 buf@ IWriteBlock
-
-	buf@ Free
-	nbuf@ Free
 
 	FreeVDB
 	LoadVDB

@@ -280,6 +280,18 @@ CPUSynchronizeIcache:
 	mtcr icachectrl, t0
 	ret
 
+CPUFlushDcache:
+.global CPUFlushDcache
+	wmb
+	li   t0, 3
+	mtcr dcachectrl, t0
+	ret
+
+CPUFlushWriteBuffer:
+.global CPUFlushWriteBuffer
+	wmb
+	ret
+
 CPUKThreadEntry:
 .global CPUKThreadEntry
 	subi sp, sp, 4
