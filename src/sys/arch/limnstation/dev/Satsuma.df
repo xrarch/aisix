@@ -209,6 +209,10 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 
 	while (i@ len@ <)
 		if (LockDKS)
+			if (i@)
+				CPUFlushDcache
+			end
+
 			-EINTR blocks!
 			return
 		end
@@ -240,6 +244,8 @@ fn (BlockDevRead) DKSRead { buf len unit seek -- blocks }
 		1 i +=
 	end
 
+	CPUFlushDcache
+
 	len@ blocks!
 end
 
@@ -260,6 +266,8 @@ fn (BlockDevWrite) DKSWrite { buf len unit seek -- blocks }
 		-EIO blocks!
 		return
 	end
+
+	CPUFlushWriteBuffer
 
 	dks@ DKS_Offset + @ seek +=
 
