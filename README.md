@@ -10,6 +10,10 @@ A long-term goal is a tiled GUI, short(er) term goal is to get a half-usable ker
 
 ![Running](https://i.imgur.com/RGFRGHh.png)
 
+## License
+
+AISIX is licensed under GPLv3. See LICENSE.
+
 ## Building
 
 As with all LIMNstation projects, the [sdk](http://github.com/xrarch/sdk) should be in a directory `../sdk` relative to this repository.
